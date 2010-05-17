@@ -1,6 +1,6 @@
-#lang scheme/base
-(require scheme/contract
-         scheme/dict)
+#lang racket/base
+(require racket/contract
+         racket/dict)
 
 (define (make-gvector* #:capacity [capacity 10])
   (make-gvector (make-vector capacity #f) 0))
