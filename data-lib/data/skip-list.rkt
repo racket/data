@@ -13,16 +13,17 @@ reference
   by William Pugh
 |#
 
-(define (skip-list-ref s key [default (skip-list-error key)])
+(define none (gensym 'none))
+
+(define (skip-list-ref s key [default none])
   (define head (skip-list-head s))
   (define result
     (search head (item-level head) key (skip-list-=? s) (skip-list-<? s)))
   (cond [result (item-data result)]
+        [(eq? default none)
+         (error 'skip-list-ref "no mapping found for key\n  key: ~e" key)]
         [(procedure? default) (default)]
         [else default]))
-
-(define ((skip-list-error x))
-  (error 'skip-list-ref "no mapping found for: ~e" x))
 
 (define (skip-list-set! s key data)
   (define head (skip-list-head s))
@@ -91,9 +92,9 @@ reference
 
 (define (check-iter who s iter)
   (unless (skip-list-iter? iter)
-    (raise-type-error who "skip-list-iter" iter))
+    (raise-argument-error who "skip-list-iter?" iter))
   (unless (eq? (skip-list-iter-s iter) s)
-    (raise-mismatch-error who "skip-list-iter does not match skip-list" iter)))
+    (error who "skip-list-iter does not match skip-list")))
 
 (define (skip-list-iterate-first s)
   (let ([next (item-next (skip-list-head s) 1)])
@@ -311,6 +312,7 @@ reference
        [_r void?])]
  [skip-list-expand!
   (->i ([s adjustable-skip-list?] [from (s) (key-c s)] [to (s) (key-c s)])
+       (#:gravity [g (or/c 'left 'right)])
        [_r void?])]
 
  [skip-list-iterate-first
