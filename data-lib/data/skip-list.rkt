@@ -29,7 +29,7 @@ reference
   (define head (skip-list-head s))
   (define =? (skip-list-=? s))
   (define <? (skip-list-<? s))
-  (define max-level (max MAX-LEVEL (add1 (item-level head))))
+  (define max-level (min MAX-LEVEL (add1 (item-level head))))
   (define result ;; new Item or #f
     (update/insert head (item-level head) key data =? <? max-level))
   (when result
@@ -45,73 +45,106 @@ reference
   (define =? (skip-list-=? s))
   (define <? (skip-list-<? s))
   (define deleted
-    (delete head (item-level head) key =? <?))
-  (when (and deleted (skip-list-num-entries s))
-    (set-skip-list-num-entries! s (sub1 (skip-list-count s))))
+    (delete! head (item-level head) key =? <?))
+  (when deleted
+    (set-skip-list-timestamp! s (add1 (skip-list-timestamp s)))
+    (when (skip-list-num-entries s)
+      (set-skip-list-num-entries! s (sub1 (skip-list-num-entries s)))))
   (unless (or (item? (item-next head (item-level head)))
               (= 1 (item-level head)))
     ;; Trim head
+    ;; FIXME: trim head less often?
     (let ([new-head (resize-item head (sub1 (item-level head)))])
       (set-skip-list-head! s new-head))))
 
 (define (skip-list-remove-range! s from to)
   (match s
-    [(skip-list head count =? <?)
-     (delete-range head head (item-level head) from to <? #f)
-     (set-skip-list-num-entries! s #f)]))
+    [(skip-list head count timestamp =? <?)
+     (define deleted
+       (delete-range! head head (item-level head) from to <? #f))
+     (when deleted
+       (set-skip-list-timestamp! s (add1 timestamp))
+       (set-skip-list-num-entries! s #f))]))
 
 (define (skip-list-contract! s from to)
   (match s
-    [(adjustable-skip-list head count =? <?)
-     (delete-range head head (item-level head) from to <? #t)
-     (set-skip-list-num-entries! s #f)]))
+    [(adjustable-skip-list head count timestamp =? <?)
+     (define deleted
+       (delete-range! head head (item-level head) from to <? #t))
+     (when deleted
+       (set-skip-list-timestamp! s (add1 timestamp))
+       (set-skip-list-num-entries! s #f))]))
 
-(define (skip-list-expand! s from to #:gravity [gravity 'right])
+(define (skip-list-expand! s from to)
   (match s
-    [(adjustable-skip-list head count =? <?)
-     (let ([adj-from
-            ;; Note: left-gravity relies on adjustable skip-list restriction to ints!
-            (case gravity
-              ((left) (add1 from))
-              ((right) from)
-              (else (error 'skip-list-expand! "bad gravity: ~e" gravity)))])
-       (expand/right-gravity! head (item-level head) adj-from (- to from)))]))
+    [(adjustable-skip-list head count timestamp =? <?)
+     (expand/right-gravity! head (item-level head) from (- to from))
+     (set-skip-list-timestamp! s (add1 timestamp))]))
 
 ;; Dict methods
 
 (define (skip-list-count s)
-  (let ([n (skip-list-num-entries s)])
-    (or n
-        (let loop ([n 0] [item (item-next (skip-list-head s) 1)])
-          (cond [item (loop (add1 n) (item-next item 1))]
-                [else
-                 (set-skip-list-num-entries! s n)
-                 n])))))
+  (or (skip-list-num-entries s)
+      (let loop ([n 0] [item (item-next (skip-list-head s) 1)])
+        (cond [item (loop (add1 n) (item-next item 1))]
+              [else
+               (set-skip-list-num-entries! s n)
+               n]))))
 
-(struct skip-list-iter (s item))
+(struct skip-list-iter (s item [timestamp #:mutable]))
 
-(define (check-iter who s iter)
+;; check-iter : symbol skip-list iter boolean -> boolean
+;; If ok returns #t; if deleted returns #f if allow-deleted?, else raises error.
+(define (check-iter who s iter allow-deleted?)
   (unless (skip-list-iter? iter)
     (raise-argument-error who "skip-list-iter?" iter))
-  (unless (eq? (skip-list-iter-s iter) s)
-    (error who "skip-list-iter does not match skip-list")))
+  (unless (eq? s (skip-list-iter-s iter))
+    (error who "iterator does not belong to given skip-list"))
+  (or (= (skip-list-timestamp s) (skip-list-iter-timestamp iter))
+      (let ([head (skip-list-head s)]
+            [item (skip-list-iter-item iter)])
+        (let-values ([(item status) (repair head (item-level head) item)])
+          (cond [(eq? status 'valid)
+                 (set-skip-list-iter-timestamp! iter (skip-list-timestamp s))
+                 #t]
+                [allow-deleted?
+                 #f]
+                [else
+                 (error who "iterator invalidated by deletion")])))))
 
 (define (skip-list-iterate-first s)
   (let ([next (item-next (skip-list-head s) 1)])
-    (and next (skip-list-iter s next))))
+    (and next (skip-list-iter s next (skip-list-timestamp s)))))
 
 (define (skip-list-iterate-next s iter)
-  (check-iter 'skip-list-iterate-next s iter)
-  (let ([next (item-next (skip-list-iter-item iter) 1)])
-    (and next (skip-list-iter s next))))
+  (check-iter 'skip-list-iterate-next s iter #t)
+  (cond [(= (skip-list-timestamp s) (skip-list-iter-timestamp iter))
+         (let ([next (item-next (skip-list-iter-item iter) 1)])
+           (and next (skip-list-iter s next (skip-list-timestamp s))))]
+        [else
+         (let ([head (skip-list-head s)]
+               [item (skip-list-iter-item iter)])
+           (let-values ([(item status) (repair head (item-level head) item)])
+             (case status
+               ((valid)
+                (let ([next (item-next item 1)])
+                  (and next (skip-list-iter s next (skip-list-timestamp s)))))
+               ((deleted)
+                (and item (skip-list-iter s item (skip-list-timestamp s))))
+               ((failed)
+                (error 'skip-list-iterate-next
+                       "internal error: iterator invalidated by deletion")))))]))
 
 (define (skip-list-iterate-key s iter)
-  (check-iter 'skip-list-iterate-key s iter)
+  (check-iter 'skip-list-iterate-key s iter #f)
   (item-key (skip-list-iter-item iter)))
 
 (define (skip-list-iterate-value s iter)
-  (check-iter 'skip-list-iterate-key s iter)
+  (check-iter 'skip-list-iterate-value s iter #f)
   (item-data (skip-list-iter-item iter)))
+
+(define (skip-list-iter-valid? iter)
+  (check-iter 'skip-list-iter-valid? (skip-list-iter-s iter) iter #t))
 
 ;; Extensions
 
@@ -120,7 +153,8 @@ reference
   (let* ([head (skip-list-head s)]
          [<? (skip-list-<? s)]
          [item (closest head (item-level head) key <?)])
-    (and (not (eq? item head)) (skip-list-iter s item))))
+    (and (not (eq? item head))
+         (skip-list-iter s item (skip-list-timestamp s)))))
 
 ;; Returns greatest/rightmost item s.t. key(item) <= key
 (define (skip-list-iterate-greatest/<=? s key)
@@ -130,11 +164,11 @@ reference
          [item< (closest head (item-level head) key <?)]
          [item1 (item-next item< 1)])
     (cond [(and item1 (=? (item-key item1) key))
-           (skip-list-iter s item1)]
+           (skip-list-iter s item1 (skip-list-timestamp s))]
           [(eq? item< head)
            #f]
           [else
-           (skip-list-iter s item<)])))
+           (skip-list-iter s item< (skip-list-timestamp s))])))
 
 ;; Returns least/leftmost item s.t. key(item) > key
 (define (skip-list-iterate-least/>? s key)
@@ -146,7 +180,7 @@ reference
     (let loop ([item item<])
       (and item
            (if (<? key (item-key item))
-               (skip-list-iter s item)
+               (skip-list-iter s item (skip-list-timestamp s))
                (loop (item-next item 1)))))))
 
 ;; Returns least/leftmost item s.t. key(item) >= key
@@ -155,12 +189,12 @@ reference
          [<? (skip-list-<? s)]
          [item (closest head (item-level head) key <?)]
          [item (item-next item 1)])
-    (and item (skip-list-iter s item))))
+    (and item (skip-list-iter s item (skip-list-timestamp s)))))
 
 (define (skip-list-iterate-least s)
   (let* ([head (skip-list-head s)]
          [item (item-next head 1)])
-    (and item (skip-list-iter s item))))
+    (and item (skip-list-iter s item (skip-list-timestamp s)))))
 
 (define (skip-list-iterate-greatest s)
   (let* ([head (skip-list-head s)]
@@ -169,7 +203,7 @@ reference
                         ;; so closest yields max item
                         'unused
                         (lambda (x y) #t))])
-    (and item (skip-list-iter s item))))
+    (and item (skip-list-iter s item (skip-list-timestamp s)))))
 
 (define (skip-list->list s)
   (let loop ([item (item-next (skip-list-head s) 1)])
@@ -192,7 +226,7 @@ reference
                     skip-list-iterate-key
                     skip-list-iterate-value))
 
-(struct skip-list ([head #:mutable] [num-entries #:mutable] =? <?)
+(struct skip-list ([head #:mutable] [num-entries #:mutable] [timestamp #:mutable] =? <?)
         #:property prop:dict/contract
         (list dict-methods
               (vector-immutable any/c any/c skip-list-iter?
@@ -248,17 +282,17 @@ reference
         [=? (order-=? ord)]
         [<? (order-<? ord)])
     (cond [(and (eq? key-contract any/c) (eq? value-contract any/c))
-           (skip-list (vector 'head 'head #f) 0 =? <?)]
+           (skip-list (vector 'head 'head #f) 0 0 =? <?)]
           [else
-           (skip-list* (vector 'head 'head #f) 0 =? <?
+           (skip-list* (vector 'head 'head #f) 0 0 =? <?
                        key-contract value-contract)])))
 
 (define (make-adjustable-skip-list #:key-contract [key-contract any/c]
                                    #:value-contract [value-contract any/c])
   (cond [(and (eq? key-contract any/c) (eq? value-contract any/c))
-         (adjustable-skip-list (vector 'head 'head #f) 0 = <)]
+         (adjustable-skip-list (vector 'head 'head #f) 0 0 = <)]
         [else
-         (adjustable-skip-list* (vector 'head 'head #f) 0 = <
+         (adjustable-skip-list* (vector 'head 'head #f) 0 0 = <
                                 key-contract value-contract)]))
 
 
@@ -312,7 +346,6 @@ reference
        [_r void?])]
  [skip-list-expand!
   (->i ([s adjustable-skip-list?] [from (s) (key-c s)] [to (s) (key-c s)])
-       (#:gravity [g (or/c 'left 'right)])
        [_r void?])]
 
  [skip-list-iterate-first
@@ -340,6 +373,8 @@ reference
 
  [skip-list-iter?
   (-> any/c any)]
+ [skip-list-iter-valid?
+  (-> skip-list-iter? boolean?)]
 
  [skip-list->list
   (-> skip-list? list?)])
