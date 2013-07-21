@@ -27,30 +27,37 @@ Levels are indexed starting at 1, as in the paper.
 
 (define DATA-SLOTS 2)
 
-;; An Item is
-;;  - (vector key data Item/#f Item/#f ...)
+;; An Item is (vector Key/Adj data Item/#f Item/#f ...)
 
 ;; The Level of an Item is the number of next links it has (at least 1).
 ;; The head is an Item with key and data #f (never examined)
 ;; The end of the list is represented by #f
 
+;; A Key/Adj is one of
+;;  - Key
+;;  - (adjust-key Key Delta)
+;; If item I has key (adjust-key Key Delta), it indicates a lazily-propagated
+;; key adjustment.  The key value is (+ Key Delta), and the adjustment should be
+;; propagated to the successors of I with level less than or equal to level(I),
+;; but not to any item with greater level.
+
 (define (item? x) (vector? x))
 (define (item-level item)
   (- (vector-length item) DATA-SLOTS))
 
-(define (item-key item)
+(define (item-raw-key item)
   (vector-ref item 0))
 (define (item-data item)
   (vector-ref item 1))
 (define (item-next item level)
-  (vector-ref item (+ (+ level DATA-SLOTS) -1)))
+  (vector-ref item (+ level DATA-SLOTS -1)))
 
 (define (set-item-key! item key)
   (vector-set! item 0 key))
 (define (set-item-data! item data)
   (vector-set! item 1 data))
 (define (set-item-next! item level next)
-  (vector-set! item (+ (+ level DATA-SLOTS) -1) next))
+  (vector-set! item (+ level DATA-SLOTS -1) next))
 
 (define (resize-item item level)
   (define new-size (+ DATA-SLOTS level))
@@ -58,7 +65,44 @@ Levels are indexed starting at 1, as in the paper.
   (vector-copy! new-item 0 item 0 (min (vector-length item) new-size))
   new-item)
 
-;; search : Item Nat Key Cmp Cmp -> Item/#f
+;; ----
+
+(struct adjust-key (base delta) #:mutable #:transparent)
+
+;; item-key : Item -> Key
+(define (item-key item)
+  (let ([raw-key (item-raw-key item)])
+    (cond [(adjust-key? raw-key)
+           (let* ([base-key (adjust-key-base raw-key)]
+                  [delta (adjust-key-delta raw-key)]
+                  [key (+ base-key delta)])
+             (unless (zero? delta)
+               ;; Leave adjust-key struct in place
+               (set-adjust-key-base! raw-key key)
+               (set-adjust-key-delta! raw-key 0)
+               ;; Propagate to nexts of lesser or equal level
+               (let ([level (item-level item)])
+                 (for ([k (in-range 1 level)])
+                   (let ([next (item-next item k)])
+                     ;; Don't adjust same item again if next at multiple levels
+                     (when (and next (= (item-level next) level))
+                       (adjust-item-key! item delta))))))
+             key)]
+          [else raw-key])))
+
+;; adjust-item-key! : Item Delta -> void
+(define (adjust-item-key! item delta)
+  (let ([raw-key (item-raw-key item)])
+    (cond [(adjust-key? raw-key)
+           (set-adjust-key-delta! raw-key
+                                  (+ (adjust-key-delta raw-key)
+                                     delta))]
+          [else
+           (set-item-key! item (adjust-key raw-key delta))])))
+
+;; ----
+
+;; search : Item Level Key Cmp Cmp -> Item/#f
 ;; Returns item(R) s.t. key(R) =? key
 (define (search head level key =? <?)
   (let* ([closest (closest head level key <?)]
@@ -67,7 +111,7 @@ Levels are indexed starting at 1, as in the paper.
          (=? key (item-key item))
          item)))
 
-;; closest : Item Nat Key Cmp Cmp -> Item
+;; closest : Item Level Key Cmp Cmp -> Item
 ;; Returns greatest item R s.t. key(R) <? key.
 ;; Pre: level(item) >= level, key(item) <? key OR item = head
 (define (closest item level key <?)
@@ -75,7 +119,7 @@ Levels are indexed starting at 1, as in the paper.
       item
       (closest (advance item level key <?) (sub1 level) key <?)))
 
-;; advance : Item Nat Key Cmp -> Item
+;; advance : Item Level Key Cmp -> Item
 ;; Returns greatest item R s.t. key(R) <? key and level(R) >= level.
 ;; Pre: level(item) >= level, key(item) <? key OR item = head
 (define (advance item level key <?)
@@ -92,6 +136,19 @@ Levels are indexed starting at 1, as in the paper.
         (loop (add1 level))
         level)))
 
+;; insert-link! : Item Level Item -> void
+(define (insert-link! item level target)
+  (let ([old (item-next item level)])
+    (set-item-next! item level target)
+    (set-item-next! target level old)))
+
+;; delete-link! : Item Level boolean -> void
+;; Does not delete next link of deleted item.
+(define (delete-link! item level)
+  (let* ([old (item-next item level)]
+         [after-old (and old (item-next item level))])
+    (set-item-next! item level after-old)))
+
 ;; update/insert : ... -> Item/#f
 ;; Updates skip-list so that key |-> data
 ;; Returns #f to indicate update (existing item changed);
@@ -103,9 +160,7 @@ Levels are indexed starting at 1, as in the paper.
                 [result (update/insert item (sub1 level)
                                        key data =? <? max-level)])
            (when (and result (>= (item-level result) level))
-             (let ([link (item-next item level)])
-               (set-item-next! item level result)
-               (set-item-next! result level link)))
+             (insert-link! item level result))
            result)]
         [else
          (let ([next (item-next item 1)])
@@ -119,6 +174,7 @@ Levels are indexed starting at 1, as in the paper.
                          (make-vector (+ DATA-SLOTS (pick-random-level max-level)) #f)])
                     (set-item-key! new-item key)
                     (set-item-data! new-item data)
+                    ;; next fields will be set by pending recursive calls
                     new-item)]))]))
 
 ;; delete : ... -> Item/#f
@@ -130,9 +186,7 @@ Levels are indexed starting at 1, as in the paper.
          (let* ([item (advance item level key <?)]
                 [result (delete item (sub1 level) key =? <?)])
            (when (and result (eq? (item-next item level) result))
-             (let ([link (item-next result level)])
-               (set-item-next! item level link)
-               (set-item-next! result level #f)))
+             (delete-link! item level))
            result)]
         [else
          (let ([next (item-next item 1)])
@@ -143,38 +197,54 @@ Levels are indexed starting at 1, as in the paper.
                   ;; Not found!
                   #f]))]))
 
-;; delete-range : ... -> void
+;; delete-range : ... -> Item/#f
+;; Returns first deleted item, or #f if none.
 ;; Pre: level(*-item) >= level; key(*-item) <? *-key OR *-item = head
-(define (delete-range f-item t-item level f-key t-key <? contract!?)
-  (cond [(positive? level)
-         (let* ([f-item (advance f-item level f-key <?)]
-                [t-item (advance t-item level t-key <?)]
-                ;; t-item greatest s.t. key(t-item) <? t-key (at level)
-                [t-item* (item-next t-item level)]) ;; key(t-item*) >=? t-key
-           (set-item-next! f-item level t-item*)
-           (delete-range f-item t-item (sub1 level) f-key t-key <? contract!?))]
-        [else
-         ;; f-item is greatest s.t. key(item) <? f-key
-         ;; so f-item is greatest s.t. key(item) <? t-key,
-         ;; because deleted [f-key, t-key)
-         (when contract!?
-           (let ([delta (- t-key f-key)])
-             (let loop ([item (item-next f-item 1)])
-               (when item
-                 ;; key(item) >=? t-key
-                 (set-item-key! item (- (item-key item) delta))
-                 (loop (item-next item 1))))))]))
+(define (delete-range from-item to-item level from-key to-key <? contract!?)
+  (let loop ([from-item from-item] [to-item to-item] [level level])
+    (cond [(positive? level)
+           (let* ([from-item (advance from-item level from-key <?)]
+                  [to-item (advance to-item level to-key <?)]
+                  ;; to-item greatest s.t. key(to-item) <? to-key (at level)
+                  [to-item* (item-next to-item level)]) ;; key(to-item*) >=? to-key
+             (set-item-next! from-item level to-item*)
+             (unless (eq? to-item from-item)
+               ;; to-item is actually within range
+               ;; test like (<? (item-key to-item) from-key), but (item-key head) is undef
+               (set-item-next! to-item level #f))
+             (when (and contract!? to-item*)
+               ;; Don't adjust same item again if next at multiple levels
+               (when (= (item-level to-item*) level)
+                 (adjust-item-key! to-item* (- from-key to-key))))
+             (loop from-item to-item (sub1 level)))]
+          [else
+           ;; from-item is greatest item s.t. key(item) <? from-key
+           ;; so from-item is greatest item s.t. key(item) <? to-key,
+           ;; because deleted [from-key, to-key)
+           (let ([next (item-next from-item 1)])
+             (and next
+                  (<? (item-key next) to-key)
+                  next))])))
 
-;; expand! : ... -> void
-(define (expand! item level from to <?)
-  (let ([delta (- to from)]
-        [item (closest item level from <?)])
-    ;; item greatest s.t. key(item) <? from
-    (let loop ([item (item-next item 1)])
-      (when item
-        ;; key(item) >=? from
-        (set-item-key! item (+ (item-key item) delta))
-        (loop (item-next item 1))))))
+;; expand/right-gravity! : Item Level Key Delta -> void
+;; An item with key = from-key will be adjusted up.
+(define (expand/right-gravity! item level from-key delta)
+  (let loop ([item item] [level level])
+    (cond [(positive? level)
+           (let* ([item (advance item level from-key <)]
+                  [next (item-next item level)])
+             (when next
+               ;; Don't adjust same item again if next at multiple levels
+               (when (= (item-level next) level)
+                 (adjust-item-key! next delta)))
+             (loop item (sub1 level)))]
+          [else
+           (void)])))
+
+;; expand/left-gravity! : Item Level Key Delta -> void
+;; An item with key = from-key will not be adjusted.
+(define (expand/left-gravity! item level from-key delta)
+  (expand/right-gravity! item level (add1 from-key) delta))
 
 
 ;; Skip list
@@ -231,10 +301,16 @@ Levels are indexed starting at 1, as in the paper.
      (delete-range head head (item-level head) from to <? #t)
      (set-skip-list-num-entries! s #f)]))
 
-(define (skip-list-expand! s from to)
+(define (skip-list-expand! s from to #:gravity [gravity 'right])
   (match s
     [(adjustable-skip-list head count =? <?)
-     (expand! head (item-level head) from to <?)]))
+     (let ([adj-from
+            ;; Note: left-gravity relies on adjustable skip-list restriction to ints!
+            (case gravity
+              ((left) (add1 from))
+              ((right) from)
+              (else (error 'skip-list-expand! "bad gravity: ~e" gravity)))])
+       (expand/right-gravity! head (item-level head) adj-from (- to from)))]))
 
 ;; Dict methods
 

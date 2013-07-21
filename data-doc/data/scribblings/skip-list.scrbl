@@ -15,7 +15,7 @@
 
 @author[@author+email["Ryan Culpepper" "ryanc@racket-lang.org"]]
 
-Skip lists are a simple, efficient data structure for mutable
+Skip-lists are a simple, efficient data structure for mutable
 dictionaries with totally ordered keys. They were described in the
 paper ``Skip Lists: A Probabilistic Alternative to Balanced Trees'' by
 William Pugh in Communications of the ACM, June 1990, 33(6) pp668-676.
@@ -27,7 +27,6 @@ interface for iterator-based search and mutation.
 Operations on skip-lists are not thread-safe. If a key in a skip-list
 is mutated, the skip-list's internal invariants may be violated,
 causings its behavior to become unpredictable.
-
 
 @defproc[(make-skip-list [ord order? datum-order]
                          [#:key-contract key-contract contract? any/c]
@@ -57,7 +56,8 @@ with @racket[key-contract] to check keys.
 Makes a new empty skip-list that permits only exact integers as keys
 (in addition to any constraints imposed by @racket[key-contract]). The
 resulting skip-list answers true to @racket[adjustable-skip-list?]
-and supports key adjustment.
+and supports efficient key adjustment; see
+@racket[skip-list-contract!] and @racket[skip-list-expand!].
 }
 
 @defproc[(skip-list? [v any/c]) boolean?]{
@@ -104,6 +104,11 @@ Implementations of @racket[dict-ref], @racket[dict-set!],
 @racket[dict-iterate-first], @racket[dict-iterate-next],
 @racket[dict-iterate-key], and @racket[dict-iterate-value],
 respectively.
+
+The @racket[skip-list-ref], @racket[skip-list-set!], and
+@racket[skip-list-remove!] operations take probabilistic @italic{O(log
+N)} time, where @italic{N} is the number of entries in the
+skip-list. The rest take constant time.
 }
 
 @defproc[(skip-list-remove-range! [skip-list skip-list?]
@@ -113,6 +118,9 @@ respectively.
 
 Removes all keys in [@racket[from], @racket[to]); that is, all keys
 greater than or equal to @racket[from] and less than @racket[to].
+
+This operation takes probabilistic @italic{O(log N)} time, where
+@italic{N} is the number of entries in the skip-list.
 }
 
 @defproc[(skip-list-contract! [skip-list adjustable-skip-list?]
@@ -124,20 +132,23 @@ Like @racket[skip-list-remove-range!], but also decreases the value
 of all keys greater than or equal to @racket[to] by @racket[(- to
 from)].
 
-This operation takes time proportional to the number of elements with
-keys greater than or equal to @racket[to].
+This operation takes probabilistic @italic{O(log N)} time, where
+@italic{N} is the number of entries in the skip-list.
 }
 
 @defproc[(skip-list-expand! [skip-list adjustable-skip-list?]
                             [from exact-integer?]
-                            [to exact-integer?])
+                            [to exact-integer?]
+                            [#:gravity gravity (or/c 'left 'right) 'right])
          void?]{
 
-Increases the value of all keys greater than or equal to @racket[from]
-by @racket[(- to from)].
+Increases each key greater than or equal to @racket[from] by
+@racket[(- to from)], if @racket[gravity] is @racket['right] (the
+default). If @racket[gravity] is @racket['left], increases each key
+strictly greater than @racket[from] instead.
 
-This operation takes time proportional to the number of elements with
-keys greater than or equal to @racket[from].
+This operation takes probabilistic @italic{O(log N)} time, where
+@italic{N} is the number of entries in the skip-list.
 }
 
 @deftogether[[
@@ -158,11 +169,14 @@ keys greater than or equal to @racket[from].
 @defproc[(skip-list-iterate-greatest [skip-list skip-list?])
          (or/c skip-list-iter? #f)]]]{
 
-Implementations of @racket[dict-iterate-least],
-@racket[dict-iterate-greatest], @racket[dict-iterate-least/>?],
+Implementations of @racket[dict-iterate-least/>?],
 @racket[dict-iterate-least/>=?], @racket[dict-iterate-greatest/<?],
 @racket[dict-iterate-greatest/<=?], @racket[dict-iterate-least], and
 @racket[dict-iterate-greatest], respectively.
+
+The @racket[skip-list-iterate-least] operation takes constant time;
+the rest take probabilistic @italic{O(log N)} time, where @italic{N}
+is the number of entries in the skip-list.
 }
 
 @defproc[(skip-list-iter? [v any/c]) boolean?]{
@@ -175,6 +189,9 @@ skip-list, @racket[#f] otherwise.
 
 Returns an association list with the keys and values of
 @racket[skip-list], in order.
+
+This operation takes @italic{O(N)} time, where @italic{N} is the
+number of entries in the skip-list.
 }
 
 
