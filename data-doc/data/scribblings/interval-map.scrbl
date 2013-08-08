@@ -20,8 +20,8 @@ intervals of exact integers to values. An interval-map is queried at a
 discrete point, and the result of the query is the value mapped to the
 interval containing the point.
 
-Internally, interval-maps use a splay-tree
-(@racketmodname[data/splay-tree]) of intervals for efficient query and
+Internally, interval-maps use a skip-list
+(@racketmodname[data/skip-list]) of intervals for efficient query and
 update, including efficient contraction and expansion of intervals.
 
 Interval-maps implement the dictionary (@racketmodname[racket/dict])
