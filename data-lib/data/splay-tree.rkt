@@ -124,13 +124,13 @@ In (values status nroot pside pnode):
 
 |#
 
-(define-syntax-rule (SPfinish expr)
+(define-syntax-rule (SPfinish expr adjust?)
   (let-values ([(ok? x p-side p) expr])
-    (finish ok? x p-side p)))
+    (finish ok? x p-side p adjust?)))
 
-(define-syntax-rule (SPisplay x-expr gp-side gp)
+(define-syntax-rule (SPisplay x-expr gp-side gp adjust?)
   (let-values ([(ok? x p-side p) x-expr])
-    (isplay! ok? x p-side p gp-side gp)))
+    (isplay! ok? x p-side p gp-side gp adjust?)))
 
 (define (SPunit x) (values 'found x #f #f))
 (define (SPunit/add x) (values 'added x #f #f))
@@ -140,19 +140,21 @@ In (values status nroot pside pnode):
 
 ;; find : ... -> (values status node/#f)
 ;; If ok?, then node returned is one sought.
-(define (n:find k x add-v)
-  (SPfinish (findb k x #f #f add-v)))
+(define (n:find k x add-v cmp adjust?)
+  (SPfinish (findb k x #f #f add-v cmp adjust?) adjust?))
 
 ;; findb : ... -> SP
-(define (findb k x p-side p add-v)
+(define (findb k x p-side p add-v cmp adjust?)
   (cond [x
-         (let ([k* (- k (node-key x))])
-           (cond [(= k (node-key x))
-                  (SPunit x)]
-                 [(< k (node-key x))
-                  (SPisplay (findb k* (node-left x)  'left  x add-v) 'left x)]
-                 [else
-                  (SPisplay (findb k* (node-right x) 'right x add-v) 'right x)]))]
+         (case (cmp k (node-key x))
+           [(=)
+            (SPunit x)]
+           [(<)
+            (let ([k* (if adjust? (- k (node-key x)) k)])
+              (SPisplay (findb k* (node-left x)  'left  x add-v cmp adjust?) 'left x adjust?))]
+           [(>)
+            (let ([k* (if adjust? (- k (node-key x)) k)])
+              (SPisplay (findb k* (node-right x) 'right x add-v cmp adjust?) 'right x adjust?))])]
         [add-v
          (let ([new-node (node k (car add-v) #f #f)])
            ;; FIXME: link unnecessary? will be done in isplay/finish?
@@ -160,25 +162,25 @@ In (values status nroot pside pnode):
            (SPunit/add new-node))]
         [else (SPfail)]))
 
-(define (n:find-min x)
+(define (n:find-min x adjust?)
   (define (find-min-loop x)
     (cond [(and x (node-left x))
-           (SPisplay (find-min-loop (node-left x)) 'left x)]
+           (SPisplay (find-min-loop (node-left x)) 'left x adjust?)]
           [x (SPunit x)]
           [else (SPfail)]))
-  (SPfinish (find-min-loop x)))
+  (SPfinish (find-min-loop x) adjust?))
 
-(define (n:find-max x)
+(define (n:find-max x adjust?)
   (define (find-max-loop x)
     (cond [(and x (node-right x))
-           (SPisplay (find-max-loop (node-right x)) 'right x)]
+           (SPisplay (find-max-loop (node-right x)) 'right x adjust?)]
           [x (SPunit x)]
           [else (SPfail)]))
-  (SPfinish (find-max-loop x)))
+  (SPfinish (find-max-loop x) adjust?))
 
 ;; isplay! : ... -> SP
 ;; incremental splay
-(define (isplay! ok? x p-side p gp-side gp)
+(define (isplay! ok? x p-side p gp-side gp adjust?)
   (cond [(eq? x #f)
          ;; Then p-side = #f, p = #f
          ;; Overwrite new root with gp
@@ -187,26 +189,26 @@ In (values status nroot pside pnode):
          (set-node-side! p p-side x)
          (cond [(eq? p-side gp-side)
                 ;; zig-zig
-                (rotate! p p-side)
+                (rotate! p p-side adjust?)
                 (set-node-side! gp gp-side x)
-                (rotate! gp gp-side)
+                (rotate! gp gp-side adjust?)
                 (values ok? x #f #f)]
                [else
                 ;; zig-zag
-                (rotate! p p-side)
+                (rotate! p p-side adjust?)
                 (set-node-side! gp gp-side x)
-                (rotate! gp gp-side)
+                (rotate! gp gp-side adjust?)
                 (values ok? x #f #f)])]
         [else
          (values ok? x gp-side gp)]))
 
-(define (finish ok? x p-side p)
+(define (finish ok? x p-side p adjust?)
   (cond [(eq? x #f)
          ;; Then p-side = #f, p = #f
          (values ok? #f)]
         [p-side ;; one splay path segment left; perform zig
          (set-node-side! p p-side x)
-         (rotate! p p-side)
+         (rotate! p p-side adjust?)
          (values ok? x)]
         [else ;; no splay path segments left
          (values ok? x)]))
@@ -216,120 +218,127 @@ In (values status nroot pside pnode):
     ((left) (set-node-left! n v))
     ((right) (set-node-right! n v))))
 
-(define (rotate! x side)
+(define (rotate! x side adjust?)
   (case side
-    ((left) (right! x))
-    ((right) (left! x))
+    ((left) (right! x adjust?))
+    ((right) (left! x adjust?))
     ((#f) (void))))
 
-(define (right! p)
+(define (right! p adjust?)
   (match p
     [(node Kp _ (and x (node Kx _ A B)) C)
      (set-node-left! p B)
      (set-node-right! x p)
-     (set-node-key! p (- 0 Kx))
-     (set-node-key! x (+ Kp Kx))
-     (when B
-       (set-node-key! B (+ (node-key B) Kx)))]))
+     (when adjust?
+       (set-node-key! p (- 0 Kx))
+       (set-node-key! x (+ Kp Kx))
+       (when B
+         (set-node-key! B (+ (node-key B) Kx))))]))
 
-(define (left! p)
+(define (left! p adjust?)
   (match p
     [(node Kp _ A (and x (node Kx _ B C)))
      (set-node-right! p B)
      (set-node-left! x p)
-     (set-node-key! p (- 0 Kx))
-     (set-node-key! x (+ Kp Kx))
-     (when B
-       (set-node-key! B (+ (node-key B) Kx)))]))
+     (when adjust?
+       (set-node-key! p (- 0 Kx))
+       (set-node-key! x (+ Kp Kx))
+       (when B
+         (set-node-key! B (+ (node-key B) Kx))))]))
 
 ;; --------
 
 ;; if left is node, new root is max(left)
-(define (n:join-left left right)
+(define (n:join-left left right adjust?)
   (cond [(and left right)
-         (let-values ([(_ok? left*) (n:find-max left)])
+         (let-values ([(_ok? left*) (n:find-max left adjust?)])
            ;; left* is node, left*.right = #f
            (set-node-right! left* right)
-           (set-node-key! right (- (node-key right) (node-key left*)))
+           (when adjust?
+             (set-node-key! right (- (node-key right) (node-key left*))))
            left*)]
         [left left]
         [else right]))
 
 ;; if right is node, new root is min(right)
-(define (n:join-right left right)
+(define (n:join-right left right adjust?)
   (cond [(and left right)
-         (let-values ([(_ok? right*) (n:find-min right)])
+         (let-values ([(_ok? right*) (n:find-min right adjust?)])
            ;; right* is node, right*.left = #f
            (set-node-left! right* left)
-           (set-node-key! left (- (node-key left) (node-key right*)))
+           (when adjust?
+             (set-node-key! left (- (node-key left) (node-key right*))))
            right*)]
         [right right]
         [else left]))
 
-(define (n:split/drop-root root)
+(define (n:split/drop-root root adjust?)
   (let ([left (node-left root)]
         [right (node-right root)])
-    (when left
-      (set-node-key! left (+ (node-key left) (node-key root))))
-    (when right
-      (set-node-key! right (+ (node-key right) (node-key root))))
+    (when adjust?
+      (when left
+        (set-node-key! left (+ (node-key left) (node-key root))))
+      (when right
+        (set-node-key! right (+ (node-key right) (node-key root)))))
     (values left right)))
 
-(define (n:split/root-to-left root)
+(define (n:split/root-to-left root adjust?)
   (let ([right (node-right root)])
-    (when right
-      (set-node-key! right (+ (node-key right) (node-key root))))
+    (when adjust?
+      (when right
+        (set-node-key! right (+ (node-key right) (node-key root)))))
     (set-node-right! root #f)
     (values root right)))
 
-(define (n:split/root-to-right root)
+(define (n:split/root-to-right root adjust?)
   (let ([left (node-left root)])
-    (when left
-      (set-node-key! left (+ (node-key left) (node-key root))))
+    (when adjust?
+      (when left
+        (set-node-key! left (+ (node-key left) (node-key root)))))
     (set-node-left! root #f)
     (values left root)))
 
-(define (n:delete-root root)
-  (let-values ([(left right) (n:split/drop-root root)])
-    (n:join-left left right)))
+(define (n:delete-root root adjust?)
+  (let-values ([(left right) (n:split/drop-root root adjust?)])
+    (n:join-left left right adjust?)))
 
-(define (n:remove-range! root from to contract!?)
-  (let*-values ([(ok? from-node) (n:find from root (list #f))]
+(define (n:remove-range! root from to contract!? cmp adjust?)
+  (let*-values ([(ok? from-node) (n:find from root (list #f) cmp adjust?)]
                 [(left-tree right-tree)
                  (if (eq? ok? 'added)
-                     (n:split/drop-root from-node)
-                     (n:split/root-to-right from-node))]
-                [(ok? to-node) (n:find to right-tree (list #f))]
+                     (n:split/drop-root from-node adjust?)
+                     (n:split/root-to-right from-node adjust?))]
+                [(ok? to-node) (n:find to right-tree (list #f) cmp adjust?)]
                 [(mid-tree right-tree)
                  (if (eq? ok? 'added)
-                     (n:split/drop-root to-node)
-                     (n:split/root-to-right to-node))])
-    (when contract!?
+                     (n:split/drop-root to-node adjust?)
+                     (n:split/root-to-right to-node adjust?))])
+    (when (and adjust? contract!?)
       (when right-tree
         (set-node-key! right-tree (+ (node-key right-tree) (- from to)))))
-    (n:join-left left-tree right-tree)))
+    (n:join-left left-tree right-tree adjust?)))
 
-(define (n:expand! root from to)
-  (let*-values ([(ok? from-node) (n:find from root (list #f))]
+(define (n:expand! root from to cmp)
+  (let*-values ([(ok? from-node) (n:find from root (list #f) cmp #t)]
                 [(left-tree right-tree)
                  (if (eq? ok? 'added)
-                     (n:split/drop-root from-node)
-                     (n:split/root-to-right from-node))])
+                     (n:split/drop-root from-node #t)
+                     (n:split/root-to-right from-node #t))])
     (when right-tree
       (set-node-key! right-tree (+ (node-key right-tree) (- to from))))
-    (n:join-left left-tree right-tree)))
+    (n:join-left left-tree right-tree #t)))
 
-(define (n:find-prev root)
+(define (n:find-prev root adjust?)
   ;; PRE: root is node and root.left is node; ie, has-prev?
-  (let-values ([(left right) (n:split/root-to-right root)])
+  (let-values ([(left right) (n:split/root-to-right root adjust?)])
     ;; join-left does max(left)
-    (n:join-left left right)))
+    (n:join-left left right adjust?)))
 
-(define (n:find-next root)
+(define (n:find-next root adjust?)
   ;; PRE: root is node and root.right is node; ie, has-next?
-  (let-values ([(left right) (n:split/root-to-left root)])
+  (let-values ([(left right) (n:split/root-to-left root adjust?)])
     ;; join-right does min(right)
-    (n:join-right left right)))
+    (n:join-right left right adjust?)))
 
 (define (n:has-prev? x) (and x (node-left x) #t))
 (define (n:has-next? x) (and x (node-right x) #t))
@@ -340,8 +349,8 @@ In (values status nroot pside pnode):
 
 (define (n:splay-tree-ref s x [default not-given])
   (match s
-    [(node-splay-tree root size)
-     (let-values ([(ok? root) (n:find x root #f)])
+    [(node-splay-tree root size cmp adjust?)
+     (let-values ([(ok? root) (n:find x root #f cmp adjust?)])
        (set-node-splay-tree-root! s root)
        (if ok?
            (node-value root)
@@ -353,8 +362,8 @@ In (values status nroot pside pnode):
 
 (define (n:splay-tree-set! s x v)
   (match s
-    [(node-splay-tree root size)
-     (let-values ([(ok? root) (n:find x root (list v))])
+    [(node-splay-tree root size cmp adjust?)
+     (let-values ([(ok? root) (n:find x root (list v) cmp adjust?)])
        (set-node-splay-tree-root! s root)
        (when (and (eq? ok? 'added) size)
          (set-node-splay-tree-size! s (add1 size)))
@@ -363,10 +372,10 @@ In (values status nroot pside pnode):
 
 (define (n:splay-tree-remove! s x)
   (match s
-    [(node-splay-tree root size)
-     (let-values ([(ok? root) (n:find x root #f)])
+    [(node-splay-tree root size cmp adjust?)
+     (let-values ([(ok? root) (n:find x root #f cmp adjust?)])
        (cond [ok? ;; => root is node to remove
-              (set-node-splay-tree-root! s (n:delete-root root))
+              (set-node-splay-tree-root! s (n:delete-root root adjust?))
               (when size (set-node-splay-tree-size! s (sub1 size)))]
              [else
               (set-node-splay-tree-root! s root)]))]))
@@ -384,27 +393,32 @@ In (values status nroot pside pnode):
 
 (define (n:splay-tree-remove-range! s from to)
   (match s
-    [(node-splay-tree root size)
-     (when (< from to)
-       (set-node-splay-tree-root! s (n:remove-range! root from to #f))
+    [(node-splay-tree root size cmp adjust?)
+     (when (eq? (cmp from to) '<)
+       (set-node-splay-tree-root! s (n:remove-range! root from to #f cmp adjust?))
        (set-node-splay-tree-size! s #f))]))
 
 (define (splay-tree-contract! s from to)
   (match s
-    [(node-splay-tree root size)
+    [(node-splay-tree root size cmp adjust?)
+     (unless adjust?
+       (error 'splay-tree-contract!
+              "non-adjustable splay tree"))
      (unless (< from to)
        (error 'splay-tree-contract!
               "bad range: ~s to ~s" from to))
-     (set-node-splay-tree-root! s (n:remove-range! root from to #t))
+     (set-node-splay-tree-root! s (n:remove-range! root from to #t cmp adjust?))
      (set-node-splay-tree-size! s #f)]))
 
 (define (splay-tree-expand! s from to)
   (match s
-    [(node-splay-tree root size)
+    [(node-splay-tree root size cmp adjust?)
+     (unless adjust?
+       (error 'splay-tree-expand! "non-adjustable splay tree"))
      (unless (< from to)
        (error 'splay-tree-expand!
               "bad range: ~s to ~s" from to))
-     (set-node-splay-tree-root! s (n:expand! root from to))]))
+     (set-node-splay-tree-root! s (n:expand! root from to cmp))]))
 
 ;; ========
 
@@ -427,8 +441,8 @@ Options
 
 (define (n:splay-tree-iterate-first s)
   (match s
-    [(node-splay-tree root size)
-     (let-values ([(ok? root) (n:find-min root)])
+    [(node-splay-tree root size cmp adjust?)
+     (let-values ([(ok? root) (n:find-min root adjust?)])
        (set-node-splay-tree-root! s root)
        (if ok? (splay-tree-iter (node-key root)) #f))]))
 
@@ -449,19 +463,19 @@ Options
 
 (define (n:extreme s key cmp-result has-X? find-X)
   (match s
-    [(node-splay-tree root size)
+    [(node-splay-tree root size cmp adjust?)
      (let-values ([(ok? root)
-                   (n:extreme* root key cmp-result has-X? find-X)])
+                   (n:extreme* root key cmp-result has-X? find-X cmp adjust?)])
        (set-node-splay-tree-root! s root)
        (and ok? (splay-tree-iter (node-key root))))]))
 
-(define (n:extreme* root key cmp-result has-X? find-X)
-  (let-values ([(_ok? root) (n:find key root #f)])
+(define (n:extreme* root key cmp-result has-X? find-X cmp adjust?)
+  (let-values ([(_ok? root) (n:find key root #f cmp adjust?)])
     ;; ok? is true if returned root satisfies search criteria
-    (cond [(and root (memq (intcmp (node-key root) key) cmp-result))
+    (cond [(and root (memq (cmp (node-key root) key) cmp-result))
            (values #t root)]
           [(has-X? root)
-           (values #t (find-X root))]
+           (values #t (find-X root adjust?))]
           [else
            (values #f root)])))
 
@@ -478,8 +492,8 @@ Options
   (n:splay-tree-iterate-first s))
 (define (n:splay-tree-iterate-greatest s)
   (match s
-    [(node-splay-tree root size)
-     (let-values ([(ok? root) (n:find-max root)])
+    [(node-splay-tree root size cmp adjust?)
+     (let-values ([(ok? root) (n:find-max root adjust?)])
        (set-node-splay-tree-root! s root)
        (if ok? (splay-tree-iter (node-key root)) #f))]))
 
@@ -488,7 +502,7 @@ Options
 ;; snapshot
 (define (n:splay-tree->list s)
   (match s
-    [(node-splay-tree root size)
+    [(node-splay-tree root size cmp adjust?)
      (let loop ([x root] [onto null] [k* 0])
        (match x
          [(node key value left right)
@@ -515,7 +529,7 @@ Options
                     n:splay-tree-iterate-key
                     n:splay-tree-iterate-value))
 
-(struct node-splay-tree ([root #:mutable] [size #:mutable])
+(struct node-splay-tree ([root #:mutable] [size #:mutable] cmp adjust?)
         #:property prop:dict/contract
         (list n:dict-methods
               (vector-immutable exact-integer?
@@ -1011,17 +1025,15 @@ Top-down splay
 (define (make-adjustable-splay-tree #:key-contract [key-contract any/c]
                                     #:value-contract [value-contract any/c])
   (cond [(and (eq? key-contract any/c) (eq? value-contract any/c))
-         (node-splay-tree #f 0)]
+         (node-splay-tree #f 0 intcmp #t)]
         [else
-         (node-splay-tree* #f 0 key-contract value-contract)]))
+         (node-splay-tree* #f 0 intcmp #t key-contract value-contract)]))
 
 (define (*make-splay-tree cmp key-contract value-contract)
-  (let ([mem (make-vector (* NODE-SIZE 4) #f)])
-    (set-vnode-key! mem scratch 4)
-    (cond [(and (eq? key-contract any/c) (eq? value-contract any/c))
-           (compact-splay-tree mem #f cmp)]
-          [else
-           (compact-splay-tree* mem #f cmp key-contract value-contract)])))
+  (cond [(and (eq? key-contract any/c) (eq? value-contract any/c))
+         (node-splay-tree #f 0 cmp #f)]
+        [else
+         (node-splay-tree* #f 0 cmp #f key-contract value-contract)]))
 
 (define (splay-tree? x)
   (or (node-splay-tree? x) (compact-splay-tree? x)))
