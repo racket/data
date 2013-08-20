@@ -364,7 +364,7 @@ reference
              (let ([approx (next-follower/approx next-follower next-flevel)])
                (advance-to-predecessor approx flevel follower)))]))
 
-  (check-head start "repair")
+  ;; (check-head start "repair")
 
   (let ([predecessor (next-follower/approx sought 1)])
     (cond [(and predecessor (eq? (item-next predecessor 1) sought))
@@ -413,132 +413,134 @@ reference
 
 ;; ----------------------------------------
 
-(define (check-head head msg [ht #f] [before #f])
-  (with-handlers ([exn:fail?
-                   (lambda (e)
-                     (eprintf "\nerror, printing visualization\n")
-                     (eprintf "msg = ~s\n" msg)
-                     (when before
-                       (eprintf "before:\n~a" before)
-                       (eprintf "\nafter:\n"))
-                     (visualize-items head ht)
-                     (raise e))])
-    (void (check-item head (item-level head)))))
+(module* debug #f
+  (require racket/format
+           racket/string)
+  (provide (all-defined-out))
 
-;; check and return leftmost successor of level > given level
-(define (check-item start level)
-  (cond [(zero? level)
-         (let ([next (item-next start 1)])
-           next)]
-        [else
-         (let* ([next (item-next start level)]
-                [next* (check-item start (sub1 level))])
-           (unless (eq? next next*)
-             (error "discrepancy at level ~s" level))
-           (cond [(and next (= (item-level next) level))
-                  (check-item next level)]
-                 [else ;; (item-level next) > level
-                  next]))]))
+  (define (check-head head msg [ht #f] [before #f])
+    (with-handlers ([exn:fail?
+                     (lambda (e)
+                       (eprintf "\nerror, printing visualization\n")
+                       (eprintf "msg = ~s\n" msg)
+                       (when before
+                         (eprintf "before:\n~a" before)
+                         (eprintf "\nafter:\n"))
+                       (visualize-items head ht)
+                       (raise e))])
+      (void (check-item head (item-level head)))))
 
-;; ----------------------------------------
+  ;; check and return leftmost successor of level > given level
+  (define (check-item start level)
+    (cond [(zero? level)
+           (let ([next (item-next start 1)])
+             next)]
+          [else
+           (let* ([next (item-next start level)]
+                  [next* (check-item start (sub1 level))])
+             (unless (eq? next next*)
+               (error "discrepancy at level ~s" level))
+             (cond [(and next (= (item-level next) level))
+                    (check-item next level)]
+                   [else ;; (item-level next) > level
+                    next]))]))
 
-;; build-items : (listof (list key value level)) -> Item
-(define (build-items spec)
-  (define head (vector 'head 'head #f))
-  (for ([entry (in-list (reverse spec))])
-    (let* ([key (car entry)]
-           [value (cadr entry)]
-           [level (caddr entry)]
-           [item (make-vector (+ 2 level) #f)])
-      (when (> level (item-level head))
-        (set! head (resize-item head level)))
-      (vector-set! item 0 key)
-      (vector-set! item 1 value)
-      (for ([k (in-range level 0 -1)])
-        (insert-link! head k item))))
-  head)
+  ;; ----------------------------------------
 
-(require racket/format
-         racket/string)
+  ;; build-items : (listof (list key value level)) -> Item
+  (define (build-items spec)
+    (define head (vector 'head 'head #f))
+    (for ([entry (in-list (reverse spec))])
+      (let* ([key (car entry)]
+             [value (cadr entry)]
+             [level (caddr entry)]
+             [item (make-vector (+ 2 level) #f)])
+        (when (> level (item-level head))
+          (set! head (resize-item head level)))
+        (vector-set! item 0 key)
+        (vector-set! item 1 value)
+        (for ([k (in-range level 0 -1)])
+          (insert-link! head k item))))
+    head)
 
-(define (visualize-items head [ht (make-hasheq)])
+  (define (visualize-items head [ht (make-hasheq)])
+    (define init-length (hash-count ht))
 
-  (define init-length (hash-count ht))
-
-  (let loop ([item head])
-    (when (and item (not (hash-ref ht item #f)))
-      (hash-set! ht item (hash-count ht))
-      (loop (item-next item 1))))
-
-  (let ([visited (make-hasheq)])
     (let loop ([item head])
-      (when (and item (not (hash-ref visited item #f)))
-        (hash-set! visited item #t)
-        (unless (hash-ref ht item #f)
-          (hash-set! ht item (hash-count ht)))
-        (for ([k (in-range (item-level item) 0 -1)])
-          (loop (item-next item k))))))
+      (when (and item (not (hash-ref ht item #f)))
+        (hash-set! ht item (hash-count ht))
+        (loop (item-next item 1))))
 
-  (define raw-keys (make-hasheq))
+    (let ([visited (make-hasheq)])
+      (let loop ([item head])
+        (when (and item (not (hash-ref visited item #f)))
+          (hash-set! visited item #t)
+          (unless (hash-ref ht item #f)
+            (hash-set! ht item (hash-count ht)))
+          (for ([k (in-range (item-level item) 0 -1)])
+            (loop (item-next item k))))))
 
-  #|
-  (for ([i (in-range (hash-count ht))])
-    (let ([raw-key (item-raw-key item)])
-      (hash-set! raw-keys item
-                 (if (adjust-key? raw-key)
-                     (list (adjust-key-base raw-key) (adjust-key-delta raw-key))
-                     raw-key))))
-  |#
+    (define raw-keys (make-hasheq))
 
-  (define (print-item item)
-    (printf (~a (~a #:width 3 #:align 'right "#" (hash-ref ht item))
-                " = ["
-                (if #t
-                    (~.v #:width 15 #:align 'right (hash-ref raw-keys item '???))
-                    "")
-                " "
-                (~.v #:width 5 #:align 'right
-                     (with-handlers ([exn:fail? (lambda (e) 'DEL)])
-                       (item-key item)))
-                " "
-                (~.v #:width 10 #:align 'right (item-data item))
-                " "
-                (string-join
-                 (for/list ([level (in-range 1 (add1 (item-level item)))])
-                   (let* ([next (item-next item level)]
-                          [next-label (hash-ref ht next #f)])
-                     (cond [next-label
-                            (~a #:width 3 #:align 'right "#" next-label)]
-                           [next
-                            (~a #:width 3 #:align 'right "k="
-                                (with-handlers ([exn:fail? (lambda (e) 'DEL)])
-                                  (item-key next)))]
-                           [else (~a #:width 3 #:align 'right '--)])))
-                 " ")
-                "]\n")))
+    #|
+    (for ([i (in-range (hash-count ht))])
+      (let ([raw-key (item-raw-key item)])
+        (hash-set! raw-keys item
+                   (if (adjust-key? raw-key)
+                       (list (adjust-key-base raw-key) (adjust-key-delta raw-key))
+                       raw-key))))
+    |#
 
-  (let ([index+item-list
-         (sort (for/list ([(k v) (in-hash ht)]) (cons v k))
-               < #:key car)])
-    (for ([index+item index+item-list])
-      (when (= (car index+item) init-length) (newline))
-      (print-item (cdr index+item))))
+    (define (print-item item)
+      (printf (~a (~a #:width 3 #:align 'right "#" (hash-ref ht item))
+                  " = ["
+                  (if #f
+                      (~.v #:width 15 #:align 'right (hash-ref raw-keys item '???))
+                      "")
+                  " "
+                  (~.v #:width 5 #:align 'right
+                       (with-handlers ([exn:fail? (lambda (e) 'DEL)])
+                         (item-key item)))
+                  " "
+                  (~.v #:width 10 #:align 'right (item-data item))
+                  " "
+                  (string-join
+                   (for/list ([level (in-range 1 (add1 (item-level item)))])
+                     (let* ([next (item-next item level)]
+                            [next-label (hash-ref ht next #f)])
+                       (cond [next-label
+                              (~a #:width 3 #:align 'right "#" next-label)]
+                             [next
+                              (~a #:width 3 #:align 'right "k="
+                                  (with-handlers ([exn:fail? (lambda (e) 'DEL)])
+                                    (item-key next)))]
+                             [else (~a #:width 3 #:align 'right '--)])))
+                   " ")
+                  "]\n")))
 
-  ht)
+    (let ([index+item-list
+           (sort (for/list ([(k v) (in-hash ht)]) (cons v k))
+                 < #:key car)])
+      (for ([index+item index+item-list])
+        (when (= (car index+item) init-length) (newline))
+        (print-item (cdr index+item))))
 
-(define head1
-  (build-items
-   '((1 one 1)
-     (2 two 3)
-     (3 three 1)
-     (4 four 1)
-     (5 five 2)
-     (6 six 1)
-     (7 seven 2)
-     (8 eight 1))))
+    ht)
 
-(define item2 (search head1 (item-level head1) 2 = <))
-(define item4 (search head1 (item-level head1) 4 = <))
+  (define head1
+    (build-items
+     '((1 one 1)
+       (2 two 3)
+       (3 three 1)
+       (4 four 1)
+       (5 five 2)
+       (6 six 1)
+       (7 seven 2)
+       (8 eight 1))))
 
-;; (delete-range head1 head1 3 3 6 < #t)
-;; (visualize head1)
+  (define item2 (search head1 (item-level head1) 2 = <))
+  (define item4 (search head1 (item-level head1) 4 = <))
+
+  ;; (delete-range head1 head1 3 3 6 < #t)
+  ;; (visualize head1)
+  )
