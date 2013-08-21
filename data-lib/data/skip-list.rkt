@@ -17,8 +17,8 @@ reference
 
 (define (skip-list-ref s key [default none])
   (define head (skip-list-head s))
-  (define result
-    (search head (item-level head) key (skip-list-=? s) (skip-list-<? s)))
+  (define cmp (skip-list-cmp s))
+  (define result (search head (item-level head) key cmp))
   (cond [result (item-data result)]
         [(eq? default none)
          (error 'skip-list-ref "no mapping found for key\n  key: ~e" key)]
@@ -27,11 +27,10 @@ reference
 
 (define (skip-list-set! s key data)
   (define head (skip-list-head s))
-  (define =? (skip-list-=? s))
-  (define <? (skip-list-<? s))
+  (define cmp (skip-list-cmp s))
   (define max-level (min MAX-LEVEL (add1 (item-level head))))
   (define result ;; new Item or #f
-    (update/insert head (item-level head) key data =? <? max-level))
+    (update/insert head (item-level head) key data cmp max-level))
   (when result
     (when (skip-list-num-entries s)
       (set-skip-list-num-entries! s (add1 (skip-list-count s))))
@@ -42,10 +41,8 @@ reference
 
 (define (skip-list-remove! s key)
   (define head (skip-list-head s))
-  (define =? (skip-list-=? s))
-  (define <? (skip-list-<? s))
-  (define deleted
-    (delete! head (item-level head) key =? <?))
+  (define cmp (skip-list-cmp s))
+  (define deleted (delete! head (item-level head) key cmp))
   (when deleted
     (set-skip-list-timestamp! s (add1 (skip-list-timestamp s)))
     (when (skip-list-num-entries s)
@@ -59,25 +56,25 @@ reference
 
 (define (skip-list-remove-range! s from to)
   (match s
-    [(skip-list head count timestamp =? <?)
+    [(skip-list head count timestamp cmp)
      (define deleted
-       (delete-range! head head (item-level head) from to <? #f))
+       (delete-range! head head (item-level head) from to cmp #f))
      (when deleted
        (set-skip-list-timestamp! s (add1 timestamp))
        (set-skip-list-num-entries! s #f))]))
 
 (define (skip-list-contract! s from to)
   (match s
-    [(adjustable-skip-list head count timestamp =? <?)
+    [(adjustable-skip-list head count timestamp cmp)
      (define deleted
-       (delete-range! head head (item-level head) from to <? #t))
+       (delete-range! head head (item-level head) from to cmp #t))
      (when deleted
        (set-skip-list-timestamp! s (add1 timestamp))
        (set-skip-list-num-entries! s #f))]))
 
 (define (skip-list-expand! s from to)
   (match s
-    [(adjustable-skip-list head count timestamp =? <?)
+    [(adjustable-skip-list head count timestamp cmp)
      (expand/right-gravity! head (item-level head) from (- to from))
      (set-skip-list-timestamp! s (add1 timestamp))]))
 
@@ -151,19 +148,18 @@ reference
 ;; Returns greatest/rightmost item s.t. key(item) < key
 (define (skip-list-iterate-greatest/<? s key)
   (let* ([head (skip-list-head s)]
-         [<? (skip-list-<? s)]
-         [item (closest head (item-level head) key <?)])
+         [cmp (skip-list-cmp s)]
+         [item (closest head (item-level head) key cmp)])
     (and (not (eq? item head))
          (skip-list-iter s item (skip-list-timestamp s)))))
 
 ;; Returns greatest/rightmost item s.t. key(item) <= key
 (define (skip-list-iterate-greatest/<=? s key)
   (let* ([head (skip-list-head s)]
-         [<? (skip-list-<? s)]
-         [=? (skip-list-=? s)]
-         [item< (closest head (item-level head) key <?)]
+         [cmp (skip-list-cmp s)]
+         [item< (closest head (item-level head) key cmp)]
          [item1 (item-next item< 1)])
-    (cond [(and item1 (=? (item-key item1) key))
+    (cond [(and item1 (=? cmp (item-key item1) key))
            (skip-list-iter s item1 (skip-list-timestamp s))]
           [(eq? item< head)
            #f]
@@ -173,21 +169,21 @@ reference
 ;; Returns least/leftmost item s.t. key(item) > key
 (define (skip-list-iterate-least/>? s key)
   (let* ([head (skip-list-head s)]
-         [<? (skip-list-<? s)]
-         [item< (closest head (item-level head) key <?)]
+         [cmp (skip-list-cmp s)]
+         [item< (closest head (item-level head) key cmp)]
          ;; If head, nudge forward one so comparisons are valid.
          [item< (if (eq? item< head) (item-next item< 1) item<)])
     (let loop ([item item<])
       (and item
-           (if (<? key (item-key item))
+           (if (<? cmp key (item-key item))
                (skip-list-iter s item (skip-list-timestamp s))
                (loop (item-next item 1)))))))
 
 ;; Returns least/leftmost item s.t. key(item) >= key
 (define (skip-list-iterate-least/>=? s key)
   (let* ([head (skip-list-head s)]
-         [<? (skip-list-<? s)]
-         [item (closest head (item-level head) key <?)]
+         [cmp (skip-list-cmp s)]
+         [item (closest head (item-level head) key cmp)]
          [item (item-next item 1)])
     (and item (skip-list-iter s item (skip-list-timestamp s)))))
 
@@ -202,7 +198,7 @@ reference
                         ;; replace standard comparison with "always <",
                         ;; so closest yields max item
                         'unused
-                        (lambda (x y) #t))])
+                        (lambda (x y) '<))])
     (and item (skip-list-iter s item (skip-list-timestamp s)))))
 
 (define (skip-list->list s)
@@ -226,7 +222,8 @@ reference
                     skip-list-iterate-key
                     skip-list-iterate-value))
 
-(struct skip-list ([head #:mutable] [num-entries #:mutable] [timestamp #:mutable] =? <?)
+(struct skip-list ([head #:mutable] [num-entries #:mutable] [timestamp #:mutable] cmp)
+        ;; cmp is either procedure or #f (numeric order); see private/skip-list
         #:property prop:dict/contract
         (list dict-methods
               (vector-immutable any/c any/c skip-list-iter?
@@ -279,22 +276,20 @@ reference
                         #:key-contract [key-contract any/c]
                         #:value-contract [value-contract any/c])
   (let ([key-contract (and/c* (order-domain-contract ord) key-contract)]
-        [=? (order-=? ord)]
-        [<? (order-<? ord)])
+        [cmp (order-comparator ord)])
     (cond [(and (eq? key-contract any/c) (eq? value-contract any/c))
-           (skip-list (vector 'head 'head #f) 0 0 =? <?)]
+           (skip-list (vector 'head 'head #f) 0 0 cmp)]
           [else
-           (skip-list* (vector 'head 'head #f) 0 0 =? <?
+           (skip-list* (vector 'head 'head #f) 0 0 cmp
                        key-contract value-contract)])))
 
 (define (make-adjustable-skip-list #:key-contract [key-contract any/c]
                                    #:value-contract [value-contract any/c])
   (cond [(and (eq? key-contract any/c) (eq? value-contract any/c))
-         (adjustable-skip-list (vector 'head 'head #f) 0 0 = <)]
+         (adjustable-skip-list (vector 'head 'head #f) 0 0 #f)]
         [else
-         (adjustable-skip-list* (vector 'head 'head #f) 0 0 = <
+         (adjustable-skip-list* (vector 'head 'head #f) 0 0 #f
                                 key-contract value-contract)]))
-
 
 (define (key-c s)
   (cond [(skip-list*? s) (skip-list*-key-c s)]

@@ -14,7 +14,7 @@ reference
 ;; with key and data set to 'head (and never examined).
 
 (define PROBABILITY-FACTOR 4)
-(define MAX-LEVEL 16)
+(define MAX-LEVEL 20)
 
 (define DATA-SLOTS 2)
 
@@ -99,30 +99,49 @@ reference
 
 ;; ----
 
-;; search : Item Level Key Cmp Cmp -> Item/#f
+;; Comparator is either #f or (any any -> (U '< '= '>))
+;; where #f represents standard numeric order (<, =)
+
+(define (compare cmp a b)
+  (cond [cmp     (cmp a b)]
+        [(< a b) '<]
+        [(= a b) '=]
+        [else    '>]))
+
+(define (=? cmp a b)
+  (cond [cmp  (eq? (cmp a b) '=)]
+        [else (= a b)]))
+
+(define (<? cmp a b)
+  (cond [cmp  (eq? (cmp a b) '<)]
+        [else (< a b)]))
+
+;; ----
+
+;; search : Item Level Key Cmp -> Item/#f
 ;; Returns item(R) s.t. key(R) =? key
-(define (search head level key =? <?)
-  (let* ([closest (closest head level key <?)]
+(define (search head level key cmp)
+  (let* ([closest (closest head level key cmp)]
          [item (item-next closest 1)])
     (and (item? item)
-         (=? key (item-key item))
+         (=? cmp key (item-key item))
          item)))
 
 ;; closest : Item Level Key Cmp Cmp -> Item
 ;; Returns greatest item R s.t. key(R) <? key.
 ;; Pre: level(item) >= level, key(item) <? key OR item = head
-(define (closest item level key <?)
+(define (closest item level key cmp)
   (if (zero? level)
       item
-      (closest (advance item level key <?) (sub1 level) key <?)))
+      (closest (advance item level key cmp) (sub1 level) key cmp)))
 
 ;; advance : Item Level Key Cmp -> Item
 ;; Returns greatest item R s.t. key(R) <? key and level(R) >= level.
 ;; Pre: level(item) >= level, key(item) <? key OR item = head
-(define (advance item level key <?)
+(define (advance item level key cmp)
   (let ([next (item-next item level)])
-    (if (and next (<? (item-key next) key))
-        (advance next level key <?)
+    (if (and next (<? cmp (item-key next) key))
+        (advance next level key cmp)
         item)))
 
 ;; pick-random-level : Nat -> Nat
@@ -152,17 +171,17 @@ reference
 ;; Returns #f to indicate update (existing item changed);
 ;; returns item to indicate insertion (context's links need updating)
 ;; Pre: level(item) >= level, key(item) <? key OR item = head
-(define (update/insert item level key data =? <? max-level)
+(define (update/insert item level key data cmp max-level)
   (cond [(positive? level)
-         (let* ([item (advance item level key <?)]
+         (let* ([item (advance item level key cmp)]
                 [result (update/insert item (sub1 level)
-                                       key data =? <? max-level)])
+                                       key data cmp max-level)])
            (when (and result (>= (item-level result) level))
              (insert-link! item level result))
            result)]
         [else
          (let ([next (item-next item 1)])
-           (cond [(and next (=? (item-key next) key))
+           (cond [(and next (=? cmp (item-key next) key))
                   ;; Update!
                   (set-item-data! next data)
                   #f]
@@ -178,27 +197,27 @@ reference
 ;; delete! : ... -> Item/#f
 ;; Returns deleted item or #f if none deleted. Deleted item is shredded.
 ;; Pre: level(item) >= level; key(item) <? key OR item = head.
-(define (delete! item level key =? <?)
-  (let-values ([(deleted follower) (delete*! item level key =? <?)])
+(define (delete! item level key cmp)
+  (let-values ([(deleted follower) (delete*! item level key cmp)])
     (shred! deleted follower MAX-LEVEL)
     deleted))
 
 ;; delete*! : ... -> (values Item/#f Item/#f)
 ;; Returns deleted item and (old) successor.
 ;; Pre: level(item) >= level; key(item) <? key OR item = head
-(define (delete*! item level key =? <?)
+(define (delete*! item level key cmp)
   ;; Returns item to indicate deletion (context's links need updating);
   ;; returns #f if not found.
   (let loop ([item item] [level level])
     (cond [(positive? level)
-           (let ([item (advance item level key <?)])
+           (let ([item (advance item level key cmp)])
              (let-values ([(deleted follower) (loop item (sub1 level))])
                (when (and deleted (eq? (item-next item level) deleted))
                  (delete-link! item level))
                (values deleted follower)))]
           [else
            (let ([next (item-next item 1)])
-             (cond [(and next (=? (item-key next) key))
+             (cond [(and next (=? cmp (item-key next) key))
                     ;; Delete!
                     (values next (item-next next 1))]
                    [else
@@ -217,9 +236,9 @@ reference
 
 ;; delete-range! : ... -> Item/#f
 ;; Returns first deleted item, or #f if none deleted. Deleted chain is shredded.
-(define (delete-range! from-item to-item level from-key to-key <? contract!?)
+(define (delete-range! from-item to-item level from-key to-key cmp contract!?)
   (define-values (deleted follower)
-    (delete-range*! from-item to-item level from-key to-key <? contract!?))
+    (delete-range*! from-item to-item level from-key to-key cmp contract!?))
   (shred! deleted follower MAX-LEVEL)
   deleted)
 
@@ -227,21 +246,21 @@ reference
 ;; Returns first deleted item, or #f if none.
 ;; Deleted item chain is internally connected, but disconnected from old surroundings.
 ;; Pre: level > 0; level(*-item) >= level; key(*-item) <? *-key OR *-item = head
-(define (delete-range*! from-item to-item level from-key to-key <? contract!?)
+(define (delete-range*! from-item to-item level from-key to-key cmp contract!?)
   (let loop ([from-item from-item] [to-item to-item] [level level])
-    (let* ([from-item (advance from-item level from-key <?)]
+    (let* ([from-item (advance from-item level from-key cmp)]
            [old-from-next (item-next from-item level)]
-           [to-item (advance to-item level to-key <?)]
-           ;; to-item greatest s.t. key(to-item) <? to-key (at level)
-           [to-item* (item-next to-item level)]) ;; key(to-item*) >=? to-key
+           [to-item (advance to-item level to-key cmp)]
+           ;; to-item greatest s.t. key(to-item) < to-key (at level)
+           [to-item* (item-next to-item level)]) ;; key(to-item*) >= to-key
       (set-item-next! from-item level to-item*)
       (unless (eq? to-item from-item)
         ;; to-item is actually within range
-        ;; test like (<? (item-key to-item) from-key), but (item-key head) is undef
+        ;; test like (< (item-key to-item) from-key), but (item-key head) is undef
         (set-item-next! to-item level #f))
       (begin0 (cond [(= level 1)
                      (if (and old-from-next
-                              (<? (item-key old-from-next) to-key))
+                              (<? cmp (item-key old-from-next) to-key))
                          (values old-from-next to-item*)
                          (values #f #f))]
                     [else (loop from-item to-item (sub1 level))])
@@ -258,7 +277,7 @@ reference
 (define (expand/right-gravity! item level from-key delta)
   (let loop ([item item] [level level])
     (cond [(positive? level)
-           (let* ([item (advance item level from-key <)]
+           (let* ([item (advance item level from-key #f)]
                   [next (item-next item level)])
              (when next
                ;; Don't adjust same item again if next at multiple levels
@@ -538,8 +557,8 @@ reference
        (7 seven 2)
        (8 eight 1))))
 
-  (define item2 (search head1 (item-level head1) 2 = <))
-  (define item4 (search head1 (item-level head1) 4 = <))
+  (define item2 (search head1 (item-level head1) 2 #f))
+  (define item4 (search head1 (item-level head1) 4 #f))
 
   ;; (delete-range head1 head1 3 3 6 < #t)
   ;; (visualize head1)
