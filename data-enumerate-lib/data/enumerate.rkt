@@ -12,6 +12,7 @@
          data/gvector
          
          math/flonum
+         (only-in math/base random-natural)
          (only-in math/number-theory
                   binomial
                   integer-root
@@ -38,9 +39,17 @@
    (-> enum? any/c
        nat?)]
   [map/e
-   (->* (procedure? procedure? enum?)
-        #:rest (listof enum?)
-        enum?)]
+   (->i ([in procedure?]
+         [out procedure?]
+         [e1 enum?])
+        #:rest [es (listof enum?)]
+        #:pre/name (in out e1 es)
+        "in's arity matches number of enumerations"
+        (procedure-arity-includes? in (+ 1 (length es)))
+        #:pre/name (in out e1 es)
+        "`in' and `out' bijection pre-condition"
+        (appears-to-be-a-bijection? in out (cons e1 es))
+        [result enum?])]
   ;; very bad, only use for small enums
   [filter/e
    (-> enum? (-> any/c boolean?)
@@ -193,6 +202,17 @@
   [symbol/e enum?]
   [base/e enum?]
   [any/e enum?]))
+
+(define (appears-to-be-a-bijection? in out es)
+  (for/and ([x (in-range 100)])
+    (define elements
+      (for/list ([e (in-list es)])
+        (define size (if (= +inf.0 (enum-size e)) 100000 (enum-size e)))
+        (from-nat e (random-natural size))))
+    (call-with-values
+     (λ () (out (apply in elements)))
+     (λ elements2
+       (equal? elements2 elements)))))
 
 (define enum-printing (make-parameter 0))
 ;; an enum a is a struct of < Nat or +Inf, Nat -> a, a -> Nat >
