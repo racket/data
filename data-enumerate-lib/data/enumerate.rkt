@@ -12,7 +12,6 @@
          data/gvector
          
          math/flonum
-         (only-in math/base random-natural)
          (only-in math/number-theory
                   binomial
                   integer-root
@@ -204,11 +203,13 @@
   [any/e enum?]))
 
 (define (appears-to-be-a-bijection? in out es)
-  (for/and ([x (in-range 100)])
+  (for/and ([x (in-range 10)])
     (define elements
       (for/list ([e (in-list es)])
-        (define size (if (= +inf.0 (enum-size e)) 100000 (enum-size e)))
-        (from-nat e (random-natural size))))
+        (define size (if (= +inf.0 (enum-size e))
+                         1000
+                         (min 1000 (enum-size e))))
+        (from-nat e (random size))))
     (call-with-values
      (λ () (out (apply in elements)))
      (λ elements2
