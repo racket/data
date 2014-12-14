@@ -203,17 +203,51 @@
   [any/e enum?]))
 
 (define (appears-to-be-a-bijection? in out es)
-  (for/and ([x (in-range 10)])
-    (define elements
-      (for/list ([e (in-list es)])
-        (define size (if (= +inf.0 (enum-size e))
-                         1000
-                         (min 1000 (enum-size e))))
-        (from-nat e (random size))))
-    (call-with-values
-     (λ () (out (apply in elements)))
-     (λ elements2
-       (equal? elements2 elements)))))
+  (cond
+    [(for/or ([e (in-list es)])
+       (zero? (enum-size e)))
+     ;; can't check bijection on empty enumerations
+     #t]
+    [else
+     (define enum-signals-errors?
+       (for/or ([e (in-list es)])
+         (with-handlers ([exn:fail? (λ (x) #t)])
+           (to-nat e (from-nat e 0))
+           #f)))
+     (cond
+       [enum-signals-errors?
+        ;; if attempting to check the enumeration at 0
+        ;; raises an exception, then just assume that
+        ;; this is a case where someone has intentionally
+        ;; written only a surjective or injective
+        ;; enumerator and so don't do any checking.
+        #t]
+       [else
+        (define zero-elements
+          (for/list ([e (in-list es)])
+            (from-nat e 0)))
+        (define in/out-signals-errors? 
+          (with-handlers ([exn:fail? (λ (x) #t)])
+            (out (apply in zero-elements))
+            #f))
+        (cond
+          [in/out-signals-errors?
+           ;; as above: we treat in/outs that raise errors
+           ;; as a way to create only injective/surjective
+           ;; enumerations
+           #t]
+          [else
+           (for/and ([x (in-range 10)])
+             (define elements
+               (for/list ([e (in-list es)])
+                 (define size (if (= +inf.0 (enum-size e))
+                                  1000
+                                  (min 1000 (enum-size e))))
+                 (from-nat e (random size))))
+             (call-with-values
+              (λ () (out (apply in elements)))
+              (λ elements2
+                (equal? elements2 elements))))])])]))
 
 (define enum-printing (make-parameter 0))
 ;; an enum a is a struct of < Nat or +Inf, Nat -> a, a -> Nat >

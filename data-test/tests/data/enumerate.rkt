@@ -294,6 +294,10 @@
    (from-list/e '(1 2))
    (from-list/e '(3 4))))
 
+(check-not-exn
+ (λ ()
+   (map/e add1 sub1 (enum 0 values values))))
+
 (test-begin
  (check-bijection? sums/e))
 
