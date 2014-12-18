@@ -237,17 +237,23 @@
            ;; enumerations
            #t]
           [else
-           (for/and ([x (in-range 10)])
-             (define elements
-               (for/list ([e (in-list es)])
-                 (define size (if (= +inf.0 (enum-size e))
-                                  1000
-                                  (min 1000 (enum-size e))))
-                 (from-nat e (random size))))
-             (call-with-values
-              (λ () (out (apply in elements)))
-              (λ elements2
-                (equal? elements2 elements))))])])]))
+           (let/ec k
+             (parameterize ([give-up-escape (λ () (k #t))])
+               (for/and ([x (in-range 10)])
+                 (define elements
+                   (for/list ([e (in-list es)])
+                     (define size (if (= +inf.0 (enum-size e))
+                                      1000
+                                      (min 1000 (enum-size e))))
+                     (from-nat e (random size))))
+                 (call-with-values
+                  (λ () (out (apply in elements)))
+                  (λ elements2
+                    (equal? elements2 elements))))))])])]))
+(define give-up-escape (make-parameter #f))
+(define (give-up-on-bijection-checking)
+  (define esc (give-up-escape))
+  (when esc (esc)))
 
 (define enum-printing (make-parameter 0))
 ;; an enum a is a struct of < Nat or +Inf, Nat -> a, a -> Nat >
@@ -1131,9 +1137,11 @@
   (define promise/e (delay (thunk)))
   (enum s
         (λ (n)
-           (from-nat (force promise/e) n))
+          (give-up-on-bijection-checking)
+          (from-nat (force promise/e) n))
         (λ (x)
-           (to-nat (force promise/e) x))))
+          (give-up-on-bijection-checking)
+          (to-nat (force promise/e) x))))
 
 ;; fix/e : [size] (enum a -> enum a) -> enum a
 (define fix/e
@@ -1143,8 +1151,10 @@
      (define self (delay (f/e (fix/e size f/e))))
      (enum size
            (λ (n)
+             (give-up-on-bijection-checking)
              (from-nat (force self) n))
            (λ (x)
+             (give-up-on-bijection-checking)
              (to-nat (force self) x)))]))
 
 ;; many/e : enum a -> enum (listof a)
