@@ -45,9 +45,9 @@
         #:pre/name (in out e1 es)
         "in's arity matches number of enumerations"
         (procedure-arity-includes? in (+ 1 (length es)))
-        #:pre/name (in out e1 es)
-        "`in' and `out' bijection pre-condition"
-        (appears-to-be-a-bijection? in out (cons e1 es))
+        ;#:pre/name (in out e1 es)
+        ;"`in' and `out' bijection pre-condition"
+        ;(appears-to-be-a-bijection? in out (cons e1 es))
         [result enum?])]
   ;; very bad, only use for small enums
   [filter/e
