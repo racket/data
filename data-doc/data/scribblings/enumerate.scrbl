@@ -186,14 +186,28 @@ An @tech{enumeration} of each @racket[eq?] value in
 (to-list (from-list/e '("Brian" "Jenny" "Ki" "Ted")))
 ]}
 
-@defproc[(fin/e [x any/c] ...) enum?]{
+@defproc[(fin/e #:contract [contract contract? (λ (x) (member x c))]
+                [x any/c] ...) 
+         enum?]{
 
-An @tech{enumeration} of each @racket[x]. If a value is duplicated in
-the input, it is only in the enumeration once.
+ An @tech{enumeration} of each @racket[x], in the order
+ given.
 
-@examples[#:eval the-eval
-(to-list (fin/e "Brian" "Jenny" "Ki" "Ted"))
-]}
+ If there are multiple arguments, then they must all be
+ distinct according to @racket[equal?]. If some other
+ equality function is appropriate, use @racket[disj-sum/e]
+ (with calls to @racket[fin/e] with just one argument and
+ explicit @racket[contract] arguments) to explicitly specify
+ predicates that differentiate the elements of the
+ enumeration.
+
+ @examples[#:eval 
+           the-eval
+           (to-list (fin/e "Brian" "Jenny" "Ki" "Ted"))
+           (to-list (fin/e 1 3 5 7 9 11 13 15 
+                           #:contract (and/c (between/c 1 15)
+                                             odd?)))]
+}
 
 @defthing[int/e enum?]{
 
@@ -675,12 +689,16 @@ This library defines some library @tech{enumerations} built on
 @defproc[(random-index [e enum?])
          exact-nonnegative-integer?]{
 
-Returns a random index into @racket[e]. This works regardless of the
-size of @racket[e], unlike @racket[(random (size e))].
+Returns a random index into @racket[e]. This works for 
+ finite and infinite enumerations, regardless of the size
+ of the enumeration. For finite enumerations, it picks
+ an index uniformly at random using @racket[random-natural]
+ and for infinite enumerations it picks a natural number 
+ from the geometric distribution and uses that as an
+ exponent, picking uniformly at random in the interval
+ between 2 to that number and 2 to that power plus one.
 
 @examples[#:eval the-eval
-(random (size nat/e))
-(random (size (below/e 5000000000)))
 (random-index nat/e)
 (random-index (below/e 5000000000))
 ]}
