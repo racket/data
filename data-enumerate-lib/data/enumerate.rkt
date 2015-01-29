@@ -122,19 +122,19 @@
   [flip-dep/e dep/e-contract]
   [thunk/e
    (->i ([s extended-nat/c]
-         [mk-e (s bijective-enum?)
+         [mk-e (s is-bijective?)
                (cond
-                 [(and (= s +inf.0) bijective-enum?)
+                 [(and (= s +inf.0) is-bijective?)
                   (-> (and/c bijective-enum? infinite-enum?))]
                  [(= s +inf.0)
                   (-> (and/c injective-enum? infinite-enum?))]
                  [else
                   (define (matching-size? n) (= (enum-size n) s))
-                  (-> (and/c (if bijective-enum?
+                  (-> (and/c (if is-bijective?
                                  (and/c bijective-enum? finite-enum?)
                                  (and/c injective-enum? finite-enum?))
                              matching-size?))])])
-        (#:bijective-enum? [bijective-enum? boolean?])
+        (#:bijective-enum? [is-bijective? boolean?])
         [result enum?])]
   [fix/e
    (case->
