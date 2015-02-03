@@ -326,7 +326,12 @@
  (define n*n*n   (unsafe:cantor-list/e nat/e nat/e nat/e))
  (define n*n*n*n (unsafe:cantor-list/e nat/e nat/e nat/e nat/e))
  
-
+ (check-equal? (one-way-enum?
+                (unsafe:cantor-list/e 
+                 (pam/e values nat/e #:contract (enum-contract nat/e))
+                 nat/e))
+               #t)
+ 
  (check-range? n*n*n  0  1 '((0 0 0)))
  (check-range? n*n*n  1  4 '((0 0 1) (0 1 0) (1 0 0)))
  (check-range? n*n*n  4 10 '((0 0 2) (1 1 0) (0 1 1) (1 0 1) (0 2 0) (2 0 0)))

@@ -30,12 +30,11 @@ todo:
  - add a coercion function to turn lists into enumerations of
    their elements automatically and non-lists into constant
    enumerations.
- - have cons/e use different orderings via keyword arguments
  - split data/enum into two libraries, one smaller with "essential" stuff called
    data/enumerate and one larger with other stuff, called data/enumerate/lib
 
+ - vector/e -- make it like list/e
  - enum-to field-check:
-   cantor-list/e
    dep/e (3 of them....)
 
  - add argument to thunk/e, check uses
@@ -1260,6 +1259,9 @@ notes for eventual email:
              "infinite-enum?"
              i
              es)))
+  (define two-way-result?
+    (for/and ([e (in-list es)])
+      (two-way-enum? e)))
   (cond [(empty? es) (fin/e '())]
         [else
          (define k (length es))
@@ -1268,9 +1270,10 @@ notes for eventual email:
             (λ (xs) (map from-nat es xs))
             (cantor-untuple k)))
          (define enc
-           (compose
-            (cantor-tuple k)
-            (λ (xs) (map to-nat es xs))))
+           (and two-way-result?
+                (compose
+                 (cantor-tuple k)
+                 (λ (xs) (map to-nat es xs)))))
          (-enum +inf.0 dec enc 
                 (apply list/c (map enum-contract es)))]))
 
