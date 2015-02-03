@@ -468,8 +468,6 @@
 
  (check-bijection? nats-up))
 
-;; depend/e tests
-;; same as dep unless the right side is finite
 (define 3-up-2
   (dep/e
    (fin/e 0 1 2)
@@ -479,6 +477,23 @@
 (define nats-to-2
   (dep/e nat/e up-to
          #:f-range-finite? #t))
+
+(check-equal? (one-way-enum?
+               (dep/e 
+                (pam/e values nat/e #:contract (enum-contract nat/e))
+                (λ (i) (pam/e values nat/e #:contract (enum-contract nat/e)))))
+              #t)
+(check-equal? (one-way-enum?
+               (dep/e 
+                (pam/e values (below/e 10) #:contract (enum-contract nat/e))
+                (λ (i) (pam/e values nat/e #:contract (enum-contract nat/e)))))
+              #t)
+(check-equal? (one-way-enum?
+               (dep/e 
+                (pam/e values (below/e 10) #:contract (enum-contract nat/e))
+                (λ (i) (pam/e values (below/e i) #:contract (enum-contract (below/e i))))
+                #:f-range-finite? #t))
+              #t)
 
 (test-begin
  (check-equal? (enum-size 3-up-2) 6)

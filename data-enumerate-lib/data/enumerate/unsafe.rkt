@@ -34,9 +34,6 @@ todo:
    data/enumerate and one larger with other stuff, called data/enumerate/lib
 
  - vector/e -- make it like list/e
- - enum-to field-check:
-   dep/e (3 of them....)
-
  - add argument to thunk/e, check uses
 
  - add contract to fix/e to check
@@ -770,9 +767,10 @@ notes for eventual email:
               (define-values (q r) (quotient/remainder n (enum-size e)))
               (cons (from-nat e r)
                     (from-nat (f (from-nat e r)) q)))
-            (λ (ab)
-              (+ (* (enum-size e) (to-nat (f (car ab)) (cdr ab)))
-                 (to-nat e (car ab))))
+            (and (two-way-enum? e)
+                 (λ (ab)
+                   (+ (* (enum-size e) (to-nat (f (car ab)) (cdr ab)))
+                      (to-nat e (car ab)))))
             the-ctc)]
     [else ;; both infinite, same as cons/e
      (-enum +inf.0               
@@ -784,15 +782,16 @@ notes for eventual email:
                      [a (from-nat e l)])
                 (cons a
                       (from-nat (f a) m))))
-            (λ (xs) ;; bijection from nxn -> n, inverse of previous
-              ;; (n,m) -> (n+m)(n+m+1)/2 + n
-              (unless (pair? xs)
-                (error 'dep2/e "not a pair"))
-              (let ([l (to-nat e (car xs))]
-                    [m (to-nat (f (car xs)) (cdr xs))])
-                (+ (/ (* (+ l m) (+ l m 1))
-                      2)
-                   l)))
+            (and (two-way-enum? e)
+                 (λ (xs) ;; bijection from nxn -> n, inverse of previous
+                   ;; (n,m) -> (n+m)(n+m+1)/2 + n
+                   (unless (pair? xs)
+                     (error 'dep2/e "not a pair"))
+                   (let ([l (to-nat e (car xs))]
+                         [m (to-nat (f (car xs)) (cdr xs))])
+                     (+ (/ (* (+ l m) (+ l m 1))
+                           2)
+                        l))))
             the-ctc)]))
 
 (define (dep/e-dependent-ranges-all-finite e f the-ctc)
@@ -847,24 +846,25 @@ notes for eventual email:
                   [e2 (f x)]
                   [y (from-nat e2 m)])
              (cons x y)))
-         (λ (ab)
-           (let* ([a (car ab)]
-                  [b (cdr ab)]
-                  [ai (to-nat e a)]
-                  [ei (f a)]
-                  [nextSize (enum-size ei)]
-                  [sizeUpTo (if (= ai 0)
-                                0
-                                (or (gvector-ref sizes (- ai 1) #f)
-                                    (let ([sizeUp
-                                           (fill-table sizes (- ai 1))])
-                                      (begin0
-                                        sizeUp
-                                        (gvector-add! sizes
-                                                      (+ nextSize
-                                                         sizeUp))))))])
-             (+ sizeUpTo
-                (to-nat ei b))))
+         (and (two-way-enum? e)
+              (λ (ab)
+                (let* ([a (car ab)]
+                       [b (cdr ab)]
+                       [ai (to-nat e a)]
+                       [ei (f a)]
+                       [nextSize (enum-size ei)]
+                       [sizeUpTo (if (= ai 0)
+                                     0
+                                     (or (gvector-ref sizes (- ai 1) #f)
+                                         (let ([sizeUp
+                                                (fill-table sizes (- ai 1))])
+                                           (begin0
+                                             sizeUp
+                                             (gvector-add! sizes
+                                                           (+ nextSize
+                                                              sizeUp))))))])
+                  (+ sizeUpTo
+                     (to-nat ei b)))))
          the-ctc))
   
 

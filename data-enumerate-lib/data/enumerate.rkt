@@ -253,9 +253,13 @@
 (define dep/e-contract
   (->i ([e enum?]
         [f (e f-range-finite?)
-           (if (or (unsupplied-arg? f-range-finite?)
-                   (not f-range-finite?))
-               (-> (enum-contract e) infinite-enum?)
-               (-> (enum-contract e) finite-enum?))])
+           (-> (enum-contract e)
+               (and/c (if (or (unsupplied-arg? f-range-finite?)
+                              (not f-range-finite?))
+                          infinite-enum?
+                          finite-enum?)
+                      (if (two-way-enum? e)
+                          two-way-enum?
+                          one-way-enum?)))])
        (#:f-range-finite? [f-range-finite? boolean?])
        [res enum?]))
