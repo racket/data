@@ -198,7 +198,7 @@ notes for eventual email:
 (define (map/e #:contract [ctc any/c] f inv-f e . es)
   (cond 
     [(or (injective-enum? e) (ormap injective-enum? es))
-     (apply pam/e ctc f e es)]
+     (apply pam/e #:contract ctc f e es)]
     [else
      (define (map1/e f inv-f e)
        (-enum (enum-size e)
