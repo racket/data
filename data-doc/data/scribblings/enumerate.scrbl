@@ -186,15 +186,19 @@ An @tech{enumeration} of each @racket[eq?] value in
 (to-list (from-list/e '("Brian" "Jenny" "Ki" "Ted")))
 ]}
 
-@defproc[(fin/e #:contract [contract contract? (λ (x) (member x c))]
-                [x any/c] ...) 
+@defproc[(fin/e [x (or/c symbol? boolean? char? keyword? null?
+                         string? bytes? number?)] ...) 
          enum?]{
 
  An @tech{enumeration} of each @racket[x], in the order
  given.
 
  If there are multiple arguments, then they must all be
- distinct according to @racket[equal?]. If some other
+ distinct; numbers except for @racket[+nan.0] and @racket[+nan.f] are
+ compared using equality and all others are compared using
+ @racket[equal?]). 
+ 
+ If some other
  equality function is appropriate, use @racket[disj-sum/e]
  (with calls to @racket[fin/e] with just one argument and
  explicit @racket[contract] arguments) to explicitly specify
@@ -204,9 +208,7 @@ An @tech{enumeration} of each @racket[eq?] value in
  @examples[#:eval 
            the-eval
            (to-list (fin/e "Brian" "Jenny" "Ki" "Ted"))
-           (to-list (fin/e 1 3 5 7 9 11 13 15 
-                           #:contract (and/c (between/c 1 15)
-                                             odd?)))]
+           (to-list (fin/e 1 3 5 7 9 11 13 15))]
 }
 
 @defthing[int/e enum?]{
