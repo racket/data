@@ -204,12 +204,12 @@
 
 ;; make sure various combinators correctly propagate bijectionness.
 (check-equal? 
- (bijective-enum? 
+ (two-way-enum? 
   (sum/e (pam/e (λ (x) (floor (/ x 2))) nat/e #:contract exact-integer?)
          (pam/e (λ (x) (floor (/ x 3))) nat/e #:contract exact-integer?)))
  #f)
 (check-equal? 
- (bijective-enum? 
+ (two-way-enum? 
   (unsafe:fin-cons/e
    (pam/e (λ (x) (floor (/ x 2))) (below/e 100) #:contract exact-integer?)
    (pam/e (λ (x) (floor (/ x 3))) (below/e 100) #:contract exact-integer?)))
@@ -321,8 +321,8 @@
                              (1 1 1))))
 
 (test-begin
- (check-bijection? (cantor-vec/e string/e nat/e bijective-real/e))
- (check-bijection? (unsafe:cantor-list/e string/e nat/e bijective-real/e))
+ (check-bijection? (cantor-vec/e string/e nat/e two-way-real/e))
+ (check-bijection? (unsafe:cantor-list/e string/e nat/e two-way-real/e))
  (check-bijection? (unsafe:cantor-list/e)))
 
 (test-begin
@@ -365,8 +365,8 @@
                              (2 2 0) (2 2 1) (2 2 2))))
 
 (test-begin
- (check-bijection? (box-vec/e string/e nat/e bijective-real/e))
- (check-bijection? (unsafe:box-list/e string/e nat/e bijective-real/e))
+ (check-bijection? (box-vec/e string/e nat/e two-way-real/e))
+ (check-bijection? (unsafe:box-list/e string/e nat/e two-way-real/e))
  (check-bijection? (unsafe:box-list/e)))
 
 ;; multi-arg map/e test
@@ -631,7 +631,7 @@
                (format "~s, index ~a" enum-code x)
                #f)))
   
-  (when (bijective-enum? enum)
+  (when (two-way-enum? enum)
     (let/ec give-up-completely
       (for ([x (in-range 100)])
         (let/ec give-up-this-attempt
@@ -675,9 +675,9 @@
 (check-contract integer/e)
 (check-contract float/e)
 (check-contract exact-rational/e)
-(check-contract bijective-real/e)
+(check-contract two-way-real/e)
 (check-contract real/e)
-(check-contract bijective-num/e)
+(check-contract two-way-num/e)
 (check-contract num/e)
 (check-contract (slice/e nat/e 10 20))
 (check-contract (permutations-of-n/e 4))

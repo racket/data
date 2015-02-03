@@ -15,7 +15,7 @@
   [finite-enum? (-> any/c boolean?)]
   [infinite-enum? (-> any/c boolean?)]
   [enum-size (-> finite-enum? nat?)]
-  [bijective-enum? (-> any/c boolean?)]
+  [two-way-enum? (-> any/c boolean?)]
   [from-nat 
    (->i ([e enum?]
          [n nat?])
@@ -25,7 +25,7 @@
             (< n (enum-size e)))
         [res (e) (enum-contract e)])]
   [to-nat
-   (->i ([e bijective-enum?] [v (e) (enum-contract e)])
+   (->i ([e two-way-enum?] [v (e) (enum-contract e)])
         [result nat?])]
   [enum-contract (-> enum? contract?)]
   [map/e
@@ -47,12 +47,12 @@
                [e enum?]
                #:contract [c contract?])
               #:rest [es (listof enum?)]
-              [result injective-enum?])]
+              [result one-way-enum?])]
   [except/e
-   (->i ([e bijective-enum?])
+   (->i ([e two-way-enum?])
         (#:contract [c (or/c #f contract?)]) ;; aka optional #f isn't considered a contract
         #:rest [more (e) (listof (enum-contract e))]
-        [res bijective-enum?])]
+        [res two-way-enum?])]
   [approximate
    (->i ([e enum?] [s (e) (if (finite-enum? e)
                               (integer-in 0 (- (enum-size e) 1))
@@ -68,7 +68,7 @@
         (#:contract [c contract?])
         #:pre (c e)
         (implies (unsupplied-arg? c)
-                 (and (bijective-enum? e)
+                 (and (two-way-enum? e)
                       (flat-contract? (enum-contract e))))
         [result enum?])]
   [slice/e
@@ -122,19 +122,19 @@
   [flip-dep/e dep/e-contract]
   [thunk/e
    (->i ([s extended-nat/c]
-         [mk-e (s is-bijective?)
+         [mk-e (s is-two-way?)
                (cond
-                 [(and (= s +inf.0) is-bijective?)
-                  (-> (and/c bijective-enum? infinite-enum?))]
+                 [(and (= s +inf.0) is-two-way?)
+                  (-> (and/c two-way-enum? infinite-enum?))]
                  [(= s +inf.0)
-                  (-> (and/c injective-enum? infinite-enum?))]
+                  (-> (and/c one-way-enum? infinite-enum?))]
                  [else
                   (define (matching-size? n) (= (enum-size n) s))
-                  (-> (and/c (if is-bijective?
-                                 (and/c bijective-enum? finite-enum?)
-                                 (and/c injective-enum? finite-enum?))
+                  (-> (and/c (if is-two-way?
+                                 (and/c two-way-enum? finite-enum?)
+                                 (and/c one-way-enum? finite-enum?))
                              matching-size?))])])
-        (#:bijective-enum? [is-bijective? boolean?])
+        (#:two-way-enum? [is-two-way? boolean?])
         [result enum?])]
   [fix/e
    (case->
@@ -185,9 +185,9 @@
      ;; can't check bijection on empty enumerations
      #t]
     [(for/or ([e (in-list es)])
-       (injective-enum? e))
+       (one-way-enum? e))
      ;; we aren't going to build a bijection if
-     ;; we aren't starting with bijective enumerations
+     ;; we aren't starting with two-way enumerations
      #t]
     [else
      (let/ec k

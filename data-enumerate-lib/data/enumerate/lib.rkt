@@ -310,9 +310,9 @@
  float/e
  exact-rational/e
  real/e
- bijective-real/e
+ two-way-real/e
  num/e
- bijective-num/e
+ two-way-num/e
  bool/e
  symbol/e
  base/e
@@ -400,7 +400,7 @@
                 (cons/e (nat+/e 1) (nat+/e 2))
                 #:contract (and/c rational? exact?))))
          
-(define bijective-real/e (sum/e integer/e float/e))
+(define two-way-real/e (sum/e integer/e float/e))
 (define real/e (sum/e float/e exact-rational/e))
 
 (define (make-non-real/e rp ip ctc)
@@ -435,11 +435,11 @@
   (and (number? x)
        (equal? 0 (real-part x))))
 
-(define bijective-num/e
-  (sum/e bijective-real/e
+(define two-way-num/e
+  (sum/e two-way-real/e
          (map/e (λ (x) (make-rectangular 0 x)) 
                 imag-part
-                bijective-real/e 
+                two-way-real/e 
                 #:contract complex-with-exact-zero-real-part?)
          exact-integer-non-real/e
          float-non-real/e))

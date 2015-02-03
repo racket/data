@@ -22,11 +22,10 @@ changes:
  - add contracts to enumeration values
  - allow only finite-enum? for enum-size
  - map/e gets a #:contract argument (other ones?)
- - added injective enumerations (as opposed to bijective)
+ - added one-way enumerations (as opposed to bijective)
  - added flat-enum? predicate
 
 todo:
- - bijective/injective => two-way/one-way
  - criterion for "less checked": avoid all checks that call from-nat/to-nat
  - add a coercion function to turn lists into enumerations of
    their elements automatically and non-lists into constant
@@ -109,8 +108,8 @@ notes for eventual email:
  
  give-up-escape
  
- bijective-enum?
- injective-enum? 
+ two-way-enum?
+ one-way-enum? 
  flat-enum?
  finite-enum?
  infinite-enum?)
@@ -173,8 +172,8 @@ notes for eventual email:
       (display ">" port)))
 (define enum-printing (make-parameter 0))
 
-(define (bijective-enum? x) (and (enum? x) (enum-to x) #t))
-(define (injective-enum? x) (and (enum? x) (not (enum-to x))))
+(define (two-way-enum? x) (and (enum? x) (enum-to x) #t))
+(define (one-way-enum? x) (and (enum? x) (not (enum-to x))))
 (define (flat-enum? e) (and (enum? e) (flat-contract? (enum-contract e))))
 (define (finite-enum? e) (and (enum? e) (not (infinite? (enum-size e)))))
 (define (infinite-enum? e) (and (enum? e) (infinite? (enum-size e))))
@@ -197,7 +196,7 @@ notes for eventual email:
 
 (define (map/e #:contract [ctc any/c] f inv-f e . es)
   (cond 
-    [(or (injective-enum? e) (ormap injective-enum? es))
+    [(or (one-way-enum? e) (ormap one-way-enum? es))
      (apply pam/e #:contract ctc f e es)]
     [else
      (define (map1/e f inv-f e)
@@ -596,7 +595,7 @@ notes for eventual email:
        (define this-e (car (vector-ref es r))) 
        (from-nat this-e (+ q prev-ib)))
      (define enc
-       (and (andmap (λ (x) (bijective-enum? (car x))) e-ps)
+       (and (andmap (λ (x) (two-way-enum? (car x))) e-ps)
             (λ (x)
               (define-values (index which-e)
                 (find-index x non-empty-e-ps))
@@ -624,8 +623,8 @@ notes for eventual email:
        (cond [(< n s1) (from-nat e1 n)]
              [else (from-nat e2 (- n s1))]))
      (define to-nat2
-       (and (bijective-enum? e1)
-            (bijective-enum? e2)
+       (and (two-way-enum? e1)
+            (two-way-enum? e2)
             (λ (x)
               (cond [(1? x) (to-nat e1 x)]
                     [(2? x) (+ (to-nat e2 x) s1)]
@@ -683,8 +682,8 @@ notes for eventual email:
            (cons (from-nat e1 n1)
                  (from-nat e2 n2)))
          (define enc 
-           (and (bijective-enum? e1)
-                (bijective-enum? e2)
+           (and (two-way-enum? e1)
+                (two-way-enum? e2)
                 (λ (p)
                   (match p
                     [(cons x1 x2)
@@ -919,13 +918,13 @@ notes for eventual email:
 
 
 ;; thunk/e : Nat or +-Inf, ( -> enum a) -> enum a
-(define (thunk/e s thunk #:bijective-enum? [bijective? #t])
+(define (thunk/e s thunk #:two-way-enum? [two-way? #t])
   (define promise/e (delay (thunk)))
   (-enum s
          (λ (n)
            (give-up-on-bijection-checking promise/e)
            (from-nat (force promise/e) n))
-         (and bijective?
+         (and two-way?
               (λ (x)
                 (give-up-on-bijection-checking promise/e)
                 (to-nat (force promise/e) x)))
