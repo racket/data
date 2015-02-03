@@ -648,7 +648,11 @@
                   (give-up-completely (void))]
                  [else
                   (give-up-this-attempt)]))))
-          (to-nat enum value))))))
+          (with-handlers ([exn:fail?
+                           (λ (x)
+                             (eprintf "test/data/enumerate: trying ~s\n" value)
+                             (raise x))])
+            (to-nat enum value)))))))
 
 (check-contract nat/e)
 (check-contract (cons/e nat/e nat/e))

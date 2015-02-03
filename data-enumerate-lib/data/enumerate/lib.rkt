@@ -378,76 +378,70 @@
            #:contract exact-integer?)))
 
 (define normal-flonums/e-p
-  (let ([p? (and/c flonum?
-                   (not/c infinite?)
-                   (not/c nan?))])
-    (cons (take/e (map/e
-                   ordinal->flonum
-                   flonum->ordinal
-                   integer/e
-                   #:contract flonum?)
-                  (+ 1 (* 2 9218868437227405311))
-                  #:contract p?)
-          p?)))
+  (take/e (map/e
+           ordinal->flonum
+           flonum->ordinal
+           integer/e
+           #:contract flonum?)
+          (+ 1 (* 2 9218868437227405311))
+          #:contract 
+          (and/c flonum?
+                 (not/c infinite?)
+                 (not/c nan?))))
 
 (define float/e
   (disj-append/e (fin/e +inf.0 -inf.0)
                  (fin/e +nan.0)
                  normal-flonums/e-p))
 
-(define exact-rational-less-than-1/e
-  (pam/e (λ (pr)
-           (/ (+ (cdr pr) 1) (+ (car pr) 2)))
-         (dep/e nat/e 
-                (λ (d)
-                  (define denom (+ d 2))
-                  (below/e (- denom 1)))
-                #:f-range-finite? #t)
-         #:contract (and/c rational?
-                           exact?
-                           (</c 1))))
-
 (define exact-rational/e
-  (pam/e
-   values
-   #:contract
-   (and/c rational? exact?)
-   (sum/e (fin/e 1)
-          exact-rational-less-than-1/e
-          (pam/e /
-                 exact-rational-less-than-1/e
-                 #:contract (and/c rational? 
-                                   exact? 
-                                   (>/c 1))))))
+  (sum/e (fin/e 0)
+         (pam/e (λ (pr) (/ (car pr) (cdr pr)))
+                (cons/e (nat+/e 1) (nat+/e 2))
+                #:contract (and/c rational? exact?))))
          
-
 (define bijective-real/e (sum/e integer/e float/e))
-(define real/e (sum/e bijective-real/e exact-rational/e))
+(define real/e (sum/e float/e exact-rational/e))
 
+(define (make-non-real/e rp ip ctc)
+  (map/e make-rectangular
+         (λ (z)
+           (values (real-part z)
+                   (imag-part z)))
+         rp ip
+         #:contract ctc))
+
+(define (complex-with-exact-integer-parts? x)
+  (and (number? x)
+       (exact-integer? (real-part x))
+       (exact-integer? (imag-part x))))
 (define exact-integer-non-real/e
-  (map/e make-rectangular
-         (λ (z)
-            (values (real-part z)
-                    (imag-part z)))
-         int/e
-         (except/e int/e 0)
-         #:contract (and/c exact? (not/c real?))))
+  (make-non-real/e (except/e int/e 0) (except/e int/e 0)
+                   (and/c complex-with-exact-integer-parts? (not/c real?))))
+(define float-non-real/e 
+  (make-non-real/e float/e float/e
+                   (and/c number? inexact? (not/c real?))))
 
-(define float-non-real/e
-  (map/e make-rectangular
-         (λ (z)
-            (values (real-part z)
-                    (imag-part z)))
-         float/e
-         (except/e float/e 0.0)
-         #:contract (and/c inexact? (not/c real?))))
+;; only one-way, so don't need to skip 0
+(define exact-rational-complex/e 
+  (make-non-real/e exact-rational/e exact-rational/e
+                   (and/c number? exact?)))
 
 (define num/e
    (sum/e real/e
           float-non-real/e
-          exact-integer-non-real/e))
+          exact-rational-complex/e))
+(define (complex-with-exact-zero-real-part? x)
+  (and (number? x)
+       (equal? 0 (real-part x))))
+
 (define bijective-num/e
   (sum/e bijective-real/e
+         (map/e (λ (x) (make-rectangular 0 x)) 
+                imag-part
+                bijective-real/e 
+                #:contract complex-with-exact-zero-real-part?)
+         exact-integer-non-real/e
          float-non-real/e))
 
 (define bool/e (fin/e #t #f))
