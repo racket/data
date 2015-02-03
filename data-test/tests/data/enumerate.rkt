@@ -3,9 +3,11 @@
          racket/function
          racket/set
          racket/contract
+         racket/generator
          data/gvector
          data/enumerate
          data/enumerate/lib
+         (submod data/enumerate/lib test)
          (prefix-in unsafe: data/enumerate/unsafe))
 
 (require (for-syntax racket/base))
@@ -733,3 +735,38 @@
 (check-contract (range/e 10 +inf.0))
 (check-contract (range/e -inf.0 +inf.0))
 (check-contract (range/e -10 10))
+
+
+(check-not-exn
+ (λ ()
+   (define HOW-MANY 5000)
+   
+   (define (test-seq K seq)
+     (define d->i (make-hasheq))
+     (for ([i (in-range HOW-MANY)]
+           [d seq])
+       (hash-update! d->i d add1 0))
+     
+     (define total
+       (for/fold ([cnt 0]) ([i (in-range K)])
+         (define i-cnt (hash-ref d->i i 0))
+         (+ cnt i-cnt)))
+     
+     (unless (= HOW-MANY total)
+       (error 'digits "Missed some: ~a" total)))
+   
+   (define (test-digits N)
+     (test-seq 10 (in-generator (BPP-digits N))))
+   
+   (test-digits 1)
+   (test-digits 9)
+   
+   (define (test-tetris K N)
+     (test-seq K (10-sequence->K-sequence K (in-generator (BPP-digits N)))))
+   
+   (test-tetris 7 1)
+   (test-tetris 7 2)
+   (test-tetris 15 1)
+   (test-tetris 15 2)
+   
+   (test-tetris 100 2)))

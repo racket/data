@@ -51,6 +51,9 @@
 
     (loop 8i)))
 
+;; exported to tests/data/enumerate
+(module+ test (provide BPP-digits 10-sequence->K-sequence))
+
 (define (bits-of k)
   (/ (log k) (log 2)))
 
@@ -80,44 +83,6 @@
          (* sub-d (expt 10 i))))
      (yield (modulo d k))
      (loop))))
-
-(module+ main
-  (define HOW-MANY 5000)
-
-  (define (test-seq K seq)
-    (define d->i (make-hasheq))
-    (for ([i (in-range HOW-MANY)]
-          [d seq])
-      (hash-update! d->i d add1 0))
-
-    (define total
-      (for/fold ([cnt 0]) ([i (in-range K)])
-        (define i-cnt (hash-ref d->i i 0))
-        (printf "\t~a => ~a" i i-cnt)
-        (when (and (= 4 (modulo i 5)) (not (= i (sub1 K)))) (newline))
-        (+ cnt i-cnt)))
-    (newline)
-
-    (unless (= HOW-MANY total)
-      (error 'digits "Missed some: ~a" total)))
-
-  (define (test-digits N)
-    (printf "BPP ~a\n" N)
-    (test-seq 10 (in-generator (BPP-digits N))))
-
-  (test-digits 1)
-  (test-digits 9)
-
-  (define (test-tetris K N)
-    (printf "BPP ~a -> ~a\n" N K)
-    (test-seq K (10-sequence->K-sequence K (in-generator (BPP-digits N)))))
-
-  (test-tetris 7 1)
-  (test-tetris 7 2)
-  (test-tetris 15 1)
-  (test-tetris 15 2)
-
-  (test-tetris 100 2))
 
 (define (infinite-sequence/e inner/e)
   (define seed/e nat/e)

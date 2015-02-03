@@ -33,7 +33,6 @@ todo:
  - split data/enum into two libraries, one smaller with "essential" stuff called
    data/enumerate and one larger with other stuff, called data/enumerate/lib
 
- - vector/e -- make it like list/e
  - add argument to thunk/e, check uses
 
  - add contract to fix/e to check
