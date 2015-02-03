@@ -699,13 +699,13 @@ notes for eventual email:
                 (cons/c (enum-contract e1) (enum-contract e2)))]))
 
 ;; cons/e : enum a, enum b ... -> enum (cons a b ...)
-(define (cons/e e1 e2)
+(define (cons/e e1 e2 #:ordering [ordering 'square])
   (map/e (λ (x)
             (cons (first  x)
                   (second x)))
          (λ (x-y)
             (list (car x-y) (cdr x-y)))
-         (list/e e1 e2)
+         (list/e e1 e2 #:ordering ordering)
          #:contract (cons/c (enum-contract e1) (enum-contract e2))))
 
 ;; Traversal (maybe come up with a better name

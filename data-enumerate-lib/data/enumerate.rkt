@@ -110,7 +110,10 @@
         #:rest (listof (or/c (cons/c enum? (-> any/c boolean?))
                              flat-enum?))
         enum?)]
-  [cons/e (-> enum? enum? enum?)]
+  [cons/e
+   (->* (enum? enum?)
+        (#:ordering (or/c 'diagonal 'square))
+        enum?)]
   [traverse/e
    (-> (-> any/c enum?)
        (listof any/c)

@@ -256,6 +256,7 @@
                           (= (cdr ns)
                              (cdr ms)))))
 
+
 ;; prod tests
 (test-begin
 
@@ -280,6 +281,19 @@
          (for/list ([i (in-range 24)])
            (map/e (curry cons i) cdr nat/e
                   #:contract (cons/c i exact-nonnegative-integer?))))))
+
+(check-equal? (for/list ([i (in-range 10)])
+                (from-nat (cons/e nat/e nat/e #:ordering 'diagonal) i))
+              '((0 . 0) 
+                (0 . 1) (1 . 0) 
+                (0 . 2) (1 . 1) (2 . 0)
+                (0 . 3) (1 . 2) (2 . 1) (3 . 0)))
+
+(check-equal? (for/list ([i (in-range 9)])
+                (from-nat (cons/e nat/e nat/e #:ordering 'square) i))
+              '((0 . 0)
+                (0 . 1) (1 . 0) (1 . 1)
+                (0 . 2) (1 . 2) (2 . 0) (2 . 1) (2 . 2)))
 
 ;; check that box-tuples/e is the same ordering as list/e in 'square mode
 (check-equal? (for/list ([x (in-range 100)])
@@ -656,6 +670,7 @@
 
 (check-contract nat/e)
 (check-contract (cons/e nat/e nat/e))
+(check-contract (cons/e nat/e nat/e #:ordering 'diagonal))
 (check-contract (except/e nat/e 0))
 (check-contract (below/e 50))
 (check-contract (fin/e 1 2 #f 'c +inf.0 +nan.0 '#:x))
