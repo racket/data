@@ -155,15 +155,6 @@
   [many1/e
    (-> enum? 
        enum?)]
-  [cantor-vec/e
-   (->* () #:rest (listof enum?)
-        enum?)]
-  [vec/e
-   (->* () #:rest (listof enum?)
-        enum?)]
-  [box-vec/e
-   (->* () #:rest (listof enum?)
-        enum?)]
   [list/e
    (->* ()
         (#:ordering (or/c 'diagonal 'square)) 

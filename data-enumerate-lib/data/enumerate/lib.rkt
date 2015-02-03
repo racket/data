@@ -466,3 +466,17 @@
             (sum/e (cons base/e (negate pair?))
                    (cons (cons/e any/e any/e) pair?)))))
 
+
+(provide
+ (contract-out
+  [vector/e
+   (->* ()
+        (#:ordering (or/c 'diagonal 'square)) 
+        #:rest (listof enum?)
+        enum?)]))
+
+(define (vector/e #:ordering [ordering 'square] . es)
+  (map/e list->vector
+         vector->list
+         (apply list/e #:ordering ordering es)
+         #:contract (apply vector/c (map enum-contract es))))

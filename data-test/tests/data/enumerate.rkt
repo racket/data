@@ -295,6 +295,19 @@
                 (0 . 1) (1 . 0) (1 . 1)
                 (0 . 2) (1 . 2) (2 . 0) (2 . 1) (2 . 2)))
 
+(check-equal? (for/list ([i (in-range 10)])
+                (from-nat (vector/e nat/e nat/e #:ordering 'diagonal) i))
+              '(#(0 0) 
+                #(0 1) #(1 0) 
+                #(0 2) #(1 1) #(2 0)
+                #(0 3) #(1 2) #(2 1) #(3 0)))
+
+(check-equal? (for/list ([i (in-range 9)])
+                (from-nat (vector/e nat/e nat/e #:ordering 'square) i))
+              '(#(0 0)
+                #(0 1) #(1 0) #(1 1)
+                #(0 2) #(1 2) #(2 0) #(2 1) #(2 2)))
+
 ;; check that box-tuples/e is the same ordering as list/e in 'square mode
 (check-equal? (for/list ([x (in-range 100)])
                 (from-nat (unsafe:box-tuples/e 3) x))
@@ -340,7 +353,7 @@
                              (1 1 1))))
 
 (test-begin
- (check-bijection? (cantor-vec/e string/e nat/e two-way-real/e))
+ (check-bijection? (vector/e string/e nat/e two-way-real/e))
  (check-bijection? (unsafe:cantor-list/e string/e nat/e two-way-real/e))
  (check-bijection? (unsafe:cantor-list/e)))
 
@@ -384,7 +397,6 @@
                              (2 2 0) (2 2 1) (2 2 2))))
 
 (test-begin
- (check-bijection? (box-vec/e string/e nat/e two-way-real/e))
  (check-bijection? (unsafe:box-list/e string/e nat/e two-way-real/e))
  (check-bijection? (unsafe:box-list/e)))
 

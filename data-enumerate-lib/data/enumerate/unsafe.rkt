@@ -90,9 +90,6 @@ notes for eventual email:
  fix/e
  many/e
  many1/e
- cantor-vec/e
- vec/e
- box-vec/e
  list/e
  cantor-list/e
  box-list/e
@@ -971,22 +968,6 @@ notes for eventual email:
 (define (many1/e e)
   (except/e (many/e e) '()
             #:contract (non-empty-listof (enum-contract e))))
-
-(define (cantor-vec/e . es)
-  (map/e list->vector
-         vector->list
-         (apply cantor-list/e es)
-         #:contract (apply vector/c (map enum-contract es))))
-
-;; vec/e : listof (enum any) -> enum (vectorof any)
-(define vec/e cantor-vec/e)
-
-(define (box-vec/e . es)
-  (map/e list->vector
-         vector->list
-         (apply box-list/e es)
-         #:contract
-         (apply vector/c (map enum-contract es))))
 
 (define (cantor-untuple k)
   ;; Paul Tarau Deriving a Fast Inverse of the Generalized Cantor N-tupling Bijection
