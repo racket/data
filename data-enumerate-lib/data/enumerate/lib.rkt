@@ -265,94 +265,58 @@
    #:stronger (λ (this that) #f)
    #:list-contract? #t))
 
-
-(define (many/e2 e)
-  (sum/e
-   (fin/e '())
-   (map/e 
-    cdr 
-    (λ (x) (cons (- (length x) 1) x))
-    (dep/e
-     nat/e
-     (λ (i) (apply list/e (build-list (+ i 1) (λ (_) e)))))
-    #:contract (non-empty-listof (enum-contract e)))))
-
-;; some plots for the docs to help explain the difference between the two enumerators
-#|
-(require plot)
-(define (build-length-stats)
-  (define limit 1000)
-  (define (get-points e color)
-    (define lengths (make-hash))
-    (define nums (make-hash))
-    (for ([x (in-range limit)])
-      (define lst (from-nat e x))
-      (define len (length lst))
-      (hash-set! lengths len (+ 1 (hash-ref lengths len 0))))
-    (points
-     #:color color
-     (for/list ([(k v) (in-hash lengths)])
-       (vector k v))))
-  (plot
-   #:x-label "length"
-   #:y-label "number of lists at that length"
-   #:x-min -1
-   #:y-min -10
-   (list (get-points lon "red")
-         (get-points lon2 "blue"))))
-
-(define (build-value-stats)
-  (define limit 1000)
-  (define (get-points e color)
-    (define values (make-hash))
-    (define nums (make-hash))
-    (for ([x (in-range limit)])
-      (define lst (from-nat e x))
-      (for ([value (in-list lst)])
-        (hash-set! values value (+ 1 (hash-ref values value 0)))))
-    (points
-     #:color color
-     (for/list ([(k v) (in-hash values)])
-       (vector k v))))
-  (parameterize ([plot-y-transform  log-transform])
-    (plot
-     #:x-label "value"
-     #:y-label "number of lists that contain that value"
-     (list (get-points lon "red")
-           (get-points lon2 "blue")))))
-|#
-
+(define listof/e-contract
+  (->i ([e (simple-recursive?) 
+           (if (or (unsupplied-arg? simple-recursive?)
+                   simple-recursive?)
+               enum?
+               infinite-enum?)])
+       (#:simple-recursive? [simple-recursive? any/c])
+       [res enum?]))
 (provide
  (contract-out
-  [many/e
-   (case-> (-> enum? enum?)
-           (-> enum? exact-nonnegative-integer? enum?))]
-  [many1/e (-> enum? enum?)]))
+  [listof/e listof/e-contract]
+  [non-empty-listof/e listof/e-contract]))
 
-
-
-;; many/e : enum a -> enum (listof a)
-;;       or : enum a, #:length natural -> enum (listof a)
-(define many/e
-  (case-lambda
-    [(e)
+(define (listof/e e #:simple-recursive? [simple-recursive? #t])
+  (cond
+    [simple-recursive?
      (define fix-size
        (if (and (finite-enum? e) (= 0 (enum-size e)))
            1
            +inf.0))
      (define result-e
        (fix/e #:size fix-size
+              #:two-way-enum? (two-way-enum? e)
+              #:flat-enum? (flat-enum? e)
               (λ (self)
                 (sum/e (cons (fin/e '()) null?)
                        (cons (cons/e e self) pair?)))))
      (map/e values values result-e #:contract (listof (enum-contract e)))]
-    [(e n)
-     (apply list/e (build-list n (const e)))]))
+    [else
+     (sum/e
+      (fin/e '())
+      (non-empty-listof/e e #:simple-recursive? #f))]))
 
-;; many1/e : enum a -> enum (nonempty listof a)
-(define (many1/e e)
-  (except/e (many/e e) '()
-            #:contract (non-empty-listof (enum-contract e))))
+(define (non-empty-listof/e e #:simple-recursive? [simple-recursive? #t])
+  (cond
+    [simple-recursive? 
+     (except/e (listof/e e #:simple-recursive? #t) '()
+               #:contract (non-empty-listof (enum-contract e)))]
+    [else 
+     (map/e 
+      cdr 
+      (λ (x) (cons (- (length x) 1) x))
+      (dep/e
+       nat/e
+       (λ (i) (apply list/e (build-list (+ i 1) (λ (_) e)))))
+      #:contract (non-empty-listof (enum-contract e)))]))
+
+(provide
+ (contract-out
+  [listof-n/e (-> enum? exact-nonnegative-integer? enum?)]))
+(define (listof-n/e e n)
+  (apply list/e (build-list n (const e))))
 
 ;; Base Type enumerators
 
@@ -407,7 +371,7 @@
   (map/e
    list->string
    string->list
-   (many/e char/e)
+   (listof/e char/e)
    #:contract string?))
 
 (define from-1/e
@@ -504,7 +468,7 @@
   (map/e
    (compose string->symbol list->string)
    (compose string->list symbol->string)
-   (many/e char/e)
+   (listof/e char/e)
    #:contract symbol?))
 
 (define base/e

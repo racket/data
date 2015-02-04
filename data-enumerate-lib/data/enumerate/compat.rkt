@@ -45,8 +45,11 @@
   (case-lambda
     [(n f) (:fix/e f #:size n)]
     [(f) (:fix/e f)]))
-(define many/e :many/e)
-(define many1/e :many1/e)
+(define many/e
+  (case-lambda
+    [(e n) (:listof-n/e nat/e n)]
+    [(e) (:listof/e e)]))
+(define many1/e :non-empty-listof/e)
 (define (cantor-vec/e . args) (apply :vector/e #:ordering 'diagonal args))
 (define vec/e :vector/e)
 (define box-vec/e :vector/e)

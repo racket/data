@@ -17,6 +17,7 @@
   [enum-size (-> finite-enum? nat?)]
   [two-way-enum? (-> any/c boolean?)]
   [one-way-enum? (-> any/c boolean?)]
+  [flat-enum? (-> any/c boolean?)]
   [from-nat 
    (->i ([e enum?]
          [n nat?])

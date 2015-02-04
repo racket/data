@@ -170,7 +170,7 @@
           (cons (fin/e 'a 'b 'c 'd) symbol?)
           (cons nat/e number?)
           (cons bool/e boolean?)
-          (cons (many/e bool/e) list?)))
+          (cons (listof/e bool/e) list?)))
 
  (define (test-multi-layered i x)
    (check-equal? (from-nat multi-layered i) x))
@@ -582,17 +582,16 @@
 (test-begin
  (check-bijection? complicated))
 
-;; many/e tests
-(define natss
-  (many/e nat/e))
 (test-begin
- (check-bijection? natss))
+ (check-bijection? (listof/e nat/e))
+ (check-equal? (from-nat (listof/e empty/e) 0) '())
+ (check-bijection? (listof/e empty/e))
+ (check-bijection? (listof/e nat/e #:simple-recursive? #f))
+ (check-bijection? (non-empty-listof/e nat/e #:simple-recursive? #f))
+ (check-bijection? (non-empty-listof/e empty/e))
+ (check-bijection? (non-empty-listof/e nat/e)))
 
-(define emptys/e
-  (many/e empty/e))
-(test-begin
- (check-equal? (from-nat emptys/e 0) '())
- (check-bijection? emptys/e))
+(check-bijection? (listof-n/e nat/e 4))
 
 (check-equal? (from-nat (range/e -inf.0 10) 0) 10)
 (check-equal? (to-nat (range/e -inf.0 10) 10) 0)
@@ -718,7 +717,7 @@
 (check-contract (map/e add1 sub1 nat/e #:contract (and/c exact-integer? positive?)))
 
 ;; use pam/e to skip the to-nat check (it gets slow)
-(check-contract (let ([e (many/e nat/e)])
+(check-contract (let ([e (listof/e nat/e)])
                   (pam/e values e #:contract (enum-contract e))))
 
 (check-contract (dep/e nat/e

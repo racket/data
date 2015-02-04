@@ -30,7 +30,6 @@ todo:
  - change names to match contract names:
      sum/e => or/e
      dep/e => cons/de (with different syntax)
-     many/e => listof/e
  - criterion for "less checked": avoid all checks that call from-nat/to-nat
  - add a coercion function to turn lists into enumerations of
    their elements automatically and non-lists into constant
@@ -56,6 +55,49 @@ todo:
    flat contract to double as the predicates)
  - find a better name than `unsafe.rkt`
 
+ - code to use in docs for many/e
+
+(require plot)
+(define (build-length-stats)
+  (define limit 1000)
+  (define (get-points e color)
+    (define lengths (make-hash))
+    (define nums (make-hash))
+    (for ([x (in-range limit)])
+      (define lst (from-nat e x))
+      (define len (length lst))
+      (hash-set! lengths len (+ 1 (hash-ref lengths len 0))))
+    (points
+     #:color color
+     (for/list ([(k v) (in-hash lengths)])
+       (vector k v))))
+  (plot
+   #:x-label "length"
+   #:y-label "number of lists at that length"
+   #:x-min -1
+   #:y-min -10
+   (list (get-points lon "red")
+         (get-points lon2 "blue"))))
+
+(define (build-value-stats)
+  (define limit 1000)
+  (define (get-points e color)
+    (define values (make-hash))
+    (define nums (make-hash))
+    (for ([x (in-range limit)])
+      (define lst (from-nat e x))
+      (for ([value (in-list lst)])
+        (hash-set! values value (+ 1 (hash-ref values value 0)))))
+    (points
+     #:color color
+     (for/list ([(k v) (in-hash values)])
+       (vector k v))))
+  (parameterize ([plot-y-transform  log-transform])
+    (plot
+     #:x-label "value"
+     #:y-label "number of lists that contain that value"
+     (list (get-points lon "red")
+           (get-points lon2 "blue")))))
 
 notes for eventual email:
  - finite vs infinite enumerations
