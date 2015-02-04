@@ -26,6 +26,11 @@ changes:
  - added flat-enum? predicate
 
 todo:
+ - make 'enum' arguments go first
+ - change names to match contract names:
+     sum/e => or/e
+     dep/e => cons/de (with different syntax)
+     many/e => listof/e
  - criterion for "less checked": avoid all checks that call from-nat/to-nat
  - add a coercion function to turn lists into enumerations of
    their elements automatically and non-lists into constant
@@ -39,6 +44,8 @@ todo:
      that the sizes are right
      change the argument order so optional arguments work....
 
+ - many/e vs many2/e: explain & use keywords for the two.
+   => include three options: dep/e variant, fix/e variant, and or/e of the two
 
  - get rid of the printfs in lib.rkt
  - coerce lists and base values (ones accepted by fin/e) into enumerations
@@ -87,8 +94,6 @@ notes for eventual email:
  flip-dep/e
  thunk/e
  fix/e
- many/e
- many1/e
  list/e
  cantor-list/e
  box-list/e
@@ -944,29 +949,6 @@ notes for eventual email:
              (enum-contract 
               (force self))))]))
 
-;; many/e : enum a -> enum (listof a)
-;;       or : enum a, #:length natural -> enum (listof a)
-(define many/e
-  (case-lambda
-    [(e)
-     (define fix-size
-       (if (= 0 (enum-size e))
-           1
-           +inf.0))
-     (define result-e
-       (fix/e fix-size
-              (λ (self)
-                (sum/e (cons (fin/e '()) null?)
-                       (cons (cons/e e self) pair?)))))
-     (struct-copy enum result-e
-                  [ctc (listof (enum-contract e))])]
-    [(e n)
-     (apply list/e (build-list n (const e)))]))
-
-;; many1/e : enum a -> enum (nonempty listof a)
-(define (many1/e e)
-  (except/e (many/e e) '()
-            #:contract (non-empty-listof (enum-contract e))))
 
 (define (cantor-untuple k)
   ;; Paul Tarau Deriving a Fast Inverse of the Generalized Cantor N-tupling Bijection

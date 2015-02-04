@@ -146,15 +146,6 @@
         enum?)
     (-> extended-nat/c (-> enum? enum?)
         enum?))]
-  [many/e
-   (case->
-    (-> enum?
-        enum?)
-    (-> enum? nat?
-        enum?))]
-  [many1/e
-   (-> enum? 
-       enum?)]
   [list/e
    (->* ()
         (#:ordering (or/c 'diagonal 'square)) 

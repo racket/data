@@ -265,6 +265,95 @@
    #:stronger (λ (this that) #f)
    #:list-contract? #t))
 
+
+(define (many/e2 e)
+  (sum/e
+   (fin/e '())
+   (map/e 
+    cdr 
+    (λ (x) (cons (- (length x) 1) x))
+    (dep/e
+     nat/e
+     (λ (i) (apply list/e (build-list (+ i 1) (λ (_) e)))))
+    #:contract (non-empty-listof (enum-contract e)))))
+
+;; some plots for the docs to help explain the difference between the two enumerators
+#|
+(require plot)
+(define (build-length-stats)
+  (define limit 1000)
+  (define (get-points e color)
+    (define lengths (make-hash))
+    (define nums (make-hash))
+    (for ([x (in-range limit)])
+      (define lst (from-nat e x))
+      (define len (length lst))
+      (hash-set! lengths len (+ 1 (hash-ref lengths len 0))))
+    (points
+     #:color color
+     (for/list ([(k v) (in-hash lengths)])
+       (vector k v))))
+  (plot
+   #:x-label "length"
+   #:y-label "number of lists at that length"
+   #:x-min -1
+   #:y-min -10
+   (list (get-points lon "red")
+         (get-points lon2 "blue"))))
+
+(define (build-value-stats)
+  (define limit 1000)
+  (define (get-points e color)
+    (define values (make-hash))
+    (define nums (make-hash))
+    (for ([x (in-range limit)])
+      (define lst (from-nat e x))
+      (for ([value (in-list lst)])
+        (hash-set! values value (+ 1 (hash-ref values value 0)))))
+    (points
+     #:color color
+     (for/list ([(k v) (in-hash values)])
+       (vector k v))))
+  (parameterize ([plot-y-transform  log-transform])
+    (plot
+     #:x-label "value"
+     #:y-label "number of lists that contain that value"
+     (list (get-points lon "red")
+           (get-points lon2 "blue")))))
+|#
+
+(provide
+ (contract-out
+  [many/e
+   (case-> (-> enum? enum?)
+           (-> enum? exact-nonnegative-integer? enum?))]
+  [many1/e (-> enum? enum?)]))
+
+
+
+;; many/e : enum a -> enum (listof a)
+;;       or : enum a, #:length natural -> enum (listof a)
+(define many/e
+  (case-lambda
+    [(e)
+     (define fix-size
+       (if (and (finite-enum? e) (= 0 (enum-size e)))
+           1
+           +inf.0))
+     (define result-e
+       (fix/e fix-size
+              (λ (self)
+                (sum/e (cons (fin/e '()) null?)
+                       (cons (cons/e e self) pair?)))))
+     (map/e values values result-e #:contract (listof (enum-contract e)))]
+    [(e n)
+     (apply list/e (build-list n (const e)))]))
+
+;; many1/e : enum a -> enum (nonempty listof a)
+(define (many1/e e)
+  (except/e (many/e e) '()
+            #:contract (non-empty-listof (enum-contract e))))
+
 ;; Base Type enumerators
 
 (provide
@@ -445,3 +534,5 @@
          vector->list
          (apply list/e #:ordering ordering es)
          #:contract (apply vector/c (map enum-contract es))))
+
+
