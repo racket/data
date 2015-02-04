@@ -41,7 +41,10 @@
 (define flip-dep/e :flip-dep/e)
 (define range/e :range/e)
 (define thunk/e :thunk/e)
-(define fix/e :fix/e)
+(define fix/e
+  (case-lambda
+    [(n f) (:fix/e f #:size n)]
+    [(f) (:fix/e f)]))
 (define many/e :many/e)
 (define many1/e :many1/e)
 (define (cantor-vec/e . args) (apply :vector/e #:ordering 'diagonal args))

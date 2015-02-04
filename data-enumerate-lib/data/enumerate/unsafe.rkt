@@ -46,6 +46,8 @@ todo:
 
  - many/e vs many2/e: explain & use keywords for the two.
    => include three options: dep/e variant, fix/e variant, and or/e of the two
+   => call the two argument version of many/e something else
+      (maybe many/e?)
 
  - get rid of the printfs in lib.rkt
  - coerce lists and base values (ones accepted by fin/e) into enumerations
@@ -932,23 +934,27 @@ notes for eventual email:
           (enum-contract
            (force promise/e)))))
 
-;; fix/e : [size] (enum a -> enum a) -> enum a
-(define fix/e
-  (case-lambda
-    [(f/e) (fix/e +inf.0 f/e)]
-    [(size f/e)
-     (define self (delay (f/e (fix/e size f/e))))
-     (-enum size
-            (λ (n)
-              (give-up-on-bijection-checking self)
-              (from-nat (force self) n))
-            (λ (x)
-              (give-up-on-bijection-checking self)
-              (to-nat (force self) x))
-            (recursive-contract 
-             (enum-contract 
-              (force self))))]))
-
+(define (fix/e f/e 
+               #:size [size +inf.0] 
+               #:two-way-enum? [two-way-enum? #t]
+               #:flat-enum? [flat-enum? #t])
+  (define self (delay (f/e (fix/e f/e #:size size #:two-way-enum? two-way-enum?))))
+  (-enum size
+         (λ (n)
+           (give-up-on-bijection-checking self)
+           (from-nat (force self) n))
+         (and two-way-enum?
+              (λ (x)
+                (give-up-on-bijection-checking self)
+                (to-nat (force self) x)))
+         (if flat-enum?
+             (recursive-contract 
+              (enum-contract 
+               (force self))
+              #:flat)
+             (recursive-contract 
+              (enum-contract 
+               (force self))))))
 
 (define (cantor-untuple k)
   ;; Paul Tarau Deriving a Fast Inverse of the Generalized Cantor N-tupling Bijection

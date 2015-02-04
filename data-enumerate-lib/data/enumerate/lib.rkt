@@ -341,7 +341,7 @@
            1
            +inf.0))
      (define result-e
-       (fix/e fix-size
+       (fix/e #:size fix-size
               (λ (self)
                 (sum/e (cons (fin/e '()) null?)
                        (cons (cons/e e self) pair?)))))
@@ -515,7 +515,7 @@
          symbol/e))
 
 (define any/e
-  (fix/e +inf.0
+  (fix/e #:size +inf.0
          (λ (any/e)
             (sum/e (cons base/e (negate pair?))
                    (cons (cons/e any/e any/e) pair?)))))

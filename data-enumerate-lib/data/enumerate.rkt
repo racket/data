@@ -102,8 +102,8 @@
   [nat/e enum?]
   [int/e enum?]
   [sum/e
-   (->* () #:rest (listof (or/c flat-enum?
-                                (cons/c enum? (-> any/c boolean?))))
+   (->* () #:rest (listof (or/c (cons/c enum? (-> any/c boolean?))
+                                flat-enum?))
         enum?)]
   [disj-append/e
    (->* ((or/c (cons/c enum? (-> any/c boolean?))
@@ -141,11 +141,26 @@
         (#:two-way-enum? [is-two-way? boolean?])
         [result enum?])]
   [fix/e
-   (case->
-    (-> (-> enum? enum?) 
-        enum?)
-    (-> extended-nat/c (-> enum? enum?)
-        enum?))]
+   (->i ([f (size is-two-way-enum? is-flat-enum?)
+            (-> enum? 
+                (and/c (if (or (unsupplied-arg? size) (= size +inf.0))
+                           infinite-enum?
+                           (and/c finite-enum?
+                                  (let ([matching-size? (λ (e) (= (enum-size e) size))])
+                                    matching-size?)))
+                       (if (or (unsupplied-arg? is-two-way-enum?) is-two-way-enum?)
+                           two-way-enum?
+                           one-way-enum?)
+                       (if (or (unsupplied-arg? is-flat-enum?) is-flat-enum?)
+                           flat-enum?
+                           (not/c flat-enum?))))])
+        (#:size 
+         [size extended-nat/c]
+         #:two-way-enum?
+         [is-two-way-enum? boolean?]
+         #:flat-enum?
+         [is-flat-enum? boolean?])
+        [result enum?])]
   [list/e
    (->* ()
         (#:ordering (or/c 'diagonal 'square)) 
