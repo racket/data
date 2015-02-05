@@ -28,7 +28,7 @@
 (define fin/e :fin/e)
 (define nat/e :nat/e)
 (define int/e :int/e)
-(define disj-sum/e :sum/e)
+(define disj-sum/e :or/e)
 (define disj-append/e :disj-append/e)
 (define fin-cons/e :cons/e)
 (define cons/e :cons/e)

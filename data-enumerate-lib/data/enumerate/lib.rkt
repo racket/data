@@ -290,11 +290,11 @@
               #:two-way-enum? (two-way-enum? e)
               #:flat-enum? (flat-enum? e)
               (λ (self)
-                (sum/e (cons (fin/e '()) null?)
-                       (cons (cons/e e self) pair?)))))
+                (or/e (cons (fin/e '()) null?)
+                      (cons (cons/e e self) pair?)))))
      (map/e values values result-e #:contract (listof (enum-contract e)))]
     [else
-     (sum/e
+     (or/e
       (fin/e '())
       (non-empty-listof/e e #:simple-recursive? #f))]))
 
@@ -413,13 +413,13 @@
                  normal-flonums/e-p))
 
 (define exact-rational/e
-  (sum/e (fin/e 0)
-         (pam/e (λ (pr) (/ (car pr) (cdr pr)))
-                (cons/e (nat+/e 1) (nat+/e 2))
-                #:contract (and/c rational? exact?))))
+  (or/e (fin/e 0)
+        (pam/e (λ (pr) (/ (car pr) (cdr pr)))
+               (cons/e (nat+/e 1) (nat+/e 2))
+               #:contract (and/c rational? exact?))))
          
-(define two-way-real/e (sum/e integer/e float/e))
-(define real/e (sum/e float/e exact-rational/e))
+(define two-way-real/e (or/e integer/e float/e))
+(define real/e (or/e float/e exact-rational/e))
 
 (define (make-non-real/e rp ip ctc)
   (map/e make-rectangular
@@ -446,21 +446,21 @@
                    (and/c number? exact?)))
 
 (define num/e
-   (sum/e real/e
-          float-non-real/e
-          exact-rational-complex/e))
+   (or/e real/e
+         float-non-real/e
+         exact-rational-complex/e))
 (define (complex-with-exact-zero-real-part? x)
   (and (number? x)
        (equal? 0 (real-part x))))
 
 (define two-way-num/e
-  (sum/e two-way-real/e
-         (map/e (λ (x) (make-rectangular 0 x)) 
-                imag-part
-                two-way-real/e 
-                #:contract complex-with-exact-zero-real-part?)
-         exact-integer-non-real/e
-         float-non-real/e))
+  (or/e two-way-real/e
+        (map/e (λ (x) (make-rectangular 0 x)) 
+               imag-part
+               two-way-real/e 
+               #:contract complex-with-exact-zero-real-part?)
+        exact-integer-non-real/e
+        float-non-real/e))
 
 (define bool/e (fin/e #t #f))
 
@@ -472,17 +472,17 @@
    #:contract symbol?))
 
 (define base/e
-  (sum/e (fin/e '())
-         (cons num/e number?)
-         string/e
-         bool/e
-         symbol/e))
+  (or/e (fin/e '())
+        (cons num/e number?)
+        string/e
+        bool/e
+        symbol/e))
 
 (define any/e
   (fix/e #:size +inf.0
          (λ (any/e)
-            (sum/e (cons base/e (negate pair?))
-                   (cons (cons/e any/e any/e) pair?)))))
+            (or/e (cons base/e (negate pair?))
+                  (cons (cons/e any/e any/e) pair?)))))
 
 
 (provide

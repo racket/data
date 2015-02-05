@@ -88,16 +88,16 @@
 
 (test-begin
  (define bool-or-num
-   (sum/e (cons bool/e boolean?)
-          (cons (fin/e 0 1 2 3) number?)))
+   (or/e (cons bool/e boolean?)
+         (cons (fin/e 0 1 2 3) number?)))
 
  (define bool-or-nat
-   (sum/e (cons bool/e boolean?)
-          (cons nat/e number?)))
+   (or/e (cons bool/e boolean?)
+         (cons nat/e number?)))
 
  (define nat-or-bool
-   (sum/e (cons nat/e number?)
-          (cons bool/e boolean?)))
+   (or/e (cons nat/e number?)
+         (cons bool/e boolean?)))
 
  (define odd-or-even
    (let ()
@@ -124,8 +124,8 @@
               nat/e
               #:contract (and/c exact-integer? odd?)))
      
-     (sum/e (cons evens/e even?)
-            (cons odds/e odd?))))
+     (or/e (cons evens/e even?)
+           (cons odds/e odd?))))
 
  (check-equal? (enum-size bool-or-num) 6)
    
@@ -166,11 +166,11 @@
  (check-bijection? nat-or-bool)
 
  (define multi-layered
-   (sum/e (cons (take/e string/e 5) string?)
-          (cons (fin/e 'a 'b 'c 'd) symbol?)
-          (cons nat/e number?)
-          (cons bool/e boolean?)
-          (cons (listof/e bool/e) list?)))
+   (or/e (cons (take/e string/e 5) string?)
+         (cons (fin/e 'a 'b 'c 'd) symbol?)
+         (cons nat/e number?)
+         (cons bool/e boolean?)
+         (cons (listof/e bool/e) list?)))
 
  (define (test-multi-layered i x)
    (check-equal? (from-nat multi-layered i) x))
@@ -195,7 +195,7 @@
  
  (check-bijection? multi-layered)
  
- (check-equal? (approximate (sum/e (cons/e nat/e nat/e) nat/e)
+ (check-equal? (approximate (or/e (cons/e nat/e nat/e) nat/e)
                             6)
               (list (from-nat (cons/e nat/e nat/e) 0)
                     0
@@ -207,8 +207,8 @@
 ;; make sure various combinators correctly propagate bijectionness.
 (check-equal? 
  (two-way-enum? 
-  (sum/e (pam/e (λ (x) (floor (/ x 2))) nat/e #:contract exact-integer?)
-         (pam/e (λ (x) (floor (/ x 3))) nat/e #:contract exact-integer?)))
+  (or/e (pam/e (λ (x) (floor (/ x 2))) nat/e #:contract exact-integer?)
+        (pam/e (λ (x) (floor (/ x 3))) nat/e #:contract exact-integer?)))
  #f)
 (check-equal? 
  (two-way-enum? 
@@ -421,8 +421,8 @@
 
 (check-bijection? (fix/e
                    (λ (m/e)
-                     (sum/e (fin/e #f)
-                            (cons/e m/e m/e)))))
+                     (or/e (fin/e #f)
+                           (cons/e m/e m/e)))))
 
 ;; dep/e tests
 (define (up-to n)
@@ -712,8 +712,8 @@
 (check-contract (except/e nat/e 0))
 (check-contract (below/e 50))
 (check-contract (fin/e 1 2 #f 'c +inf.0 +nan.0 '#:x))
-(check-contract (sum/e (cons (cons/e nat/e nat/e) pair?)
-                       (cons nat/e real?)))
+(check-contract (or/e (cons (cons/e nat/e nat/e) pair?)
+                      (cons nat/e real?)))
 (check-contract (map/e add1 sub1 nat/e #:contract (and/c exact-integer? positive?)))
 
 ;; use pam/e to skip the to-nat check (it gets slow)

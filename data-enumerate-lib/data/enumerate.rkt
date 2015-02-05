@@ -102,7 +102,7 @@
         [result enum?])]
   [nat/e enum?]
   [int/e enum?]
-  [sum/e
+  [or/e
    (->* () #:rest (listof (or/c (cons/c enum? (-> any/c boolean?))
                                 flat-enum?))
         enum?)]

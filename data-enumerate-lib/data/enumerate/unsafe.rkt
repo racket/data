@@ -28,7 +28,6 @@ changes:
 todo:
  - make 'enum' arguments go first
  - change names to match contract names:
-     sum/e => or/e
      dep/e => cons/de (with different syntax)
  - criterion for "less checked": avoid all checks that call from-nat/to-nat
  - add a coercion function to turn lists into enumerations of
@@ -51,7 +50,7 @@ todo:
  - get rid of the printfs in lib.rkt
  - coerce lists and base values (ones accepted by fin/e) into enumerations
    automatically. 
- - change disj-append/e to work like sum/e (allowing enumerators with
+ - change disj-append/e to work like or/e (allowing enumerators with
    flat contract to double as the predicates)
  - find a better name than `unsafe.rkt`
 
@@ -128,7 +127,7 @@ notes for eventual email:
  fin/e
  nat/e
  int/e
- sum/e
+ or/e
  disj-append/e
  fin-cons/e
  cons/e
@@ -612,7 +611,7 @@ notes for eventual email:
   (values prev-max-index tuple-bound exhs inexhs))
 
 ;; fairly interleave a list of enumerations
-(define (sum/e . e-or-e/ps)
+(define (or/e . e-or-e/ps)
   (define e-ps (for/list ([x (in-list e-or-e/ps)])
                  (cond
                    [(enum? x) (cons x (enum-contract x))]
@@ -652,7 +651,7 @@ notes for eventual email:
             enc
             (apply or/c (map (λ (x) (enum-contract (car x))) non-empty-e-ps)))]))
 
-;; Like sum/e, but sequences the enumerations instead of interleaving
+;; Like or/e, but sequences the enumerations instead of interleaving
 (define (disj-append/e e-p . e-ps)
   (define/match (disj-append2/e e-p1 e-p2)
     [((cons e1 1?) (cons e2 2?))
