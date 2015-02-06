@@ -4,6 +4,7 @@
          racket/generator
          racket/stream
          racket/bool
+         racket/match
          (only-in racket/list remove-duplicates)
          math/base
          math/distributions
@@ -364,6 +365,63 @@
    (λ (x) (- (to-nat e x) lo))
    (below/e (hi . - . lo))
    #:contract contract))
+
+(provide
+ (contract-out
+  [traverse/e
+   (-> (-> any/c enum?)
+       (listof any/c)
+       enum?)]
+  [hash-traverse/e
+   (-> (-> any/c enum?) hash?
+       enum?)]))
+
+;; Traversal (maybe come up with a better name
+;; traverse/e : (a -> enum b), (listof a) -> enum (listof b)
+(define (traverse/e f xs)
+  (apply list/e (map f xs)))
+
+;; Hash Traversal
+;; hash-traverse/e : (a -> enum b), (hash[k] -o> a) -> enum (hash[k] -o> b)
+(define (hash-traverse/e f ht)
+  ;; as-list : listof (cons k a)
+  (define as-list (hash->list ht))
+  ;; on-cdr : (cons k a) -> enum (cons k b)
+  (define (on-cdr pr)
+    (match pr
+      [(cons k v)
+       (map/e (λ (x) (cons k x))
+              cdr
+              (f v)
+              #:contract any/c)]))
+  ;; enum (listof (cons k b))
+  (define assoc/e
+    (traverse/e on-cdr as-list))
+  (define (hash-that-maps-correct-keys? candidate-ht)
+    (define b (box #f))
+    (for/and ([(k v) (in-hash ht)])
+      (not (eq? (hash-ref candidate-ht k b) b))))
+  (map/e make-immutable-hash
+         hash->list
+         assoc/e
+         #:contract 
+         (and/c
+          hash?
+          hash-that-maps-correct-keys?
+          (hash/dc [k any/c]
+                   [v (k) (enum-contract (f k))]))))
+
+
+(provide
+ (contract-out
+  [nat+/e (-> exact-nonnegative-integer? enum?)]))
+(define (nat+/e n)
+  (map/e (λ (k) (+ k n))
+         (λ (k) (- k n))
+         nat/e
+         #:contract
+         (and/c (>=/c n) exact-integer?)))
+
 
 ;; Base Type enumerators
 

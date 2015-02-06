@@ -96,13 +96,6 @@
    (->* (enum? enum?)
         (#:ordering (or/c 'diagonal 'square))
         enum?)]
-  [traverse/e
-   (-> (-> any/c enum?)
-       (listof any/c)
-       enum?)]
-  [hash-traverse/e
-   (-> (-> any/c enum?) hash?
-       enum?)]
   [thunk/e
    (->i ([s extended-nat/c]
          [mk-e (s is-two-way?)
@@ -147,12 +140,6 @@
         enum?)]
   [bounded-list/e
    (-> nat? nat?
-       enum?)]
-  [nat+/e
-   (-> nat?
-       enum?)]
-  [fail/e
-   (-> exn?
        enum?)]))
 
 (define nat? exact-nonnegative-integer?)

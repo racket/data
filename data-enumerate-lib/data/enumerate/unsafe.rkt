@@ -123,8 +123,6 @@ notes for eventual email:
  disj-append/e
  fin-cons/e
  cons/e
- traverse/e
- hash-traverse/e
  cons/de
  thunk/e
  fix/e
@@ -133,8 +131,6 @@ notes for eventual email:
  box-list/e
  prime-length-box-list/e
  bounded-list/e
- nat+/e
- fail/e
  box-tuples/e
  below/e
  
@@ -684,39 +680,6 @@ notes for eventual email:
          (list/e e1 e2 #:ordering ordering)
          #:contract (cons/c (enum-contract e1) (enum-contract e2))))
 
-;; Traversal (maybe come up with a better name
-;; traverse/e : (a -> enum b), (listof a) -> enum (listof b)
-(define (traverse/e f xs)
-  (apply list/e (map f xs)))
-
-;; Hash Traversal
-;; hash-traverse/e : (a -> enum b), (hash[k] -o> a) -> enum (hash[k] -o> b)
-(define (hash-traverse/e f ht)
-  ;; as-list : listof (cons k a)
-  (define as-list (hash->list ht))
-  ;; on-cdr : (cons k a) -> enum (cons k b)
-  (define/match (on-cdr pr)
-    [((cons k v))
-     (map/e (λ (x) (cons k x))
-            cdr
-            (f v)
-            #:contract any/c)])
-  ;; enum (listof (cons k b))
-  (define assoc/e
-    (traverse/e on-cdr as-list))
-  (define (hash-that-maps-correct-keys? candidate-ht)
-    (define b (box #f))
-    (for/and ([(k v) (in-hash ht)])
-      (not (eq? (hash-ref candidate-ht k b) b))))
-  (map/e make-immutable-hash
-         hash->list
-         assoc/e
-         #:contract 
-         (and/c
-          hash?
-          hash-that-maps-correct-keys?
-          (hash/dc [k any/c]
-                   [v (k) (enum-contract (f k))]))))
 
 ;; the nth triangle number
 (define (tri n)
@@ -1394,16 +1357,3 @@ notes for eventual email:
      (define layer/e (bounded-list/e k layer))
      (from-nat layer/e (n . - . smallest))))
 
-(define (nat+/e n)
-  (map/e (λ (k)
-            (+ k n))
-         (λ (k)
-            (- k n))
-         nat/e
-         #:contract
-         (and/c (>=/c n) exact-integer?)))
-
-;; fail/e : exn -> enum ()
-(define (fail/e e)
-  (define (t _) (raise e))
-  (-enum 1 t t none/c))
