@@ -315,6 +315,35 @@
 (define (listof-n/e e n)
   (apply list/e (build-list n (const e))))
 
+(provide
+ (contract-out
+  [slice/e
+   (->i ([e enum?] [lo exact-nonnegative-integer?] [hi exact-nonnegative-integer?])
+        (#:contract [contract contract?])
+        #:pre (lo hi) (<= lo hi)
+        #:pre (e hi) (or (infinite-enum? e) (hi . <= . (enum-size e)))
+        [res enum?])]))
+(define (slice/e e lo hi 
+                 #:contract 
+                 [contract 
+                  (let ([c (enum-contract e)])
+                    (unless (flat-contract? c)
+                      (error 'slice/e
+                             (string-append
+                              "expected either an explicit #:contract"
+                              " argument or an enumerator with a flat contract, got ~v" e)))
+                    (and/c c
+                           (let ([in-the-slice?
+                                  (λ (x)
+                                    (for/or ([i (in-range lo hi)])
+                                      (equal? (from-nat e i) x)))])
+                             in-the-slice?)))])
+  (map/e
+   (λ (n) (from-nat e (n . + . lo)))
+   (λ (x) (- (to-nat e x) lo))
+   (below/e (hi . - . lo))
+   #:contract contract))
+
 ;; Base Type enumerators
 
 (provide
@@ -496,6 +525,3 @@
          (apply list/e #:ordering ordering es)
          #:contract (apply vector/c (map enum-contract es))))
 
-
-(provide (contract-out [below/e (-> nat? enum?)]))
-(define below/e unsafe:below/e)

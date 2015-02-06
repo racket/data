@@ -62,6 +62,9 @@
                               exact-nonnegative-integer?)])
         [res (e) (listof (enum-contract e))])]
   [to-list (->i ([e finite-enum?]) [result (e) (listof (enum-contract e))])]
+  
+  [below/e (-> exact-nonnegative-integer? enum?)]
+
   [take/e
    (->i ([e enum?] 
          [s (e) 
@@ -74,14 +77,6 @@
                  (and (two-way-enum? e)
                       (flat-contract? (enum-contract e))))
         [result enum?])]
-  [slice/e
-   (->i ([e enum?] [lo nat?] [hi nat?])
-        #:pre 
-        (e lo hi)
-        (and (or (infinite-enum? e)
-                 (hi . <= . (enum-size e)))
-             (hi . >= . lo))
-        [res enum?])]
   [empty/e enum?]
   [fin/e
    (->i ()

@@ -116,7 +116,6 @@ notes for eventual email:
  approximate
  to-list
  take/e
- slice/e
  below/e
  empty/e
  fin/e
@@ -330,36 +329,6 @@ notes for eventual email:
                   (unless (< k n)
                     (error 'take/e "attempted to encode an element not in an enumerator"))
                   k)))
-         contract))
-
-(define (slice/e e lo hi 
-                 #:contract 
-                 [contract 
-                  (let ([c (enum-contract e)])
-                    (unless (flat-contract? c)
-                      (error 'slice/e
-                             (string-append
-                              "expected either an explicit #:contract"
-                              " argument or an enumerator with a flat contract, got ~v" e)))
-                    (and/c c
-                           (let ([in-the-slice?
-                                  (λ (x)
-                                    (for/or ([i (in-range lo hi)])
-                                      (equal? (from-nat e i) x)))])
-                             in-the-slice?)))])
-  (-enum (hi . - . lo)
-         (λ (n)
-           (from-nat e (n . + . lo)))
-         (and (enum-to e)
-              (λ (x)
-                (define n (to-nat e x))
-                (unless (and (n . >= . lo)
-                             (n . <  . hi))
-                  (error 'slice/e
-                         (string-append
-                          "attempted to encode an element removed by slice/e:"
-                          " ~s was excepted, originally ~s, but sliced between ~s and ~s" x n lo hi)))
-                (n . - . lo)))
          contract))
 
 (define (below/e n)
