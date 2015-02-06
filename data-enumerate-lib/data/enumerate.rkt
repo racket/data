@@ -5,6 +5,7 @@
          racket/bool)
 
 (provide 
+ cons/de
  (contract-out
   [enum (->i ([size extended-nat/c]
               [from-nat (contract) (-> exact-nonnegative-integer? contract)]
@@ -123,8 +124,6 @@
   [hash-traverse/e
    (-> (-> any/c enum?) hash?
        enum?)]
-  [dep/e dep/e-contract]
-  [flip-dep/e dep/e-contract]
   [thunk/e
    (->i ([s extended-nat/c]
          [mk-e (s is-two-way?)
@@ -248,16 +247,3 @@
    (for/list ([e (in-list eles)])
      (format " ~e" e))))
 
-(define dep/e-contract
-  (->i ([e enum?]
-        [f (e f-range-finite?)
-           (-> (enum-contract e)
-               (and/c (if (or (unsupplied-arg? f-range-finite?)
-                              (not f-range-finite?))
-                          infinite-enum?
-                          finite-enum?)
-                      (if (two-way-enum? e)
-                          two-way-enum?
-                          one-way-enum?)))])
-       (#:f-range-finite? [f-range-finite? boolean?])
-       [res enum?]))

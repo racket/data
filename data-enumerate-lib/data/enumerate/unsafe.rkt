@@ -8,6 +8,7 @@
          racket/promise
          racket/vector
          racket/generic
+         syntax/location
          data/gvector
          (only-in math/number-theory
                   binomial
@@ -27,8 +28,7 @@ changes:
 
 todo:
  - make 'enum' arguments go first
- - change names to match contract names:
-     dep/e => cons/de (with different syntax)
+ - change names to match contract names
  - criterion for "less checked": avoid all checks that call from-nat/to-nat
  - add a coercion function to turn lists into enumerations of
    their elements automatically and non-lists into constant
@@ -41,11 +41,6 @@ todo:
  - add contract to fix/e to check
      that the sizes are right
      change the argument order so optional arguments work....
-
- - many/e vs many2/e: explain & use keywords for the two.
-   => include three options: dep/e variant, fix/e variant, and or/e of the two
-   => call the two argument version of many/e something else
-      (maybe many/e?)
 
  - get rid of the printfs in lib.rkt
  - coerce lists and base values (ones accepted by fin/e) into enumerations
@@ -133,8 +128,7 @@ notes for eventual email:
  cons/e
  traverse/e
  hash-traverse/e
- dep/e
- flip-dep/e
+ cons/de
  thunk/e
  fix/e
  list/e
@@ -798,13 +792,83 @@ notes for eventual email:
               1))
        2)))
 
+(define-syntax (cons/de stx)
+  (define f-range-finite #f)
+  (define (parse-options options)
+    (let loop ([options options])
+      (syntax-case options ()
+        [() (void)]
+        [(#:f-range-finite? exp . options)
+         (begin
+           (when f-range-finite
+             (raise-syntax-error 'cons/de "expected only one use for #:f-range-finite"
+                                 stx
+                                 f-range-finite
+                                 (list #'exp)))
+           (set! f-range-finite #'exp)
+           (loop #'options))]
+        [(x . y)
+         (raise-syntax-error 'cons/de "bad syntax" stx #'x)])))
+  (define the-srcloc
+    #`(srcloc '#,(syntax-source stx)
+              #,(syntax-line stx)
+              #,(syntax-column stx)
+              #,(syntax-position stx)
+              #,(syntax-span stx)))
+  (define other-party-name (syntax-local-lift-expression #'(quote-module-name)))
+  (syntax-case stx ()
+    [(_ [hd e1] [tl (hd2) e2] . options)
+     (begin
+       (unless (free-identifier=? #'hd #'hd2)
+         (raise-syntax-error 'cons/de "expected the identifiers to be the same"
+                             stx
+                             #'hd
+                             (list #'hd2)))
+       (parse-options #'options)
+       #`(cons/de/proc e1 (λ (hd2) e2) #,f-range-finite #f 
+                       #,the-srcloc #,other-party-name))]
+    [(_ [hd (tl2) e1] [tl e2] . options)
+     (begin
+       (unless (free-identifier=? #'tl #'tl2)
+         (raise-syntax-error 'cons/de "expected the identifiers to be the same"
+                             stx
+                             #'tl
+                             (list #'tl2)))
+       (parse-options #'options)
+       #`(cons/de/proc e2 (λ (tl2) e1) #,f-range-finite #t 
+                       #,the-srcloc #,other-party-name))]))
+                       
+(define (cons/de/proc e _f f-range-finite? flip? srcloc other-party-name)
+  (define f-range-ctc
+    (and/c (if f-range-finite?
+               finite-enum?
+               infinite-enum?)
+           (if (two-way-enum? e)
+               two-way-enum?
+               one-way-enum?)))
+  (define (f v)
+    (contract f-range-ctc
+              (_f v) 
+              other-party-name 
+              'data/enumerate 
+              'cons/de/dependent-expression
+              srcloc))
+  (define forward (cons/de/forward e f f-range-finite?))
+  (cond
+    [flip?
+     (define (flip-pr ab) (cons (cdr ab) (car ab)))
+     (map/e
+      flip-pr flip-pr forward
+      #:contract
+      (cons/dc [hd (tl) (enum-contract (f tl))] [tl (enum-contract e)]))]
+    [else forward]))
 
-(define (dep/e e f #:f-range-finite? [f-range-finite? #f])
+(define (cons/de/forward e f f-range-finite?)
   (define the-ctc (cons/dc [hd (enum-contract e)] [tl (hd) (enum-contract (f hd))]))
   (cond
     [(= 0 (enum-size e)) empty/e]
     [f-range-finite?
-     (dep/e-dependent-ranges-all-finite e f the-ctc)]
+     (cons/de-dependent-ranges-all-finite e f the-ctc)]
     [(finite-enum? e)
      (-enum +inf.0
             (λ (n)
@@ -838,7 +902,7 @@ notes for eventual email:
                         l))))
             the-ctc)]))
 
-(define (dep/e-dependent-ranges-all-finite e f the-ctc)
+(define (cons/de-dependent-ranges-all-finite e f the-ctc)
   ;; 'sizes' is a memo table that caches the size of the dependent enumerators
   ;; sizes[n] = # of terms with left side index <= n
   ;; sizes : gvector int
@@ -944,20 +1008,6 @@ notes for eventual email:
   (check-equal? (find-size (gvector 1 5 7) 5) 2)
   (check-equal? (find-size (gvector 1 5 7) 6) 2)
   (check-equal? (find-size (gvector 1 5 7) 7) #f))
-
-
-;; flip-dep/e : enum a (a -> enum b) -> enum (b,a)
-(define (flip-dep/e e f #:f-range-finite? [f-range-finite? #f])
-  (map/e
-   (λ (ab)
-      (cons (cdr ab)
-            (car ab)))
-   (λ (ba)
-      (cons (cdr ba)
-            (car ba)))
-   (dep/e e f #:f-range-finite? f-range-finite?)
-   #:contract
-   (cons/dc [hd (tl) (enum-contract (f tl))] [tl (enum-contract e)])))
 
 
 ;; thunk/e : Nat or +-Inf, ( -> enum a) -> enum a

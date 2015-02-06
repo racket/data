@@ -105,25 +105,24 @@
      (map/e
       values
       values
-      (dep/e
-       #:f-range-finite? #t
-       (below/e n)
-       (λ (v)
-         (define (without-v-but-with-n? x) (not (member v x)))
-         (unsafe:map/e
-          (λ (l)
-            (for/list ([i (in-list l)])
-              (if (< i v)
-                  i
-                  (+ i 1))))
-          (λ (l)
-            (for/list ([i (in-list l)])
-              (if (< i v)
-                  i
-                  (- i 1))))
-          p-sub1
-          #:contract
-          any/c)))
+      (cons/de
+       [v (below/e n)]
+       [tl (v)
+           (unsafe:map/e
+            (λ (l)
+              (for/list ([i (in-list l)])
+                (if (< i v)
+                    i
+                    (+ i 1))))
+            (λ (l)
+              (for/list ([i (in-list l)])
+                (if (< i v)
+                    i
+                    (- i 1))))
+            p-sub1
+            #:contract
+            any/c)]
+       #:f-range-finite? #t)
       #:contract
       (and/c (apply list/c (build-list n (λ (_) elem/c)))
              no-duplicates?))]))
@@ -235,11 +234,9 @@
             [else
              (loop
               (cdr l)
-              (flip-dep/e
-               #:f-range-finite? f-range-finite?
-               acc
-               (λ (xs)
-                 (f xs (car l)))))])))
+              (cons/de [hd (xs) (f xs (car l))]
+                       [xs acc]
+                       #:f-range-finite? f-range-finite?))])))
   (map/e
    reverse
    reverse
@@ -307,9 +304,9 @@
      (map/e 
       cdr 
       (λ (x) (cons (- (length x) 1) x))
-      (dep/e
-       nat/e
-       (λ (i) (apply list/e (build-list (+ i 1) (λ (_) e)))))
+      (cons/de
+       [i nat/e]
+       [tl (i) (apply list/e (build-list (+ i 1) (λ (_) e)))])
       #:contract (non-empty-listof (enum-contract e)))]))
 
 (provide

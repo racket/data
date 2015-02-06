@@ -424,26 +424,26 @@
                      (or/e (fin/e #f)
                            (cons/e m/e m/e)))))
 
-;; dep/e tests
-(define (up-to n)
-  (below/e (add1 n)))
+;; cons/de tests
+(define (up-to n) (below/e (add1 n)))
 (define 3-up
-  (dep/e
-   (fin/e 0 1 2)
-   up-to
-   #:f-range-finite? #t))
+  (cons/de [hd (fin/e 0 1 2)]
+           [tl (hd) (below/e (add1 hd))]
+           #:f-range-finite? #t))
 
 (define from-3
-  (dep/e
-   (fin/e 0 1 2)
-   nat+/e))
+  (cons/de
+   [hd (fin/e 0 1 2)]
+   [tl (hd) (nat+/e hd)]))
 
 (define nats-to
-  (dep/e nat/e up-to
-         #:f-range-finite? #t))
+  (cons/de [hd nat/e]
+           [tl (hd) (up-to hd)]
+           #:f-range-finite? #t))
 
 (define nats-up
-  (dep/e nat/e nat+/e))
+  (cons/de [hd nat/e]
+           [tl (hd) (nat+/e hd)]))
 
 (test-begin
  (check-equal? (enum-size 3-up) 6)
@@ -488,29 +488,30 @@
  (check-bijection? nats-up))
 
 (define 3-up-2
-  (dep/e
-   (fin/e 0 1 2)
-   up-to
+  (cons/de
+   [hd (fin/e 0 1 2)]
+   [tl (hd) (up-to hd)]
    #:f-range-finite? #t))
 
 (define nats-to-2
-  (dep/e nat/e up-to
-         #:f-range-finite? #t))
+  (cons/de [hd nat/e]
+           [tl (hd) (up-to hd)]
+           #:f-range-finite? #t))
 
 (check-equal? (one-way-enum?
-               (dep/e 
-                (pam/e values nat/e #:contract (enum-contract nat/e))
-                (λ (i) (pam/e values nat/e #:contract (enum-contract nat/e)))))
+               (cons/de
+                [i (pam/e values nat/e #:contract (enum-contract nat/e))]
+                [tl (i) (pam/e values nat/e #:contract (enum-contract nat/e))]))
               #t)
 (check-equal? (one-way-enum?
-               (dep/e 
-                (pam/e values (below/e 10) #:contract (enum-contract nat/e))
-                (λ (i) (pam/e values nat/e #:contract (enum-contract nat/e)))))
+               (cons/de
+                [i (pam/e values (below/e 10) #:contract (enum-contract nat/e))]
+                [tl (i) (pam/e values nat/e #:contract (enum-contract nat/e))]))
               #t)
 (check-equal? (one-way-enum?
-               (dep/e 
-                (pam/e values (below/e 10) #:contract (enum-contract nat/e))
-                (λ (i) (pam/e values (below/e i) #:contract (enum-contract (below/e i))))
+               (cons/de
+                [i (pam/e values (below/e 10) #:contract (enum-contract nat/e))]
+                [tl (i) (pam/e values (below/e i) #:contract (enum-contract (below/e i)))]
                 #:f-range-finite? #t))
               #t)
 
@@ -720,11 +721,12 @@
 (check-contract (let ([e (listof/e nat/e)])
                   (pam/e values e #:contract (enum-contract e))))
 
-(check-contract (dep/e nat/e
-                       (λ (i) 
-                         (map/e (λ (x) (+ x i)) (λ (x) (- x i)) nat/e 
-                                #:contract 
-                                (and/c (>=/c i) exact-integer?)))))
+(check-contract 
+ (cons/de [i nat/e]
+          [tl (i)
+              (map/e (λ (x) (+ x i)) (λ (x) (- x i)) nat/e 
+                     #:contract 
+                     (and/c (>=/c i) exact-integer?))]))
 (check-contract integer/e)
 (check-contract float/e)
 (check-contract exact-rational/e)
