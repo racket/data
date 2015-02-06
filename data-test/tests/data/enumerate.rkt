@@ -77,13 +77,13 @@
 
 ;; ints checks
 (test-begin
- (check-eq? (from-nat int/e 0) 0)         ; 0 -> 0
- (check-eq? (from-nat int/e 1) 1)         ; 1 -> 1
- (check-eq? (from-nat int/e 2) -1)        ; 2 -> 1
- (check-eq? (to-nat int/e 0) 0)
- (check-eq? (to-nat int/e 1) 1)
- (check-eq? (to-nat int/e -1) 2)
- (check-bijection? int/e))              ; -1 -> 2, -3 -> 4
+ (check-eq? (from-nat integer/e 0) 0)         ; 0 -> 0
+ (check-eq? (from-nat integer/e 1) 1)         ; 1 -> 1
+ (check-eq? (from-nat integer/e 2) -1)        ; 2 -> 1
+ (check-eq? (to-nat integer/e 0) 0)
+ (check-eq? (to-nat integer/e 1) 1)
+ (check-eq? (to-nat integer/e -1) 2)
+ (check-bijection? integer/e))                ; -1 -> 2, -3 -> 4
 
 
 (test-begin

@@ -192,7 +192,7 @@
 (define (range/e low high)
   (cond 
     [(and (infinite? high) (infinite? low))
-     int/e]
+     integer/e]
     [(infinite? high)
      (map/e
       (λ (n)
@@ -481,7 +481,7 @@
        (exact-integer? (real-part x))
        (exact-integer? (imag-part x))))
 (define exact-integer-non-real/e
-  (make-non-real/e (except/e int/e 0) (except/e int/e 0)
+  (make-non-real/e (except/e integer/e 0) (except/e integer/e 0)
                    (and/c complex-with-exact-integer-parts? (not/c real?))))
 (define float-non-real/e 
   (make-non-real/e float/e float/e

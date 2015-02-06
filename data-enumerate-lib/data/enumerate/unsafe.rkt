@@ -119,7 +119,6 @@ notes for eventual email:
  empty/e
  fin/e
  nat/e
- int/e
  or/e
  disj-append/e
  fin-cons/e
@@ -267,8 +266,6 @@ notes for eventual email:
       (λ (xs) (apply f xs))   
       (apply list/e (cons e es)))]))
 
-;; except/e : (enum a) a* -> (enum a)
-;; Everything inside e MUST be in the enumerator or you will get an error
 (define (except/e e #:contract [_contract #f] . excepts)
   (define contract
     (cond
@@ -355,19 +352,6 @@ notes for eventual email:
             (apply or/c args))]))
 
 (define nat/e (-enum +inf.0 values values exact-nonnegative-integer?))
-
-
-(define int/e
-  (-enum +inf.0
-         (λ (n)
-           (if (even? n)
-               (* -1 (/ n 2))
-               (/ (+ n 1) 2)))
-         (λ (n)
-           (if (> n 0)
-               (- (* 2 n) 1)
-               (* 2 (abs n))))
-         exact-integer?))
 
 (define (empty/e? e)
   (= 0 (enum-size e)))
