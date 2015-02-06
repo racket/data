@@ -122,10 +122,8 @@ notes for eventual email:
  or/e
  disj-append/e
  fin-cons/e
- cons/e
  cons/de
  thunk/e
- fix/e
  list/e
  cantor-list/e
  box-list/e
@@ -670,17 +668,6 @@ notes for eventual email:
          (-enum the-size dec enc
                 (cons/c (enum-contract e1) (enum-contract e2)))]))
 
-;; cons/e : enum a, enum b ... -> enum (cons a b ...)
-(define (cons/e e1 e2 #:ordering [ordering 'square])
-  (map/e (λ (x)
-            (cons (first  x)
-                  (second x)))
-         (λ (x-y)
-            (list (car x-y) (cdr x-y)))
-         (list/e e1 e2 #:ordering ordering)
-         #:contract (cons/c (enum-contract e1) (enum-contract e2))))
-
-
 ;; the nth triangle number
 (define (tri n)
   (/ (* n (+ n 1))
@@ -916,9 +903,12 @@ notes for eventual email:
 
 
 ;; thunk/e : Nat or +-Inf, ( -> enum a) -> enum a
-(define (thunk/e s thunk #:two-way-enum? [two-way? #t])
+(define (thunk/e thunk
+                 #:size [size +inf.0]
+                 #:two-way-enum? [two-way? #t]
+                 #:flat-enum? [flat-enum? #t])
   (define promise/e (delay (thunk)))
-  (-enum s
+  (-enum size
          (λ (n)
            (give-up-on-bijection-checking promise/e)
            (from-nat (force promise/e) n))
@@ -926,31 +916,14 @@ notes for eventual email:
               (λ (x)
                 (give-up-on-bijection-checking promise/e)
                 (to-nat (force promise/e) x)))
-         (recursive-contract
-          (enum-contract
-           (force promise/e)))))
-
-(define (fix/e f/e 
-               #:size [size +inf.0] 
-               #:two-way-enum? [two-way-enum? #t]
-               #:flat-enum? [flat-enum? #t])
-  (define self (delay (f/e (fix/e f/e #:size size #:two-way-enum? two-way-enum?))))
-  (-enum size
-         (λ (n)
-           (give-up-on-bijection-checking self)
-           (from-nat (force self) n))
-         (and two-way-enum?
-              (λ (x)
-                (give-up-on-bijection-checking self)
-                (to-nat (force self) x)))
          (if flat-enum?
-             (recursive-contract 
-              (enum-contract 
-               (force self))
+             (recursive-contract
+              (enum-contract
+               (force promise/e))
               #:flat)
-             (recursive-contract 
-              (enum-contract 
-               (force self))))))
+             (recursive-contract
+              (enum-contract
+               (force promise/e))))))
 
 (define (cantor-untuple k)
   ;; Paul Tarau Deriving a Fast Inverse of the Generalized Cantor N-tupling Bijection

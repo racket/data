@@ -92,40 +92,19 @@
         #:rest (listof (or/c (cons/c enum? (-> any/c boolean?))
                              flat-enum?))
         enum?)]
-  [cons/e
-   (->* (enum? enum?)
-        (#:ordering (or/c 'diagonal 'square))
-        enum?)]
   [thunk/e
-   (->i ([s extended-nat/c]
-         [mk-e (s is-two-way?)
-               (cond
-                 [(and (= s +inf.0) is-two-way?)
-                  (-> (and/c two-way-enum? infinite-enum?))]
-                 [(= s +inf.0)
-                  (-> (and/c one-way-enum? infinite-enum?))]
-                 [else
-                  (define (matching-size? n) (= (enum-size n) s))
-                  (-> (and/c (if is-two-way?
-                                 (and/c two-way-enum? finite-enum?)
-                                 (and/c one-way-enum? finite-enum?))
-                             matching-size?))])])
-        (#:two-way-enum? [is-two-way? boolean?])
-        [result enum?])]
-  [fix/e
-   (->i ([f (size is-two-way-enum? is-flat-enum?)
-            (-> enum? 
-                (and/c (if (or (unsupplied-arg? size) (= size +inf.0))
-                           infinite-enum?
-                           (and/c finite-enum?
-                                  (let ([matching-size? (λ (e) (= (enum-size e) size))])
-                                    matching-size?)))
-                       (if (or (unsupplied-arg? is-two-way-enum?) is-two-way-enum?)
-                           two-way-enum?
-                           one-way-enum?)
-                       (if (or (unsupplied-arg? is-flat-enum?) is-flat-enum?)
-                           flat-enum?
-                           (not/c flat-enum?))))])
+   (->i ([mk-e (size is-two-way-enum? is-flat-enum?)
+               (-> (and/c (if (or (unsupplied-arg? size) (= size +inf.0))
+                              infinite-enum?
+                              (and/c finite-enum?
+                                     (let ([matching-size? (λ (e) (= (enum-size e) size))])
+                                       matching-size?)))
+                          (if (or (unsupplied-arg? is-two-way-enum?) is-two-way-enum?)
+                              two-way-enum?
+                              one-way-enum?)
+                          (if (or (unsupplied-arg? is-flat-enum?) is-flat-enum?)
+                              flat-enum?
+                              (not/c flat-enum?))))])
         (#:size 
          [size extended-nat/c]
          #:two-way-enum?

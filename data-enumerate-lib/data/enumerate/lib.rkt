@@ -422,6 +422,53 @@
          #:contract
          (and/c (>=/c n) exact-integer?)))
 
+(provide
+ (contract-out
+  [cons/e
+   (->* (enum? enum?)
+        (#:ordering (or/c 'diagonal 'square))
+        enum?)]))
+;; cons/e : enum a, enum b ... -> enum (cons a b ...)
+(define (cons/e e1 e2 #:ordering [ordering 'square])
+  (map/e (λ (x) (cons (car x) (cadr x)))
+         (λ (x-y) (list (car x-y) (cdr x-y)))
+         (list/e e1 e2 #:ordering ordering)
+         #:contract (cons/c (enum-contract e1) (enum-contract e2))))
+
+
+
+(provide
+ (contract-out
+  [fix/e
+   (->i ([f (size is-two-way-enum? is-flat-enum?)
+            (-> enum? 
+                (and/c (if (or (unsupplied-arg? size) (= size +inf.0))
+                           infinite-enum?
+                           (and/c finite-enum?
+                                  (let ([matching-size? (λ (e) (= (enum-size e) size))])
+                                    matching-size?)))
+                       (if (or (unsupplied-arg? is-two-way-enum?) is-two-way-enum?)
+                           two-way-enum?
+                           one-way-enum?)
+                       (if (or (unsupplied-arg? is-flat-enum?) is-flat-enum?)
+                           flat-enum?
+                           (not/c flat-enum?))))])
+        (#:size 
+         [size (or/c +inf.0 exact-nonnegative-integer?)]
+         #:two-way-enum?
+         [is-two-way-enum? boolean?]
+         #:flat-enum?
+         [is-flat-enum? boolean?])
+        [result enum?])]))
+(define (fix/e f/e 
+               #:size [size +inf.0] 
+               #:two-way-enum? [two-way-enum? #t]
+               #:flat-enum? [flat-enum? #t])
+  (define me (thunk/e (λ () (f/e me))
+                      #:size size
+                      #:two-way-enum? two-way-enum?
+                      #:flat-enum? flat-enum?))
+  me)
 
 ;; Base Type enumerators
 

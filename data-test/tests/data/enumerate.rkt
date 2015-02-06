@@ -16,7 +16,6 @@
 
 (eprintf "no-tests ~s\n" 
          (list 'mixed-box-tuples/e
-               'fail/e
                'hash-traverse/e))
 
 
