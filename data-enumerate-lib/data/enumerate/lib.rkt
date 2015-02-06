@@ -3,6 +3,7 @@
          racket/function
          racket/generator
          racket/stream
+         racket/bool
          (only-in racket/list remove-duplicates)
          math/base
          math/distributions
@@ -317,26 +318,46 @@
 
 (provide
  (contract-out
+  [take/e
+   (->i ([e enum?] 
+         [s (e) 
+            (if (finite-enum? e)
+                (integer-in 0 (- (enum-size e) 1))
+                exact-nonnegative-integer?)])
+        (#:contract [c contract?])
+        #:pre (c e)
+        (implies (unsupplied-arg? c)
+                 (and (two-way-enum? e)
+                      (flat-contract? (enum-contract e))))
+        [result enum?])]))
+(define (take/e e n #:contract [contract 
+                                (λ (x)
+                                  (and ((enum-contract e) x)
+                                       (< (to-nat e x) n)))])
+  (slice/e e 0 n))
+
+(provide
+ (contract-out
   [slice/e
    (->i ([e enum?] [lo exact-nonnegative-integer?] [hi exact-nonnegative-integer?])
-        (#:contract [contract contract?])
+        (#:contract [c contract?])
         #:pre (lo hi) (<= lo hi)
         #:pre (e hi) (or (infinite-enum? e) (hi . <= . (enum-size e)))
+        #:pre (c e)
+        (implies (unsupplied-arg? c)
+                 (and (two-way-enum? e)
+                      (flat-contract? (enum-contract e))))
         [res enum?])]))
 (define (slice/e e lo hi 
                  #:contract 
                  [contract 
                   (let ([c (enum-contract e)])
-                    (unless (flat-contract? c)
-                      (error 'slice/e
-                             (string-append
-                              "expected either an explicit #:contract"
-                              " argument or an enumerator with a flat contract, got ~v" e)))
                     (and/c c
                            (let ([in-the-slice?
                                   (λ (x)
-                                    (for/or ([i (in-range lo hi)])
-                                      (equal? (from-nat e i) x)))])
+                                    (define n (to-nat e x))
+                                    (and (<= lo n)
+                                         (< n hi)))])
                              in-the-slice?)))])
   (map/e
    (λ (n) (from-nat e (n . + . lo)))

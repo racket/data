@@ -115,7 +115,6 @@ notes for eventual email:
  except/e
  approximate
  to-list
- take/e
  below/e
  empty/e
  fin/e
@@ -316,23 +315,8 @@ notes for eventual email:
   (for/list ([i (in-range (enum-size e))])
     (from-nat e i)))
 
-(define (take/e e n #:contract [contract 
-                                (λ (x)
-                                  (and ((enum-contract e) x)
-                                       (< (to-nat e x) n)))])
-  (-enum n
-         (λ (k)
-           (from-nat e k))
-         (and (enum-to e)
-              (λ (x)
-                (let ([k (to-nat e x)])
-                  (unless (< k n)
-                    (error 'take/e "attempted to encode an element not in an enumerator"))
-                  k)))
-         contract))
-
 (define (below/e n)
-  (take/e nat/e n #:contract (integer-in 0 (- n 1))))
+  (-enum n values values (integer-in 0 (- n 1))))
 
 (define empty/e
   (-enum 0

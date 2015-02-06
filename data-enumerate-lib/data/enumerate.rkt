@@ -65,18 +65,6 @@
   
   [below/e (-> exact-nonnegative-integer? enum?)]
 
-  [take/e
-   (->i ([e enum?] 
-         [s (e) 
-            (if (finite-enum? e)
-                (integer-in 0 (- (enum-size e) 1))
-                exact-nonnegative-integer?)])
-        (#:contract [c contract?])
-        #:pre (c e)
-        (implies (unsupplied-arg? c)
-                 (and (two-way-enum? e)
-                      (flat-contract? (enum-contract e))))
-        [result enum?])]
   [empty/e enum?]
   [fin/e
    (->i ()
