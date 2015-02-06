@@ -82,9 +82,6 @@
                  (hi . <= . (enum-size e)))
              (hi . >= . lo))
         [res enum?])]
-  [below/e
-   (-> nat?
-       enum?)]
   [empty/e enum?]
   [fin/e
    (->i ()

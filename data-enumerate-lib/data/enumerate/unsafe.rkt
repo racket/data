@@ -139,6 +139,7 @@ notes for eventual email:
  nat+/e
  fail/e
  box-tuples/e
+ below/e
  
  give-up-escape
  
@@ -164,43 +165,48 @@ notes for eventual email:
   (display "#<enum" port)
   (define the-size (enum-size enum))
   (define more-to-go?
-    (parameterize ([enum-printing (+ 1 (enum-printing))])
-      (let loop ([i 0] [chars 0])
-        ;; chars is an approximation on how much
-        ;; we've printed so far.
-        (cond
-          [(not (< i the-size)) #f]
-          [(> (enum-printing) 10)
-           ;; we appear to be in some kind of a bad loop here; just give up
-           #f]
-          [(<= chars 20)
-           (define ele (from-nat enum i))
-           (define sp (open-output-string))
-           (recur ele sp)
-           (define s (get-output-string sp))
+    (cond
+      [(zero? the-size) 
+       (display " «∅»" port)
+       #f]
+      [else
+       (parameterize ([enum-printing (+ 1 (enum-printing))])
+         (let loop ([i 0] [chars 0])
+           ;; chars is an approximation on how much
+           ;; we've printed so far.
            (cond
-             [(equal? s "")
-              ;; if any enumeration values print as empty 
-              ;; strings, then we just give up so as to avoid
-              ;; 'i' never incrementing and never terminating
-              #t]
-             [else
-              (if (zero? i)
-                  (display ": " port)
-                  (display " " port))
-              
-              ;; only print twice up to depth 2 in order to avoid bad
-              ;; algorithmic behavior (so enumerations of enumerations
-              ;; of enumerations might look less beautiful in drracket)
+             [(not (< i the-size)) #f]
+             [(> (enum-printing) 10)
+              ;; we appear to be in some kind of a bad loop here; just give up
+              #f]
+             [(<= chars 20)
+              (define ele (from-nat enum i))
+              (define sp (open-output-string))
+              (recur ele sp)
+              (define s (get-output-string sp))
               (cond
-                [(<= (enum-printing) 2)
-                 (display s port)]
+                [(equal? s "")
+                 ;; if any enumeration values print as empty 
+                 ;; strings, then we just give up so as to avoid
+                 ;; 'i' never incrementing and never terminating
+                 #t]
                 [else
-                 (recur ele port)])
-              
-              (loop (+ i 1)
-                    (+ chars (string-length s) 1))])]
-          [else #t]))))
+                 (if (zero? i)
+                     (display ": " port)
+                     (display " " port))
+                 
+                 ;; only print twice up to depth 2 in order to avoid bad
+                 ;; algorithmic behavior (so enumerations of enumerations
+                 ;; of enumerations might look less beautiful in drracket)
+                 (cond
+                   [(<= (enum-printing) 2)
+                    (display s port)]
+                   [else
+                    (recur ele port)])
+                 
+                 (loop (+ i 1)
+                       (+ chars (string-length s) 1))])]
+             [else #t])))]))
   (if more-to-go?
       (display "...>" port)
       (display ">" port)))
@@ -356,7 +362,6 @@ notes for eventual email:
                 (n . - . lo)))
          contract))
 
-;; below/e
 (define (below/e n)
   (take/e nat/e n #:contract (integer-in 0 (- n 1))))
 

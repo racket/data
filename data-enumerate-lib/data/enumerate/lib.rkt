@@ -497,3 +497,5 @@
          #:contract (apply vector/c (map enum-contract es))))
 
 
+(provide (contract-out [below/e (-> nat? enum?)]))
+(define below/e unsafe:below/e)
