@@ -5,7 +5,7 @@
          racket/stream
          racket/bool
          racket/match
-         (only-in racket/list remove-duplicates)
+         (only-in racket/list remove-duplicates partition)
          syntax/location
          math/base
          math/distributions
@@ -495,6 +495,53 @@
   [to-list (->i ([e finite-enum?]) 
                 [result (e) (listof (enum-contract e))])]))
 (define (to-list e) (approximate e (enum-size e)))
+
+(provide
+ (contract-out
+  [fin/e
+   (->i ()
+        #:rest
+        [elements 
+         (listof (or/c symbol? boolean? char? keyword? null?
+                       string? bytes? number?))]
+        #:pre/name (elements) 
+        "no duplicate elements"
+        (let() 
+          (define-values (nums non-nums) (partition number? elements))
+          (and (= (length (remove-duplicates nums =))
+                  (length nums))
+               (= (length (remove-duplicates non-nums))
+                  (length non-nums))))
+        [result enum?])]))
+(define (fin/e . args)
+  (cond
+    [(null? args) empty/e]
+    [else
+     (define (use-=? x) (and (number? x) (not (memv x '(+nan.0 +nan.f)))))
+     (define-values (use-= use-equal?) (partition use-=? args))
+     (define rev-map (make-hash))
+     (define num-rev-map (list))
+     (for ([i (in-naturals)]
+           [x (in-list args)])
+       (cond
+         [(use-=? x)
+          (set! num-rev-map (cons (cons x i) num-rev-map))]
+         [else
+          (hash-set! rev-map x i)]))
+     (set! num-rev-map (reverse num-rev-map))
+     (define vec (list->vector args))
+     (map/e (λ (n) (vector-ref vec n))
+            (λ (x) 
+              (cond
+                [(use-=? x)
+                 (for/first ([pr (in-list num-rev-map)]
+                             #:when (= x (car pr)))
+                   (cdr pr))]
+                [else (hash-ref rev-map x)]))
+            (below/e (vector-length vec))
+            #:contract (apply or/c args))]))
+
+
 
 ;; Base Type enumerators
 

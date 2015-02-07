@@ -42,22 +42,6 @@
   [nat/e enum?]
   [below/e (-> exact-nonnegative-integer? enum?)]  
   [empty/e enum?]
-  
-  [fin/e
-   (->i ()
-        #:rest
-        [elements 
-         (listof (or/c symbol? boolean? char? keyword? null?
-                       string? bytes? number?))]
-        #:pre/name (elements) 
-        "no duplicate elements"
-        (let() 
-          (define-values (nums non-nums) (partition number? elements))
-          (and (= (length (remove-duplicates nums =))
-                  (length nums))
-               (= (length (remove-duplicates non-nums))
-                  (length non-nums))))
-        [result enum?])]
 
 
   [map/e

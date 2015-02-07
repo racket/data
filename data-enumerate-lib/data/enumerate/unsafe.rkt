@@ -1,13 +1,10 @@
 #lang racket/base
-(require racket/bool
-         racket/contract
+(require racket/contract
          racket/function
          racket/list
          racket/math
          racket/match
          racket/promise
-         racket/vector
-         racket/generic
          syntax/location
          data/gvector
          (only-in math/number-theory
@@ -43,8 +40,6 @@ todo:
      change the argument order so optional arguments work....
 
  - get rid of the printfs in lib.rkt
- - coerce lists and base values (ones accepted by fin/e) into enumerations
-   automatically. 
  - change disj-append/e to work like or/e (allowing enumerators with
    flat contract to double as the predicates)
  - find a better name than `unsafe.rkt`
@@ -116,7 +111,6 @@ notes for eventual email:
  approximate
  below/e
  empty/e
- fin/e
  nat/e
  or/e
  append/e
@@ -310,35 +304,6 @@ notes for eventual email:
          (λ (x)
            (error 'to-nat "no elements in the enumerator"))
          none/c))
-
-(define no-contract (box #f))
-(define (fin/e . args)
-  (cond
-    [(null? args) empty/e]
-    [else
-     (define (use-=? x) (and (number? x) (not (memv x '(+nan.0 +nan.f)))))
-     (define-values (use-= use-equal?) (partition use-=? args))
-     (define rev-map (make-hash))
-     (define num-rev-map (list))
-     (for ([i (in-naturals)]
-           [x (in-list args)])
-       (cond
-         [(use-=? x)
-          (set! num-rev-map (cons (cons x i) num-rev-map))]
-         [else
-          (hash-set! rev-map x i)]))
-     (set! num-rev-map (reverse num-rev-map))
-     (define vec (list->vector args))
-     (-enum (vector-length vec)
-            (λ (n) (vector-ref vec n))
-            (λ (x) 
-              (cond
-                [(use-=? x)
-                 (for/first ([pr (in-list num-rev-map)]
-                             #:when (= x (car pr)))
-                   (cdr pr))]
-                [else (hash-ref rev-map x)]))
-            (apply or/c args))]))
 
 (define nat/e (-enum +inf.0 values values exact-nonnegative-integer?))
 
@@ -1075,10 +1040,13 @@ notes for eventual email:
                  r)]))))
   (-enum (* s1 s2) dec enc (cons/c (enum-contract e1) (enum-contract e2))))
 
+(define singleton-empty-list/e
+  (-enum 1 (λ (x) '()) (λ (e) 0) (list/c)))
+
 (define (list/e #:ordering [ordering 'square] . es)
   (define l (length es))
   (cond
-    [(= l 0) (fin/e '())]
+    [(= l 0) singleton-empty-list/e]
     [(= l 1) (map/e list car (car es) #:contract (list/c (enum-contract (car es))))]
     [(all-infinite? es)
      (if (equal? ordering 'square)
@@ -1194,7 +1162,7 @@ notes for eventual email:
   (define two-way-result?
     (for/and ([e (in-list es)])
       (two-way-enum? e)))
-  (cond [(empty? es) (fin/e '())]
+  (cond [(empty? es) singleton-empty-list/e]
         [else
          (define k (length es))
          (define dec
@@ -1245,7 +1213,7 @@ notes for eventual email:
              i
              es)))
   (define k (length es))
-  (cond [(= k 0) (fin/e '())]
+  (cond [(= k 0) singleton-empty-list/e]
         [(= k 1) (map/e list car (car es))]
         [else
          (define factors (prime-factorize k))
@@ -1283,7 +1251,7 @@ notes for eventual email:
 (define (bounded-list/e len bound)
   (define (loop len)
     (match len
-      [0 (fin/e '())]
+      [0 singleton-empty-list/e]
       [1 
        (define lst (list bound))
        (map/e (λ (x) lst) (λ (lst) 0) (below/e 1) #:contract (list/c bound))]
