@@ -3,26 +3,163 @@
           (for-label data/enumerate
                      data/enumerate/lib
                      racket/math
+                     racket/set
                      racket/contract
+                     racket/match
                      racket/base))
 
 @title{Enumerations}
 
 @(define the-eval (make-base-eval))
-@(the-eval '(require data/enumerate racket/string))
+@(the-eval '(require data/enumerate data/enumerate/lib
+                     racket/set racket/string 
+                     racket/contract racket/match))
+@(define-syntax-rule (ex e ...) (examples #:eval the-eval e ...))
 
 @defmodule[data/enumerate]
 
 @author[@author+email["Max S. New" "maxsnew@gmail.com"]]
 
-This library defines @deftech{enumerations}. Enumerations are
-bijections between the natural numbers (or a prefix thereof) and a
-data-type. Most of the bijections defined in this library guarantee
-that the enumeration is efficient, meaning that the decoding a number
-is linear in the bits of the number.
+This library defines @deftech{enumerations}. Enumerations
+are bijections between the natural numbers (or a prefix of
+them) and the values of some contract. Most of the
+enumerations defined in this library guarantee that the
+constructed bijection is efficient, in the sense that
+decoding a number is roughly linear in the number of bits
+taken to represent the number.
 
-@; XXX explain fairness
-@; XXX add citations
+The two main options on an enumeration convert natural numbers
+back (@racket[from-nat]) and forth (@racket[to-nat]) between
+the elements of the contract. The simplest enumeration, 
+@racket[nat/e] is just a pair of identity functions:
+@interaction[#:eval
+             the-eval
+             (from-nat nat/e 0)
+             (to-nat nat/e 1)]
+but the library builds up more complex enumerations from
+simple ones. For example, you can enumerate lists of the
+elements of other enumerations using @racket[list/e]:
+@interaction[#:eval
+             the-eval
+             (from-nat (list/e nat/e nat/e nat/e) 0)
+             (from-nat (list/e nat/e nat/e nat/e) 1)
+             (from-nat (list/e nat/e nat/e nat/e) (expt 2 100))
+             (to-nat (list/e nat/e nat/e nat/e) (list 123456789 123456789 123456789))]
+To interleave two enumerations, use @racket[or/e]:
+@interaction[#:eval
+             the-eval
+             (from-nat (or/e nat/e (list/e nat/e nat/e)) 0)
+             (from-nat (or/e nat/e (list/e nat/e nat/e)) 1)
+             (from-nat (or/e nat/e (list/e nat/e nat/e)) 2)
+             (from-nat (or/e nat/e (list/e nat/e nat/e)) 3)
+             (from-nat (or/e nat/e (list/e nat/e nat/e)) 4)]
+and to construct recursive data structures, use 
+@racket[delay/e] (with a little help from @racket[fin/e] to
+build a base-case that is not infinite):
+@def+int[#:eval 
+         the-eval
+         (define bt/e
+           (delay/e
+            (or/e (fin/e #f)
+                  (list/e bt/e bt/e))))
+         (from-nat bt/e 0)
+         (from-nat bt/e 1)
+         (from-nat bt/e 2)
+         (from-nat bt/e 3)
+         (from-nat bt/e (expt 2 100))]
+
+The library also supports dependent enumerations. For example, 
+to build ordered pairs, we can allow any natural number
+in the first component, but we want to have only natural
+numbers that are larger than that in the second component. 
+The @racket[cons/de] lets us express the dependency (using a notation
+similar to the contract @racket[cons/dc]) and then we can
+use @racket[nat+/e], which builds a enumerators of natural numbers
+that are larger than or equal to its argument:
+@def+int[#:eval 
+         the-eval
+         (define ordered-pair/e
+           (cons/de [hd nat/e]
+                    [tl (hd) (nat+/e (+ hd 1))]))
+         (for/list ([i (in-range 10)])
+           (from-nat ordered-pair/e i))]
+
+Sometimes the best way to get a new enumeration is to adjust
+the output of a previous one. For example, if we wanted
+ordered pairs that were ordered in the other direction, we
+just need to swap the components of the pair from the 
+@racket[ordered-pair/e] enumeration. The function 
+@racket[map/e] adjusts existing enumerations. It accepts a
+contract describing the new kinds of values and functions
+that convert back and forth between the new and old kinds of
+values. 
+@defs+int[#:eval 
+          the-eval
+          ((define (swap-components x) (cons (cdr x) (car x)))
+           (define other-ordered-pair/e
+             (map/e swap-components
+                    swap-components
+                    ordered-pair/e
+                    #:contract (cons/c exact-nonnegative-integer?
+                                       exact-nonnegative-integer?))))
+          (for/list ([i (in-range 10)])
+            (from-nat ordered-pair/e i))]
+
+Until we got to @racket[map/e], all of the enumeration functions have built
+enumerations that are guaranteed to be bijections. But since @racket[map/e]
+accepts arbitrary functions, enumerations that it produces may not be bijections.
+To help avoid errors, it's contract does some random checking to see if
+the argument functions form a bijection. Here's an example that, with high
+probability, signals a contract violation.
+@interaction[#:eval
+             the-eval
+             (map/e (λ (x) (floor (/ x 100)))
+                    (λ (x) (* x 100))
+                    nat/e
+                    #:contract exact-nonnegative-integer?)]
+
+
+Putting all these pieces together, here is a definition of
+an enumeration of closed expressions of the untyped
+lambda calculus.
+
+@defs+int[#:eval
+          the-eval
+          ((define/contract (lc-var/e bvs)
+             (-> (set/c symbol?) enum?)
+             (delay/e
+              (or/e
+               (code:comment "the variables currently in scope")
+               (apply fin/e (set->list bvs))
+               
+               (code:comment "the λ case; first we build a dependent")
+               (code:comment "pair of a bound variable and a body expression")
+               (code:comment "and then use map/e to build the usual syntax")
+               (map/e
+                (λ (pr) `(λ (,(car pr)) ,(cdr pr)))
+                (λ (λ-exp) (cons (caadr λ-exp) (caddr λ-exp)))
+                (cons/de
+                 [hd symbol/e]
+                 [tl (hd) (lc-var/e (set-add bvs hd))])
+                #:contract (list/c 'λ (list/c symbol?) lc-exp?))
+               
+               (code:comment "application expressions")
+               (list/e (lc-var/e bvs) (lc-var/e bvs)))))
+           
+           (define (lc-exp? x)
+             (match x
+               [(? symbol?) #t]
+               [`(λ (,x) ,e) (and (symbol? x) (lc-exp? e))]
+               [`(,a ,b) (and (lc-exp? a) (lc-exp? b))]))
+           
+           (define lc/e (lc-var/e (set))))
+          (from-nat lc/e 0)
+          (from-nat lc/e 1)
+          (from-nat lc/e 2)
+          (to-nat lc/e
+                  '(λ (f) 
+                     ((λ (x) (f (x x)))
+                      (λ (x) (f (x x))))))]
 
 @defproc[(enum [size (or/c exact-nonnegative-integer? +inf.0)] 
                [from (-> exact-nonnegative-integer? any/c)]
