@@ -592,11 +592,16 @@
              above2/e-p)
    #:contract char?))
 
+(define better-ordering-for-sequences-of-chars/e
+  (append/e (list/e char/e)
+            (fin/e '())
+            (cons/e char/e (cons/e char/e (listof/e char/e)))))
+
 (define string/e
   (map/e
    list->string
    string->list
-   (listof/e char/e)
+   better-ordering-for-sequences-of-chars/e
    #:contract string?))
 
 (define from-1/e
@@ -692,7 +697,7 @@
   (map/e
    (compose string->symbol list->string)
    (compose string->list symbol->string)
-   (listof/e char/e)
+   better-ordering-for-sequences-of-chars/e
    #:contract symbol?))
 
 (define base/e

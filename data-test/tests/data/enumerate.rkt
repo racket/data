@@ -85,6 +85,17 @@
  (check-bijection? integer/e))                ; -1 -> 2, -3 -> 4
 
 
+
+
+(check-equal? (from-nat string/e (+ (enum-size char/e) 1))
+              (string (from-nat char/e 0) (from-nat char/e 0)))
+(check-equal? (from-nat string/e (enum-size char/e))
+              "")
+(check-equal? (from-nat string/e 0)
+              (string (from-nat char/e 0)))
+(check-equal? (from-nat symbol/e (+ (enum-size char/e) 1))
+              (string->symbol (from-nat string/e (+ (enum-size char/e) 1))))
+
 (test-begin
  (define bool-or-num
    (or/e (cons bool/e boolean?)
@@ -181,11 +192,11 @@
       ;; to trick the automatic indentation
       ;; to keep everything lined up nicely
       '(#||#
-        #||# ""   a 0 #t ()
-        #||# "a"  b 1 #f (#t)
-        #||# "b"  c 2    (#f)
-        #||# "c"  d 3    (#t #t)
-        #||# "d"    4    (#f #t)
+        #||# "a"  a 0 #t ()
+        #||# "b"  b 1 #f (#t)
+        #||# "c"  c 2    (#f)
+        #||# "d"  d 3    (#t #t)
+        #||# "e"    4    (#f #t)
         #||#        5    (#t #f)
         #||#        6    (#f #f)
         #||#        7    (#t #t #t)
