@@ -1,7 +1,6 @@
 #lang racket/base
 
 (require (prefix-in : "lib.rkt")
-         (prefix-in : "../enumerate.rkt")
          (prefix-in unsafe: "unsafe.rkt")
          racket/contract)
 
@@ -27,24 +26,24 @@
 (define (from-list/e l) (apply fin/e l))
 (define fin/e :fin/e)
 (define nat/e :nat/e)
-(define int/e :int/e)
+(define int/e :integer/e)
 (define disj-sum/e :or/e)
-(define disj-append/e :disj-append/e)
+(define disj-append/e :append/e)
 (define fin-cons/e :cons/e)
 (define cons/e :cons/e)
 (define (elegant-cons/e a b) (cons/e a b))
 (define traverse/e :traverse/e)
 (define hash-traverse/e :hash-traverse/e)
-(define dep/e :dep/e)
-(define (dep2/e n a b) (:dep/e a b))
+(define (dep/e e f) (:cons/de [hd e] [tl (hd) (f hd)]))
+(define (dep2/e n e f) (:cons/de [hd e] [tl (hd) (f hd)]))
 (define fold-enum :fold-enum)
-(define flip-dep/e :flip-dep/e)
+(define (flip-dep/e e f) (:cons/de [hd (tl) (f tl)] [tl e]))
 (define range/e :range/e)
 (define thunk/e :thunk/e)
 (define fix/e
   (case-lambda
-    [(n f) (:fix/e f #:size n)]
-    [(f) (:fix/e f)]))
+    [(n f) (define e (:thunk/e (λ () (f e)) #:size n)) e]
+    [(f) (fix/e f)]))
 (define many/e
   (case-lambda
     [(e n) (:listof-n/e nat/e n)]
@@ -64,7 +63,7 @@
 (define box-tuples/e unsafe:box-tuples/e)
 (define bounded-list/e :bounded-list/e)
 (define nat+/e :nat+/e)
-(define fail/e :fail/e)
+; (define fail/e :fail/e) ;; probably not used
 (define char/e :char/e)
 (define string/e :string/e)
 (define from-1/e :from-1/e)
