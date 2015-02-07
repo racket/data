@@ -114,13 +114,12 @@ notes for eventual email:
  pam/e
  except/e
  approximate
- to-list
  below/e
  empty/e
  fin/e
  nat/e
  or/e
- disj-append/e
+ append/e
  fin-cons/e
  cons/de
  thunk/e
@@ -300,10 +299,6 @@ notes for eventual email:
 
 (define (approximate e n)
   (for/list ([i (in-range n)])
-    (from-nat e i)))
-
-(define (to-list e)
-  (for/list ([i (in-range (enum-size e))])
     (from-nat e i)))
 
 (define (below/e n)
@@ -582,7 +577,7 @@ notes for eventual email:
             (apply or/c (map (λ (x) (enum-contract (car x))) non-empty-e-ps)))]))
 
 ;; Like or/e, but sequences the enumerations instead of interleaving
-(define (disj-append/e e-p . e-ps)
+(define (append/e e-p . e-ps)
   (define/match (disj-append2/e e-p1 e-p2)
     [((cons e1 1?) (cons e2 2?))
      (define s1 (enum-size e1))
@@ -832,7 +827,7 @@ notes for eventual email:
              (gvector-add! sizes sum)
              sum))
          (gvector-ref sizes 0)
-         (map (compose enum-size f) (cdr (to-list e))))))
+         (map (compose enum-size f) (cdr (approximate e (enum-size e)))))))
   
   (-enum the-enum-size
          (λ (n)
@@ -1312,8 +1307,8 @@ notes for eventual email:
                           smallers/e)]))
        (define (first-max? l)
          ((first l) . = . bound))
-       (disj-append/e (cons first-not-max/e (negate first-max?))
-                      (cons first-max/e     first-max?))]))
+       (append/e (cons first-not-max/e (negate first-max?))
+                 (cons first-max/e     first-max?))]))
   (loop len))
 
 (define (box-tuple k)

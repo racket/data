@@ -218,11 +218,11 @@
 
 (test-begin
  (define bool-or-num
-   (disj-append/e (cons bool/e boolean?)
-                  (cons (fin/e 0 1 2 3) number?)))
+   (append/e (cons bool/e boolean?)
+             (cons (fin/e 0 1 2 3) number?)))
  (define bool-or-nat
-   (disj-append/e (cons bool/e boolean?)
-                  (cons nat/e number?)))
+   (append/e (cons bool/e boolean?)
+             (cons nat/e number?)))
  
  (check-equal? (enum-size bool-or-num) 6)
    

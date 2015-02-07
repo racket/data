@@ -15,10 +15,10 @@
   [enum? (-> any/c boolean?)]
   [finite-enum? (-> any/c boolean?)]
   [infinite-enum? (-> any/c boolean?)]
-  [enum-size (-> finite-enum? nat?)]
   [two-way-enum? (-> any/c boolean?)]
   [one-way-enum? (-> any/c boolean?)]
   [flat-enum? (-> any/c boolean?)]
+  
   [from-nat 
    (->i ([e enum?]
          [n nat?])
@@ -30,7 +30,36 @@
   [to-nat
    (->i ([e two-way-enum?] [v (e) (enum-contract e)])
         [result nat?])]
+  [enum-size (-> finite-enum? nat?)]
   [enum-contract (-> enum? contract?)]
+  
+  [approximate
+   (->i ([e enum?] [s (e) (if (finite-enum? e)
+                              (integer-in 0 (- (enum-size e) 1))
+                              exact-nonnegative-integer?)])
+        [res (e) (listof (enum-contract e))])]
+  
+  [nat/e enum?]
+  [below/e (-> exact-nonnegative-integer? enum?)]  
+  [empty/e enum?]
+  
+  [fin/e
+   (->i ()
+        #:rest
+        [elements 
+         (listof (or/c symbol? boolean? char? keyword? null?
+                       string? bytes? number?))]
+        #:pre/name (elements) 
+        "no duplicate elements"
+        (let() 
+          (define-values (nums non-nums) (partition number? elements))
+          (and (= (length (remove-duplicates nums =))
+                  (length nums))
+               (= (length (remove-duplicates non-nums))
+                  (length non-nums))))
+        [result enum?])]
+
+
   [map/e
    (->i ([in (e es c) 
              (dynamic->* #:mandatory-domain-contracts (map enum-contract (cons e es))
@@ -56,37 +85,12 @@
         (#:contract [c (or/c #f contract?)]) ;; aka optional #f isn't considered a contract
         #:rest [more (e) (listof (enum-contract e))]
         [res two-way-enum?])]
-  [approximate
-   (->i ([e enum?] [s (e) (if (finite-enum? e)
-                              (integer-in 0 (- (enum-size e) 1))
-                              exact-nonnegative-integer?)])
-        [res (e) (listof (enum-contract e))])]
-  [to-list (->i ([e finite-enum?]) [result (e) (listof (enum-contract e))])]
   
-  [below/e (-> exact-nonnegative-integer? enum?)]
-
-  [empty/e enum?]
-  [fin/e
-   (->i ()
-        #:rest
-        [elements 
-         (listof (or/c symbol? boolean? char? keyword? null?
-                       string? bytes? number?))]
-        #:pre/name (elements) 
-        "no duplicate elements"
-        (let() 
-          (define-values (nums non-nums) (partition number? elements))
-          (and (= (length (remove-duplicates nums =))
-                  (length nums))
-               (= (length (remove-duplicates non-nums))
-                  (length non-nums))))
-        [result enum?])]
-  [nat/e enum?]
   [or/e
    (->* () #:rest (listof (or/c (cons/c enum? (-> any/c boolean?))
                                 flat-enum?))
         enum?)]
-  [disj-append/e
+  [append/e
    (->* ((or/c (cons/c enum? (-> any/c boolean?))
                flat-enum?))
         #:rest (listof (or/c (cons/c enum? (-> any/c boolean?))
@@ -117,9 +121,7 @@
         (#:ordering (or/c 'diagonal 'square)) 
         #:rest (listof enum?)
         enum?)]
-  [bounded-list/e
-   (-> nat? nat?
-       enum?)]))
+  [bounded-list/e (-> nat? nat? enum?)]))
 
 (define nat? exact-nonnegative-integer?)
 (define extended-nat/c (or/c nat? +inf.0))

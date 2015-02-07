@@ -489,6 +489,12 @@
               #:flat-enum? is-flat-enum?))
   delay/e)
 
+(provide
+ (contract-out
+  [to-list (->i ([e finite-enum?]) 
+                [result (e) (listof (enum-contract e))])]))
+(define (to-list e) (approximate e (enum-size e)))
+
 ;; Base Type enumerators
 
 (provide
@@ -530,12 +536,12 @@
   (map/e
    integer->char
    char->integer
-   (disj-append/e low/e-p
-                  up/e-p
-                  bottom/e-p
-                  mid/e-p
-                  above1/e-p
-                  above2/e-p)
+   (append/e low/e-p
+             up/e-p
+             bottom/e-p
+             mid/e-p
+             above1/e-p
+             above2/e-p)
    #:contract char?))
 
 (define string/e
@@ -579,9 +585,8 @@
                  (not/c nan?))))
 
 (define float/e
-  (disj-append/e (fin/e +inf.0 -inf.0)
-                 (fin/e +nan.0)
-                 normal-flonums/e-p))
+  (append/e (fin/e +inf.0 -inf.0 +nan.0)
+            normal-flonums/e-p))
 
 (define exact-rational/e
   (or/e (fin/e 0)
