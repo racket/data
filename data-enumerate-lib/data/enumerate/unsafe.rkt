@@ -730,7 +730,7 @@ notes for eventual email:
        #`(cons/de/proc e2 (λ (tl2) e1) #,f-range-finite #t 
                        #,the-srcloc #,other-party-name))]))
                        
-(define (cons/de/proc e _f f-range-finite? flip? srcloc other-party-name)
+(define (cons/de/proc e _f f-range-finite? flip? the-srcloc other-party-name)
   (define f-range-ctc
     (and/c (if f-range-finite?
                finite-enum?
@@ -744,7 +744,7 @@ notes for eventual email:
               other-party-name 
               'data/enumerate 
               'cons/de/dependent-expression
-              srcloc))
+              the-srcloc))
   (define forward (cons/de/forward e f f-range-finite?))
   (cond
     [flip?

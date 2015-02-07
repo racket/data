@@ -6,12 +6,14 @@
          racket/bool
          racket/match
          (only-in racket/list remove-duplicates)
+         syntax/location
          math/base
          math/distributions
          math/number-theory
          math/flonum
          "../enumerate.rkt"
-         (prefix-in unsafe: "unsafe.rkt"))
+         (prefix-in unsafe: "unsafe.rkt")
+         (for-syntax racket/base))
 
 ;; random-natural-w/o-limit : ([0,1] -> Nat) ∩ (-> Nat)
 (define (random-natural-w/o-limit [prob-of-zero 0.01])
@@ -285,12 +287,12 @@
            1
            +inf.0))
      (define result-e
-       (fix/e #:size fix-size
-              #:two-way-enum? (two-way-enum? e)
-              #:flat-enum? (flat-enum? e)
-              (λ (self)
-                (or/e (cons (fin/e '()) null?)
-                      (cons (cons/e e self) pair?)))))
+       (delay/e
+        (or/e (cons (fin/e '()) null?)
+              (cons (cons/e e result-e) pair?))
+        #:size fix-size
+        #:two-way-enum? (two-way-enum? e)
+        #:flat-enum? (flat-enum? e)))
      (map/e values values result-e #:contract (listof (enum-contract e)))]
     [else
      (or/e
@@ -435,40 +437,57 @@
          (list/e e1 e2 #:ordering ordering)
          #:contract (cons/c (enum-contract e1) (enum-contract e2))))
 
+(provide delay/e)
+(define-syntax (delay/e stx)
+  (syntax-case stx ()
+    [(_ expr . kwd-args)
+     (let ()
+       (when (keyword? (syntax-e #'expr))
+         (raise-syntax-error 'delay/e 
+                             "expected an expression argument first, not a keyword"
+                             stx #'expr))
+       (define other-party-name (syntax-local-lift-expression #'(quote-module-name)))
+       (define the-srcloc
+         #`(srcloc '#,(syntax-source stx)
+                   #,(syntax-line stx)
+                   #,(syntax-column stx)
+                   #,(syntax-position stx)
+                   #,(syntax-span stx)))
+       #`((delay/e/proc #,other-party-name #,the-srcloc (λ () expr)) . kwd-args))]))
 
-
-(provide
- (contract-out
-  [fix/e
-   (->i ([f (size is-two-way-enum? is-flat-enum?)
-            (-> enum? 
-                (and/c (if (or (unsupplied-arg? size) (= size +inf.0))
-                           infinite-enum?
-                           (and/c finite-enum?
-                                  (let ([matching-size? (λ (e) (= (enum-size e) size))])
-                                    matching-size?)))
-                       (if (or (unsupplied-arg? is-two-way-enum?) is-two-way-enum?)
-                           two-way-enum?
-                           one-way-enum?)
-                       (if (or (unsupplied-arg? is-flat-enum?) is-flat-enum?)
-                           flat-enum?
-                           (not/c flat-enum?))))])
-        (#:size 
-         [size (or/c +inf.0 exact-nonnegative-integer?)]
-         #:two-way-enum?
-         [is-two-way-enum? boolean?]
-         #:flat-enum?
-         [is-flat-enum? boolean?])
-        [result enum?])]))
-(define (fix/e f/e 
-               #:size [size +inf.0] 
-               #:two-way-enum? [two-way-enum? #t]
-               #:flat-enum? [flat-enum? #t])
-  (define me (thunk/e (λ () (f/e me))
-                      #:size size
-                      #:two-way-enum? two-way-enum?
-                      #:flat-enum? flat-enum?))
-  me)
+(define (delay/e/proc other-party-name the-srcloc thunk)
+  ;; do this curried thing to get better error reporting for keyword arity errors
+  (define (delay/e #:size [size +inf.0]
+                   #:two-way-enum? [is-two-way-enum? #t]
+                   #:flat-enum? [is-flat-enum? #t])
+    
+    (define ctc
+      (and/c (if (= size +inf.0)
+                 infinite-enum?
+                 (and/c finite-enum?
+                        (let ([matching-size? (λ (e) (= (enum-size e) size))])
+                          matching-size?)))
+             (if is-two-way-enum?
+                 two-way-enum?
+                 one-way-enum?)
+             (if is-flat-enum?
+                 flat-enum?
+                 (not/c flat-enum?))))
+    (unless (or (exact-nonnegative-integer? size)
+                (and (number? size) (= size +inf.0)))
+      (raise-argument-error 'delay/e 
+                            (format "~s" '(or/c exact-nonnegative-integer? +inf.0))
+                            size))
+    (thunk/e (λ () (contract ctc
+                             (thunk)
+                             other-party-name 
+                             'data/enumerate/lib 
+                             'delay/e-expression
+                             the-srcloc))
+              #:size size
+              #:two-way-enum? is-two-way-enum?
+              #:flat-enum? is-flat-enum?))
+  delay/e)
 
 ;; Base Type enumerators
 
@@ -631,10 +650,10 @@
         symbol/e))
 
 (define any/e
-  (fix/e #:size +inf.0
-         (λ (any/e)
-            (or/e (cons base/e (negate pair?))
-                  (cons (cons/e any/e any/e) pair?)))))
+  (delay/e
+   (or/e (cons base/e (negate pair?))
+         (cons (cons/e any/e any/e) pair?))
+   #:size +inf.0))
 
 
 (provide

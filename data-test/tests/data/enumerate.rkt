@@ -418,10 +418,11 @@
 (test-begin
  (check-bijection? sums/e))
 
-(check-bijection? (fix/e
-                   (λ (m/e)
-                     (or/e (fin/e #f)
-                           (cons/e m/e m/e)))))
+(check-bijection? 
+ (letrec ([m/e (delay/e
+                (or/e (fin/e #f)
+                      (cons/e m/e m/e)))])
+   m/e))
 
 ;; cons/de tests
 (define (up-to n) (below/e (add1 n)))
@@ -740,7 +741,7 @@
 (check-contract (range/e 10 +inf.0))
 (check-contract (range/e -inf.0 +inf.0))
 (check-contract (range/e -10 10))
-(check-contract (fix/e (λ (me) nat/e)))
+(check-contract (delay/e nat/e))
 
 (check-not-exn
  (λ ()
