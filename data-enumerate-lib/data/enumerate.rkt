@@ -35,7 +35,7 @@
   
   [approximate
    (->i ([e enum?] [s (e) (if (finite-enum? e)
-                              (integer-in 0 (- (enum-size e) 1))
+                              (integer-in 0 (enum-size e))
                               exact-nonnegative-integer?)])
         [res (e) (listof (enum-contract e))])]
   
