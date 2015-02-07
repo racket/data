@@ -14,6 +14,7 @@
          "../enumerate.rkt"
          (prefix-in unsafe: "unsafe.rkt")
          (for-syntax racket/base))
+(provide (all-from-out "../enumerate.rkt"))
 
 ;; random-natural-w/o-limit : ([0,1] -> Nat) ∩ (-> Nat)
 (define (random-natural-w/o-limit [prob-of-zero 0.01])
