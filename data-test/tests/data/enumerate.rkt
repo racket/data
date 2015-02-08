@@ -11,28 +11,33 @@
          (prefix-in unsafe: data/enumerate/unsafe))
 
 (require (for-syntax racket/base))
+(define last (current-process-milliseconds))
+(define (show-here/proc l)
+  (printf "got to line ~a ~s\n" l (- (current-process-milliseconds) last))
+  (set! last (current-process-milliseconds)))
 (define-syntax (show-here stx)
-  #`(printf "got to line ~a\n" #,(syntax-line stx)))
+  #`(show-here/proc #,(syntax-line stx)))
 
 (eprintf "no-tests ~s\n" 
          (list 'mixed-box-tuples/e
                'hash-traverse/e))
 
-
+(define (do-check-bijection e confidence)
+  (define nums (build-list (if (finite-enum? e)
+                               (if (<= (enum-size e) confidence)
+                                   (enum-size e)
+                                   confidence)
+                               confidence)
+                           identity))
+  (andmap =
+          nums
+          (map (λ (n)
+                 (to-nat e (from-nat e n)))
+               nums)))
 (define-simple-check (check-bijection? e)
-  (let ()
-    (define confidence 1000)
-    (define nums (build-list (if (finite-enum? e)
-                                 (if (<= (enum-size e) confidence)
-                                     (enum-size e)
-                                     confidence)
-                                 confidence)
-                             identity))
-    (andmap =
-            nums
-            (map (λ (n)
-                   (to-nat e (from-nat e n)))
-                 nums))))
+  (do-check-bijection e 1000))
+(define-simple-check (check-bijection/just-a-few? e)
+  (do-check-bijection e 100))
 
 ;; fin/e tests
 (let ([e (fin/e 17)])
@@ -83,9 +88,6 @@
  (check-eq? (to-nat integer/e 1) 1)
  (check-eq? (to-nat integer/e -1) 2)
  (check-bijection? integer/e))                ; -1 -> 2, -3 -> 4
-
-
-
 
 (check-equal? (from-nat string/e (+ (enum-size char/e) 1))
               (string (from-nat char/e 0) (from-nat char/e 0)))
@@ -422,6 +424,7 @@
    (fin/e 3 4)
    #:contract any/c))
 
+
 (check-not-exn
  (λ ()
    (map/e add1 sub1 empty/e #:contract none/c)))
@@ -598,8 +601,8 @@
  (check-bijection? (listof/e nat/e))
  (check-equal? (from-nat (listof/e empty/e) 0) '())
  (check-bijection? (listof/e empty/e))
- (check-bijection? (listof/e nat/e #:simple-recursive? #f))
- (check-bijection? (non-empty-listof/e nat/e #:simple-recursive? #f))
+ (check-bijection/just-a-few? (listof/e nat/e #:simple-recursive? #f))
+ (check-bijection/just-a-few? (non-empty-listof/e nat/e #:simple-recursive? #f))
  (check-bijection? (non-empty-listof/e empty/e))
  (check-bijection? (non-empty-listof/e nat/e)))
 
@@ -682,8 +685,13 @@
               #t)
 
 
-(define-syntax-rule (check-contract e) (check-contract/proc e 'e))
-(define (check-contract/proc enum enum-code)
+(define-syntax (check-contract stx)
+  (syntax-case stx ()
+    [(_ e)
+     (with-syntax ([line (syntax-line stx)])
+       #'(check-contract/proc line e 'e))]))
+
+(define (check-contract/proc line enum enum-code)
   (for ([x (in-range (if (finite-enum? enum)
                          (min (enum-size enum) 100)
                          100))])
