@@ -223,11 +223,13 @@ notes for eventual email:
      (apply pam/e #:contract ctc f e es)]
     [else
      (define (map1/e f inv-f e)
+       (define e-from (enum-from e))
+       (define e-to (enum-to e))
        (-enum (enum-size e)
               (λ (x) 
-                (f (from-nat e x)))
+                (f (e-from x)))
               (λ (n)
-                (to-nat e (inv-f n)))
+                (e-to (inv-f n)))
               ctc))
      (cond
        [(empty? es) (map1/e f inv-f e)]
