@@ -7,11 +7,6 @@
 (provide 
  cons/de
  (contract-out
-  [enum (->i ([size extended-nat/c]
-              [from-nat (contract) (-> exact-nonnegative-integer? contract)]
-              [to-nat (contract) (or/c #f (-> contract exact-nonnegative-integer?))]
-              [contract contract?])
-            [result enum?])]
   [enum? (-> any/c boolean?)]
   [finite-enum? (-> any/c boolean?)]
   [infinite-enum? (-> any/c boolean?)]

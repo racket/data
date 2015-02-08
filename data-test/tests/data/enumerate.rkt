@@ -424,7 +424,7 @@
 
 (check-not-exn
  (λ ()
-   (map/e add1 sub1 (enum 0 values values none/c) #:contract none/c)))
+   (map/e add1 sub1 empty/e #:contract none/c)))
 
 (test-begin
  (check-bijection? sums/e))

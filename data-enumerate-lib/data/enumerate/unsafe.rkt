@@ -99,7 +99,6 @@ notes for eventual email:
 |#
 
 (provide 
- enum
  enum?
  enum-size
  from-nat
