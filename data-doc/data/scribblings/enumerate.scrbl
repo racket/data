@@ -9,6 +9,7 @@
                      racket/base))
 
 @title{Enumerations}
+@declare-exporting[data/enumerate data/enumerate/lib]
 
 @(define the-eval (make-base-eval))
 @(the-eval '(require data/enumerate data/enumerate/lib
@@ -16,7 +17,6 @@
                      racket/contract racket/match))
 @(define-syntax-rule (ex e ...) (examples #:eval the-eval e ...))
 
-@defmodule[data/enumerate]
 
 @author[@author+email["Max S. New" "maxsnew@gmail.com"]]
 
@@ -161,6 +161,9 @@ lambda calculus.
                      ((λ (x) (f (x x)))
                       (λ (x) (f (x x))))))]
 
+@section{Core Enumeration Operations}
+@defmodule[data/enumerate #:no-declare]
+
 @defproc[(enum [size (or/c exact-nonnegative-integer? +inf.0)] 
                [from (-> exact-nonnegative-integer? any/c)]
                [to (-> any/c exact-nonnegative-integer?)])
@@ -174,9 +177,12 @@ function. }
 
 Identifies a value as an @tech{enumeration}.}
 
-@defproc[(size [e enum?]) (or/c exact-nonnegative-integer? +inf.0)]{
 
-Returns the size of an @tech{enumeration}.}
+@defproc[(finite-enum? [v any/c]) boolean?]{}
+@defproc[(infinite-enum? [v any/c]) boolean?]{}
+@defproc[(two-way-enum? [v any/c]) boolean?]{}
+@defproc[(one-way-enum? [v any/c]) boolean?]{}
+@defproc[(flat-enum? [v any/c]) boolean?]{}
 
 @defproc[(from-nat [e enum?] [n exact-nonnegative-integer?]) any/c]{
 
@@ -186,6 +192,22 @@ Uses @racket[e] to decode @racket[n].}
 
 Uses @racket[e] to encode @racket[x].}
 
+@defproc[(enum-size [e finite-enum?]) exact-nonnegative-integer?]{
+
+Returns the size of an @tech{enumeration}.}
+
+@defproc[(enum-contract [e finite-enum?]) exact-nonnegative-integer?]{
+
+Returns the size of an @tech{enumeration}.}
+
+@defproc[(approximate [e enum?] [n exact-nonnegative-integer?]) list?]{
+
+Returns a list of the first @racket[n] values in @racket[e].
+
+@examples[#:eval the-eval
+(approximate map-2/e 5)
+]}
+
 @defthing[nat/e enum?]{
 
 An @tech{enumeration} of the natural numbers.
@@ -194,6 +216,23 @@ An @tech{enumeration} of the natural numbers.
 (from-nat nat/e 5)
 (to-nat nat/e 5)
 ]}
+
+@defproc[(below/e [max exact-nonnegative-integer?]) enum?]{
+
+An @tech{enumeration} of the first @racket[max] naturals.
+
+@examples[#:eval the-eval
+(to-list (below/e 10))
+]}
+
+@defthing[empty/e enum?]{
+
+The empty @tech{enumeration}.
+
+@examples[#:eval the-eval
+(to-list empty/e)
+]}
+
 
 @defproc[(map/e [f (-> a ... b)]
                 [inv-f (-> b (values a ...))]
@@ -219,19 +258,11 @@ functions of @racket[e].
 (to-nat map-2/e "1 2")
 ]}
 
-@defproc[(filter/e [e enum?] [p (-> any/c boolean?)]) enum?]{
 
-Returns an @tech{enumeration} identical to @racket[e] except that only
-elements where @racket[p] returns true are included. The encoding
-function and the size are wrong in the result and this is inefficient,
-so only use it for very small enumerations.
+@defproc[(pam/e [f (-> a ... b)]
+                [e enum?] ...+) enum?]{
 
-@examples[#:eval the-eval
-(define filter-1/e
-  (filter/e nat/e even?))
-(from-nat filter-1/e 5)
-(to-nat filter-1/e 8)
-]}
+}
 
 @defproc[(except/e [e enum?] [x any/c] ...) enum?]{
 
@@ -246,20 +277,117 @@ Returns an @tech{enumeration} identical to @racket[e] except that all
 (to-nat except-1/e 8)
 ]}
 
+@defproc[(or/e [e-p (cons/c enum? (-> any/c boolean?))] ...) enum?]{
+
+An @tech{enumeration} of the disjoint sum of the enumerations given in
+@racket[e-p]. Each @racket[e-p] is a pair of an enumeration and a
+predicate identifying elements of it. Only one or zero predicates
+should return true on any value.
+
+@examples[#:eval the-eval
+(approximate (disj-sum/e (cons nat/e exact-nonnegative-integer?)
+                         (cons map-1/e string?))
+             10)
+]}
+
+@defproc[(append/e [e-p (cons/c enum? (-> any/c boolean?))] ...+) enum?]{
+
+An @tech{enumeration} of the disjoint sum of the enumerations given in
+@racket[e-p] that fully enumerates each enumeration before enumerating
+the next. @racket[e-p] are formatted as in @racket[disj-sum/e]. All
+but the last enumeration should be finite.
+
+@examples[#:eval the-eval
+(approximate 
+ (disj-append/e (cons (take/e nat/e 4) exact-nonnegative-integer?)
+                (cons map-1/e string?))
+ 10)
+]}
+
+@defproc[(thunk/e [size (or/c exact-nonnegative-integer? +inf.0)] [ep (-> enum?)]) enum?]{
+
+A delayed @tech{enumeration} identical to @racket[ep]. This is
+typically used with @racket[fix/e].
+
+@examples[#:eval the-eval
+(approximate (thunk/e +inf.0 (λ () nat/e)) 5)
+]}
+
+@defproc[(list/e [e enum?] ...) enum?]{
+
+An @tech{enumeration} of lists of values enumerated by the
+@racket[e].
+
+@examples[#:eval the-eval
+(approximate (list/e
+              (fin/e "Brian" "Jenny" "Ki" "Ted") 
+              nat/e
+              (fin/e "Terra" "Locke" "Edgar" "Mash"))
+             5)
+]}
+
+@defproc[(dep/e [a enum?] [b (-> any/c enum?)]) enum?]{
+
+Constructs an @tech{enumeration} of pairs of values @racket[a] and
+@racket[(b a)].
+
+@examples[#:eval the-eval
+(define dep-1/e
+  (dep/e nat/e (λ (a) (below/e a))))
+(approximate dep-1/e 5)
+(to-nat dep-1/e (cons 17 10))
+]}
+
+@defproc[(dep2/e [n (or/c exact-nonnegative-integer? +inf.0)] [a enum?] [b (-> any/c enum?)]) enum?]{
+
+Like @racket[dep2/e] but requires the size of the resulting
+enumeration be given as @racket[n]. This is more efficient than
+@racket[dep/e], particularly when @racket[n] is finite.
+
+@examples[#:eval the-eval
+(define (! n)
+  (if (zero? n) 1 (* n (! (sub1 n)))))
+(define dep2-1/e
+  (dep2/e (+ (! 1) (! 2) (! 3) (! 4) (! 5))
+          (below/e 5)
+          (λ (a) (below/e a))))
+(approximate dep2-1/e 5)
+(to-nat dep2-1/e (cons 4 3))
+]}
+
+@defproc[(bounded-list/e [k exact-nonnegative-integer?] [n exact-nonnegative-integer?]) enum?]{
+
+An @tech{enumeration} of tuples of naturals up to @racket[n] of length @racket[k].
+
+@examples[#:eval the-eval
+(approximate (bounded-list/e 3 2)
+             5)
+]}
+
+
+@section{More Enumeration Operations}
+@defmodule[data/enumerate/lib]
+
+@defproc[(filter/e [e enum?] [p (-> any/c boolean?)]) enum?]{
+
+Returns an @tech{enumeration} identical to @racket[e] except that only
+elements where @racket[p] returns true are included. The encoding
+function and the size are wrong in the result and this is inefficient,
+so only use it for very small enumerations.
+
+@examples[#:eval the-eval
+(define filter-1/e
+  (filter/e nat/e even?))
+(from-nat filter-1/e 5)
+(to-nat filter-1/e 8)
+]}
+
 @defproc[(to-stream [e enum?]) stream?]{
 
 Returns a stream of the values in @racket[e].
 
 @examples[#:eval the-eval
 (to-stream map-2/e)
-]}
-
-@defproc[(approximate [e enum?] [n exact-nonnegative-integer?]) list?]{
-
-Returns a list of the first @racket[n] values in @racket[e].
-
-@examples[#:eval the-eval
-(approximate map-2/e 5)
 ]}
 
 @defproc[(to-list [e enum?]) list?]{
@@ -287,22 +415,6 @@ Identical to @racket[e] but only includes the values between
 
 @examples[#:eval the-eval
 (to-list (slice/e map-2/e 5 10))
-]}
-
-@defproc[(below/e [max exact-nonnegative-integer?]) enum?]{
-
-An @tech{enumeration} of the first @racket[max] naturals.
-
-@examples[#:eval the-eval
-(to-list (below/e 10))
-]}
-
-@defthing[empty/e enum?]{
-
-An empty @tech{enumeration}.
-
-@examples[#:eval the-eval
-(to-list empty/e)
 ]}
 
 @defproc[(const/e [x any/c]) enum?]{
@@ -356,32 +468,6 @@ An @tech{enumeration} of the integers.
 (approximate int/e 10)
 ]}
 
-@defproc[(disj-sum/e [e-p (cons/c enum? (-> any/c boolean?))] ...) enum?]{
-
-An @tech{enumeration} of the disjoint sum of the enumerations given in
-@racket[e-p]. Each @racket[e-p] is a pair of an enumeration and a
-predicate identifying elements of it. Only one or zero predicates
-should return true on any value.
-
-@examples[#:eval the-eval
-(approximate (disj-sum/e (cons nat/e exact-nonnegative-integer?)
-                         (cons map-1/e string?))
-             10)
-]}
-
-@defproc[(disj-append/e [e-p (cons/c enum? (-> any/c boolean?))] ...+) enum?]{
-
-An @tech{enumeration} of the disjoint sum of the enumerations given in
-@racket[e-p] that fully enumerates each enumeration before enumerating
-the next. @racket[e-p] are formatted as in @racket[disj-sum/e]. All
-but the last enumeration should be finite.
-
-@examples[#:eval the-eval
-(approximate 
- (disj-append/e (cons (take/e nat/e 4) exact-nonnegative-integer?)
-                (cons map-1/e string?))
- 10)
-]}
 
 @defproc[(fin-cons/e [x enum?] [y enum?]) enum?]{
 
@@ -446,34 +532,6 @@ of the enumerations returned by @racket[f] applied to each value of
         '#hash(("Brian" . 4) ("Jenny" . 1) ("Ted" . 16) ("Ki" . 7)))
 ]}
 
-@defproc[(dep/e [a enum?] [b (-> any/c enum?)]) enum?]{
-
-Constructs an @tech{enumeration} of pairs of values @racket[a] and
-@racket[(b a)].
-
-@examples[#:eval the-eval
-(define dep-1/e
-  (dep/e nat/e (λ (a) (below/e a))))
-(approximate dep-1/e 5)
-(to-nat dep-1/e (cons 17 10))
-]}
-
-@defproc[(dep2/e [n (or/c exact-nonnegative-integer? +inf.0)] [a enum?] [b (-> any/c enum?)]) enum?]{
-
-Like @racket[dep2/e] but requires the size of the resulting
-enumeration be given as @racket[n]. This is more efficient than
-@racket[dep/e], particularly when @racket[n] is finite.
-
-@examples[#:eval the-eval
-(define (! n)
-  (if (zero? n) 1 (* n (! (sub1 n)))))
-(define dep2-1/e
-  (dep2/e (+ (! 1) (! 2) (! 3) (! 4) (! 5))
-          (below/e 5)
-          (λ (a) (below/e a))))
-(approximate dep2-1/e 5)
-(to-nat dep2-1/e (cons 4 3))
-]}
 
 @defproc[(fold-enum [f (-> (listof a) b enum?)] [bs (listof b)]) enum?]{
 
@@ -496,15 +554,6 @@ An @tech{enumeration} of the naturals between @racket[lo] and @racket[hi].
 
 @examples[#:eval the-eval
 (approximate (range/e 42 64) 5)
-]}
-
-@defproc[(thunk/e [size (or/c exact-nonnegative-integer? +inf.0)] [ep (-> enum?)]) enum?]{
-
-A delayed @tech{enumeration} identical to @racket[ep]. This is
-typically used with @racket[fix/e].
-
-@examples[#:eval the-eval
-(approximate (thunk/e +inf.0 (λ () nat/e)) 5)
 ]}
 
 @defproc*[([(fix/e [f (-> enum? enum?)]) enum?]
@@ -616,18 +665,6 @@ An @tech{enumeration} of pairs of the values from @racket[x] and
 (approximate (inf-fin-cons/e (take/e nat/e 4) nat/e) 5)
 ]}
 
-@defproc[(list/e [e enum?] ...) enum?]{
-
-An @tech{enumeration} of lists of values enumerated by the
-@racket[e].
-
-@examples[#:eval the-eval
-(approximate (list/e
-              (fin/e "Brian" "Jenny" "Ki" "Ted") 
-              nat/e
-              (fin/e "Terra" "Locke" "Edgar" "Mash"))
-             5)
-]}
 
 @defproc[(nested-cons-list/e [e enum?] ...) enum?]{
 
@@ -687,15 +724,6 @@ An @tech{enumeration} of tuples of naturals of length @racket[k].
 
 @examples[#:eval the-eval
 (approximate (box-tuples/e 3)
-             5)
-]}
-
-@defproc[(bounded-list/e [k exact-nonnegative-integer?] [n exact-nonnegative-integer?]) enum?]{
-
-An @tech{enumeration} of tuples of naturals up to @racket[n] of length @racket[k].
-
-@examples[#:eval the-eval
-(approximate (bounded-list/e 3 2)
              5)
 ]}
 
@@ -816,14 +844,6 @@ An @tech{enumeration} of S-expressions.
 @examples[#:eval the-eval
 (approximate any/e 5)
 ]}
-
-@section{Library Enumerations}
-@(the-eval '(require data/enumerate/lib))
-
-@defmodule[data/enumerate/lib]
-
-This library defines some library @tech{enumerations} built on
-@racketmodname[data/enumerate].
 
 @defproc[(random-index [e enum?])
          exact-nonnegative-integer?]{
