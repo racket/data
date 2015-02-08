@@ -114,7 +114,9 @@ notes for eventual email:
  or/e
  append/e
  fin-cons/e
- cons/de
+ dep/e
+ dep/e-internal
+ dep/e-contract
  thunk/e
  list/e
  cantor-list/e
@@ -645,78 +647,10 @@ notes for eventual email:
               1))
        2)))
 
-(define-syntax (cons/de stx)
-  (define f-range-finite #f)
-  (define (parse-options options)
-    (let loop ([options options])
-      (syntax-case options ()
-        [() (void)]
-        [(#:f-range-finite? exp . options)
-         (begin
-           (when f-range-finite
-             (raise-syntax-error 'cons/de "expected only one use for #:f-range-finite"
-                                 stx
-                                 f-range-finite
-                                 (list #'exp)))
-           (set! f-range-finite #'exp)
-           (loop #'options))]
-        [(x . y)
-         (raise-syntax-error 'cons/de "bad syntax" stx #'x)])))
-  (define the-srcloc
-    #`(srcloc '#,(syntax-source stx)
-              #,(syntax-line stx)
-              #,(syntax-column stx)
-              #,(syntax-position stx)
-              #,(syntax-span stx)))
-  (define other-party-name (syntax-local-lift-expression #'(quote-module-name)))
-  (syntax-case stx ()
-    [(_ [hd e1] [tl (hd2) e2] . options)
-     (begin
-       (unless (free-identifier=? #'hd #'hd2)
-         (raise-syntax-error 'cons/de "expected the identifiers to be the same"
-                             stx
-                             #'hd
-                             (list #'hd2)))
-       (parse-options #'options)
-       #`(cons/de/proc e1 (λ (hd2) e2) #,f-range-finite #f 
-                       #,the-srcloc #,other-party-name))]
-    [(_ [hd (tl2) e1] [tl e2] . options)
-     (begin
-       (unless (free-identifier=? #'tl #'tl2)
-         (raise-syntax-error 'cons/de "expected the identifiers to be the same"
-                             stx
-                             #'tl
-                             (list #'tl2)))
-       (parse-options #'options)
-       #`(cons/de/proc e2 (λ (tl2) e1) #,f-range-finite #t 
-                       #,the-srcloc #,other-party-name))]))
-                       
-(define (cons/de/proc e _f f-range-finite? flip? the-srcloc other-party-name)
-  (define f-range-ctc
-    (and/c (if f-range-finite?
-               finite-enum?
-               infinite-enum?)
-           (if (two-way-enum? e)
-               two-way-enum?
-               one-way-enum?)))
-  (define (f v)
-    (contract f-range-ctc
-              (_f v) 
-              other-party-name 
-              'data/enumerate 
-              'cons/de/dependent-expression
-              the-srcloc))
-  (define forward (cons/de/forward e f f-range-finite?))
-  (cond
-    [flip?
-     (define (flip-pr ab) (cons (cdr ab) (car ab)))
-     (map/e
-      flip-pr flip-pr forward
-      #:contract
-      (cons/dc [hd (tl) (enum-contract (f tl))] [tl (enum-contract e)]))]
-    [else forward]))
+(define (dep/e e f #:f-range-finite? [f-range-finite? #t])
+  (dep/e-internal e f f-range-finite?))
 
-(define (cons/de/forward e f f-range-finite?)
+(define (dep/e-internal e f f-range-finite?)
   (define the-ctc (cons/dc [hd (enum-contract e)] [tl (hd) (enum-contract (f hd))]))
   (cond
     [(= 0 (enum-size e)) empty/e]
@@ -754,6 +688,20 @@ notes for eventual email:
                            2)
                         l))))
             the-ctc)]))
+
+(define dep/e-contract
+  (->i ([e enum?]
+        [f (e f-range-finite?)
+           (-> (enum-contract e)
+               (and/c (if (or (unsupplied-arg? f-range-finite?)
+                              (not f-range-finite?))
+                          infinite-enum?
+                          finite-enum?)
+                      (if (two-way-enum? e)
+                          two-way-enum?
+                          one-way-enum?)))])
+       (#:f-range-finite? [f-range-finite? boolean?])
+       [res enum?]))
 
 (define (cons/de-dependent-ranges-all-finite e f the-ctc)
   ;; 'sizes' is a memo table that caches the size of the dependent enumerators

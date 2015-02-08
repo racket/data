@@ -100,6 +100,86 @@
        (yield (from-nat inner/e k)))))
   (pam/e seed->seq seed/e #:contract sequence?))
 
+(provide cons/de)
+(define-syntax (cons/de stx)
+  (define f-range-finite #f)
+  (define (parse-options options)
+    (let loop ([options options])
+      (syntax-case options ()
+        [() (void)]
+        [(#:f-range-finite? exp . options)
+         (begin
+           (when f-range-finite
+             (raise-syntax-error 'cons/de "expected only one use for #:f-range-finite"
+                                 stx
+                                 f-range-finite
+                                 (list #'exp)))
+           (set! f-range-finite #'exp)
+           (loop #'options))]
+        [(x . y)
+         (raise-syntax-error 'cons/de "bad syntax" stx #'x)])))
+  (define the-srcloc
+    #`(srcloc '#,(syntax-source stx)
+              #,(syntax-line stx)
+              #,(syntax-column stx)
+              #,(syntax-position stx)
+              #,(syntax-span stx)))
+  (define other-party-name (syntax-local-lift-expression #'(quote-module-name)))
+  (syntax-case stx ()
+    [(_ [hd e1] [tl (hd2) e2] . options)
+     (begin
+       (unless (free-identifier=? #'hd #'hd2)
+         (raise-syntax-error 'cons/de "expected the identifiers to be the same"
+                             stx
+                             #'hd
+                             (list #'hd2)))
+       (parse-options #'options)
+       #`(cons/de/proc e1 (λ (hd2) e2) #,f-range-finite #f 
+                       #,the-srcloc #,other-party-name))]
+    [(_ [hd (tl2) e1] [tl e2] . options)
+     (begin
+       (unless (free-identifier=? #'tl #'tl2)
+         (raise-syntax-error 'cons/de "expected the identifiers to be the same"
+                             stx
+                             #'tl
+                             (list #'tl2)))
+       (parse-options #'options)
+       #`(cons/de/proc e2 (λ (tl2) e1) #,f-range-finite #t 
+                       #,the-srcloc #,other-party-name))]))
+                       
+(define (cons/de/proc e _f f-range-finite? flip? the-srcloc other-party-name)
+  (define f-range-ctc
+    (and/c (if f-range-finite?
+               finite-enum?
+               infinite-enum?)
+           (if (two-way-enum? e)
+               two-way-enum?
+               one-way-enum?)))
+  (define (f v)
+    (contract f-range-ctc
+              (_f v) 
+              other-party-name 
+              'data/enumerate 
+              'cons/de/dependent-expression
+              the-srcloc))
+  (define forward (unsafe:dep/e-internal e f f-range-finite?))
+  (if flip?
+      (flip-it forward e f)
+      forward))
+
+(provide
+ (contract-out
+  [flip-dep/e unsafe:dep/e-contract]))
+(define (flip-dep/e e f #:f-range-finite? [f-range-finite? #f])
+  (flip-it (unsafe:dep/e-internal e f f-range-finite?) e f))
+(define (flip-it to-flip e f)
+  (define (flip-pr ab) (cons (cdr ab) (car ab)))
+  (map/e
+   flip-pr flip-pr 
+   to-flip
+   #:contract
+   (cons/dc [hd (tl) (enum-contract (f tl))] [tl (enum-contract e)])))
+
 (define (permutations-of-n/e n)
   (cond
     [(zero? n)

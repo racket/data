@@ -5,7 +5,6 @@
          racket/bool)
 
 (provide 
- cons/de
  (contract-out
   [enum? (-> any/c boolean?)]
   [finite-enum? (-> any/c boolean?)]
@@ -172,4 +171,3 @@
    string-append
    (for/list ([e (in-list eles)])
      (format " ~e" e))))
-
