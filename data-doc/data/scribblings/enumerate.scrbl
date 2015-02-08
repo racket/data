@@ -9,6 +9,7 @@
                      racket/base))
 
 @title{Enumerations}
+@defmodule[data/enumerate #:no-declare]
 @declare-exporting[data/enumerate data/enumerate/lib]
 
 @(define the-eval (make-base-eval))
@@ -161,52 +162,89 @@ lambda calculus.
                      ((λ (x) (f (x x)))
                       (λ (x) (f (x x))))))]
 
-@section{Core Enumeration Operations}
-@defmodule[data/enumerate #:no-declare]
+@section{Enumeration Properties}
 
-@defproc[(enum [size (or/c exact-nonnegative-integer? +inf.0)] 
-               [from (-> exact-nonnegative-integer? any/c)]
-               [to (-> any/c exact-nonnegative-integer?)])
-         enum?]{
+An enumeration has three boolean properties: if it is finite
+or not, if it is a bijection to the natural numbers or
+merely maps from the natural numbers without going back, and
+if the contract is has is a @racket[flat-contract?].
+In addition, each enumeration has a contract associated with
+it and, if it is a finite enumeration, a size.
 
-Constructs an @tech{enumeration} of size @racket[size] where
-@racket[from] is the decoding function and @racket[to] is the encoding
-function. }
+The functions in this section are predicates for the boolean
+properties and selection functions for other properties.
 
 @defproc[(enum? [x any/c]) boolean?]{
+  Identifies a value as an @tech{enumeration}.
+}
 
-Identifies a value as an @tech{enumeration}.}
-
-
-@defproc[(finite-enum? [v any/c]) boolean?]{}
-@defproc[(infinite-enum? [v any/c]) boolean?]{}
-@defproc[(two-way-enum? [v any/c]) boolean?]{}
-@defproc[(one-way-enum? [v any/c]) boolean?]{}
-@defproc[(flat-enum? [v any/c]) boolean?]{}
-
-@defproc[(from-nat [e enum?] [n exact-nonnegative-integer?]) any/c]{
-
-Uses @racket[e] to decode @racket[n].}
-
-@defproc[(to-nat [e enum?] [x any/c]) exact-nonnegative-integer?]{
-
-Uses @racket[e] to encode @racket[x].}
+@defproc[(finite-enum? [v any/c]) boolean?]{
+  Identifies @deftech{finite enumerations}.
+}
+@defproc[(infinite-enum? [v any/c]) boolean?]{
+  Identifies @deftech{infinite enumerations}, i. e., 
+  @tech{enumerations} that map all natural numbers.
+}
+@defproc[(two-way-enum? [v any/c]) boolean?]{
+  Identifies @deftech{two way enumerations}, i. e., @tech{enumerations}
+  that can map back and forth from
+  values that satisfy the enumeration's contract to the natural
+  numbers.
+}
+@defproc[(one-way-enum? [v any/c]) boolean?]{
+   Identifies @deftech{one way enumerations}, i. e., @tech{enumerations}
+   that can map only from the natural numbers to values that satisfy the 
+   enumeration's contract, but not back.
+}
+@defproc[(flat-enum? [v any/c]) boolean?]{
+  Identifies @deftech{flat enumerations}, i. e., @tech{enumerations}
+  whose contracts are @racket[flat-contract?]s.
+}
 
 @defproc[(enum-size [e finite-enum?]) exact-nonnegative-integer?]{
-
-Returns the size of an @tech{enumeration}.}
+  Returns the size of an @tech{enumeration}.
+}
 
 @defproc[(enum-contract [e finite-enum?]) exact-nonnegative-integer?]{
+  Returns the @tech{contract} that @racket[e] enumerates.
+}
 
-Returns the size of an @tech{enumeration}.}
+@section{Querying Enumerations}
 
-@defproc[(approximate [e enum?] [n exact-nonnegative-integer?]) list?]{
+The functions in this section exercise the enumeration,
+turning natural numbers back and forth to the values
+that an enumeration enumerates.
 
-Returns a list of the first @racket[n] values in @racket[e].
+@defproc[(from-nat [e enum?] [n (if (finite-enum? e)
+                                    (integer-in 0 (enum-size e))
+                                    exact-nonnegative-integer?)])
+         (enum-contract e)]{
+  Decodes @racket[n] from @racket[e].
+}
 
-@examples[#:eval the-eval
-(approximate map-2/e 5)
-]}
+@defproc[(to-nat [e two-way-enum?] [x (enum-contract e)])
+         (if (finite-enum? e)
+             (integer-in 0 (enum-size e))
+             exact-nonnegative-integer?)]{
+  Encodes @racket[x] from @racket[e].
+}
+
+@defproc[(approximate [e enum?] 
+                      [n (if (finite-enum? e)
+                             (integer-in 0 (enum-size e))
+                             exact-nonnegative-integer?)]) 
+         (listof (enum-contract e))]{
+  Returns a list of the first @racket[n] values in @racket[e].
+
+  @examples[#:eval 
+            the-eval
+            (approximate nat/e 5)]
+}
+
+@section{Constructing Enumerations}
+
+This section contains the basic operations for building
+enumerations.
 
 @defthing[nat/e enum?]{
 
@@ -234,126 +272,168 @@ The empty @tech{enumeration}.
 ]}
 
 
-@defproc[(map/e [f (-> a ... b)]
-                [inv-f (-> b (values a ...))]
-                [e enum?] ...+) enum?]{
-
-Uses @racket[f] and @racket[inv-f] around the encoding and decoding
-functions of @racket[e].
-
-@examples[#:eval the-eval
-(define map-1/e
-  (map/e number->string string->number nat/e))
-(from-nat map-1/e 5)
-(to-nat map-1/e "5")
-(define map-2/e
-  (map/e (λ (x y) 
-           (string-join
-            (list (number->string x)
-                  (number->string y))))
-         (λ (x)
-           (apply values (map string->number (string-split x))))
-         nat/e nat/e))
-(from-nat map-2/e 5)
-(to-nat map-2/e "1 2")
-]}
+@defproc[(map/e [f (dynamic->* #:mandatory-domain-contracts (map enum-contract e)
+                               #:range-contracts (list c))]
+                [f-inv (dynamic->* #:mandatory-domain-contracts (list c)
+                                   #:range-contracts (map enum-contract e))]
+                [#:contract c contract?]
+                [e enum?] ...+)
+         enum?]{
+ Builds an @tech{enumeration} of @racket[c] from @racket[e] by
+ calling @racket[f] on each element of the enumeration
+ and @racket[f-inv] of each value of @racket[c]. 
+ 
+ If multiple enumerations are supplied, @racket[f] is expected
+ to accept any combination of elements of the given enumerations,
+ i. e., the enumerations are not processed in parallel like the
+ lists in @racket[map], but instead any element from the first enumeration
+ may appear as the first argument to @racket[f] and any element from
+ the second may appear as the second argument to @racket[f], etc.
+ 
+ If @racket[e] is a @tech{one way enumeration}, then the result is
+ a one way enumeration and @racket[f-inv] is ignored. Otherwise,
+ the result is a @tech{two way enumeration}.
+ 
+ @examples[#:eval 
+           the-eval
+           (define evens/e
+             (map/e (λ (x) (* x 2))
+                    (λ (x) (/ x 2))
+                    nat/e
+                    #:contract (and/c exact-nonnegative-integer?
+                                      even?)))
+           (approximate evens/e 10)
+           (define odds/e
+             (map/e add1
+                    sub1
+                    evens/e
+                    #:contract (and/c exact-nonnegative-integer?
+                                      odd?)))
+           (approximate odds/e 10)]
+}
 
 
 @defproc[(pam/e [f (-> a ... b)]
                 [e enum?] ...+) enum?]{
+  Builds a @tech{one way enumeration} from the given enumerations,
+  combining their elements with @racket[f], in a manner similar
+  to @racket[map/e].
 
+   @examples[#:eval 
+             the-eval
+             (define rationals/e
+               (pam/e /
+                      (nat+/e 1)
+                      (nat+/e 2)
+                      #:contract (and/c exact? rational? positive?)))
+           (approximate rationals/e 10)]
 }
 
-@defproc[(except/e [e enum?] [x any/c] ...) enum?]{
+@defproc[(except/e [e enum?] 
+                   [#:contract c (or/c #f contract?) #f]
+                   [x any/c] ...) enum?]{
 
 Returns an @tech{enumeration} identical to @racket[e] except that all
-@racket[x] are not included in the decoding and cannot be encoded
-(converted to a natural number).
+@racket[x] are removed from the enumeration.
+
+If @racket[c] is @racket[#f], then it is not treated as a contract, and
+the resulting contract is synthesized from contract on @racket[e]
+and the @racket[x]s. If @racket[c] is @racket[#f], then @racket[e]
+must be a @tech{two way enumeration}.
 
 @examples[#:eval the-eval
-(define except-1/e
-  (except/e nat/e 3))
-(from-nat except-1/e 5)
-(to-nat except-1/e 8)
-]}
+                 (define except-1/e
+                   (except/e nat/e 3))
+                 (from-nat except-1/e 2)
+                 (from-nat except-1/e 4)
+                 (to-nat except-1/e 2)
+                 (to-nat except-1/e 4)]}
 
-@defproc[(or/e [e-p (cons/c enum? (-> any/c boolean?))] ...) enum?]{
+@defproc[(or/e [e-p (or/c flat-enum? (cons/c enum? (-> any/c boolean?)))] ...) 
+         enum?]{
+
+An @tech{enumeration} of the disjoint sum of the enumerations in
+@racket[e-p]. If a @racket[e-p] is a pair, then the predicate is used
+to identify its elements and the predicate needs only to be able
+to distinguish elements of its enumeration from the others. If
+@racket[e-p] is a @tech{flat enumeration}, the predicate is extracted from the
+@tech{enumeration}'s predicate.
+
+@examples[#:eval the-eval
+                 (approximate (or/e nat/e (list/e nat/e nat/e))
+                              10)]
+}
+
+@defproc[(append/e [e-p (or/c flat-enum? (cons/c enum? (-> any/c boolean?)))] ...+) 
+         enum?]{
 
 An @tech{enumeration} of the disjoint sum of the enumerations given in
-@racket[e-p]. Each @racket[e-p] is a pair of an enumeration and a
-predicate identifying elements of it. Only one or zero predicates
-should return true on any value.
+@racket[e-p] that enumerates the elements in order that the enumerations
+are supplied. All but the last enumeration must be finite.
 
 @examples[#:eval the-eval
-(approximate (disj-sum/e (cons nat/e exact-nonnegative-integer?)
-                         (cons map-1/e string?))
-             10)
-]}
-
-@defproc[(append/e [e-p (cons/c enum? (-> any/c boolean?))] ...+) enum?]{
-
-An @tech{enumeration} of the disjoint sum of the enumerations given in
-@racket[e-p] that fully enumerates each enumeration before enumerating
-the next. @racket[e-p] are formatted as in @racket[disj-sum/e]. All
-but the last enumeration should be finite.
-
-@examples[#:eval the-eval
-(approximate 
- (disj-append/e (cons (take/e nat/e 4) exact-nonnegative-integer?)
-                (cons map-1/e string?))
- 10)
-]}
+                 (approximate 
+                  (append/e (take/e nat/e 4)
+                            (list/e nat/e nat/e))
+                  10)]
+}
 
 @defproc[(thunk/e [size (or/c exact-nonnegative-integer? +inf.0)] [ep (-> enum?)]) enum?]{
 
-A delayed @tech{enumeration} identical to @racket[ep]. This is
-typically used with @racket[fix/e].
+A delayed @tech{enumeration} identical to the result of @racket[ep]. 
 
 @examples[#:eval the-eval
-(approximate (thunk/e +inf.0 (λ () nat/e)) 5)
-]}
+                 (letrec ([bt/e (thunk/e 
+                                 (λ ()
+                                   (or/e (fin/e #f)
+                                         (list/e bt/e bt/e))))])
+                   (approximate bt/e 5))]
+}
 
-@defproc[(list/e [e enum?] ...) enum?]{
+@defproc[(list/e [#:ordering ordering (or/c 'diagonal 'square) 'square] [e enum?] ...) enum?]{
 
 An @tech{enumeration} of lists of values enumerated by the
 @racket[e].
 
-@examples[#:eval the-eval
-(approximate (list/e
-              (fin/e "Brian" "Jenny" "Ki" "Ted") 
-              nat/e
-              (fin/e "Terra" "Locke" "Edgar" "Mash"))
-             5)
-]}
-
-@defproc[(dep/e [a enum?] [b (-> any/c enum?)]) enum?]{
-
-Constructs an @tech{enumeration} of pairs of values @racket[a] and
-@racket[(b a)].
+If @racket[ordering] is @racket['square], it uses a generalized form
+of Szudzik's ``elegant'' ordering and if @racket[ordering] is @racket['diagonal],
+it uses a generalized form of Cantor's mapping from pairs of naturals
+to naturals.
 
 @examples[#:eval the-eval
-(define dep-1/e
-  (dep/e nat/e (λ (a) (below/e a))))
-(approximate dep-1/e 5)
-(to-nat dep-1/e (cons 17 10))
-]}
+                 (approximate (list/e
+                               (fin/e "Brian" "Jenny" "Ki" "Ted") 
+                               nat/e
+                               (fin/e "Terra" "Locke" "Edgar" "Mash"))
+                              5)
+                 (approximate (list/e nat/e nat/e)
+                              10)
+                 (approximate (list/e #:ordering  'diagonal nat/e nat/e)
+                              10)]}
 
-@defproc[(dep2/e [n (or/c exact-nonnegative-integer? +inf.0)] [a enum?] [b (-> any/c enum?)]) enum?]{
-
-Like @racket[dep2/e] but requires the size of the resulting
-enumeration be given as @racket[n]. This is more efficient than
-@racket[dep/e], particularly when @racket[n] is finite.
-
-@examples[#:eval the-eval
-(define (! n)
-  (if (zero? n) 1 (* n (! (sub1 n)))))
-(define dep2-1/e
-  (dep2/e (+ (! 1) (! 2) (! 3) (! 4) (! 5))
-          (below/e 5)
-          (λ (a) (below/e a))))
-(approximate dep2-1/e 5)
-(to-nat dep2-1/e (cons 4 3))
-]}
+@defform*[[(cons/de [car-id car-enumeration-expr] 
+                    [cdr-id (car-id) cdr-enumeration-expr] 
+                    cons/dc-option)
+           (cons/de [car-id (cdr-id) car-enumeration-expr]
+                    [cdr-id cdr-enumeration-expr]
+                    cons/dc-option)]
+          #:grammar ([cons/de-option (code:line)
+                                     #:f-range-finite? expr])]{
+  Constructs an @tech{enumeration} of pairs where the first component
+                of the pair is drawn from the @racket[car-enumeration-expr]'s
+                value and the second is drawn from the @racket[cdr-enumeration-expr]'s
+                value.
+                
+  In the first form, the @racket[cdr-enumeration-expr] can use @racket[car-id], which
+  is bound to the value of the car position of the pair, mutatis mutandis in the second case.
+  
+  @examples[#:eval
+            the-eval
+            (define ordered-pair/e
+              (cons/de [hd nat/e]
+                       [tl (hd) (nat+/e (+ hd 1))]))
+            (approximate ordered-pair/e 10)]
+}
 
 @defproc[(bounded-list/e [k exact-nonnegative-integer?] [n exact-nonnegative-integer?]) enum?]{
 
