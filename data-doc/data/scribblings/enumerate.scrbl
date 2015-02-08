@@ -126,26 +126,30 @@ lambda calculus.
 
 @defs+int[#:eval
           the-eval
-          ((define/contract (lc-var/e bvs)
-             (-> (set/c symbol?) enum?)
-             (delay/e
-              (or/e
-               (code:comment "the variables currently in scope")
-               (apply fin/e (set->list bvs))
-               
-               (code:comment "the λ case; first we build a dependent")
-               (code:comment "pair of a bound variable and a body expression")
-               (code:comment "and then use map/e to build the usual syntax")
-               (map/e
-                (λ (pr) `(λ (,(car pr)) ,(cdr pr)))
-                (λ (λ-exp) (cons (caadr λ-exp) (caddr λ-exp)))
-                (cons/de
-                 [hd symbol/e]
-                 [tl (hd) (lc-var/e (set-add bvs hd))])
-                #:contract (list/c 'λ (list/c symbol?) lc-exp?))
-               
-               (code:comment "application expressions")
-               (list/e (lc-var/e bvs) (lc-var/e bvs)))))
+          ((define/contract (lc-var/e bvs memo)
+             (-> (set/c symbol?) (hash/c (set/c symbol?) enum?) enum?)
+             (code:comment "memoization is a significant performance improvement")
+             (hash-ref!
+              memo
+              bvs
+              (delay/e
+               (or/e
+                (code:comment "the variables currently in scope")
+                (apply fin/e (set->list bvs))
+                
+                (code:comment "the λ case; first we build a dependent")
+                (code:comment "pair of a bound variable and a body expression")
+                (code:comment "and then use map/e to build the usual syntax")
+                (map/e
+                 (λ (pr) `(λ (,(car pr)) ,(cdr pr)))
+                 (λ (λ-exp) (cons (caadr λ-exp) (caddr λ-exp)))
+                 (cons/de
+                  [hd symbol/e]
+                  [tl (hd) (lc-var/e (set-add bvs hd) memo)])
+                 #:contract (list/c 'λ (list/c symbol?) lc-exp?))
+                
+                (code:comment "application expressions")
+                (list/e (lc-var/e bvs memo) (lc-var/e bvs memo))))))
            
            (define (lc-exp? x)
              (match x
@@ -153,7 +157,7 @@ lambda calculus.
                [`(λ (,x) ,e) (and (symbol? x) (lc-exp? e))]
                [`(,a ,b) (and (lc-exp? a) (lc-exp? b))]))
            
-           (define lc/e (lc-var/e (set))))
+           (define lc/e (lc-var/e (set) (make-hash))))
           (from-nat lc/e 0)
           (from-nat lc/e 1)
           (from-nat lc/e 2)
@@ -161,6 +165,7 @@ lambda calculus.
                   '(λ (f) 
                      ((λ (x) (f (x x)))
                       (λ (x) (f (x x))))))]
+
 
 @section{Enumeration Properties}
 
