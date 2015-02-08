@@ -19,7 +19,7 @@
 @(define-syntax-rule (ex e ...) (examples #:eval the-eval e ...))
 
 
-@author[@author+email["Max S. New" "maxsnew@gmail.com"]]
+@author[@author+email["Max S. New" "maxnew@ccs.neu.edu"]]
 
 This library defines @deftech{enumerations}. Enumerations
 are bijections between the natural numbers (or a prefix of

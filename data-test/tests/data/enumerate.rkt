@@ -787,3 +787,7 @@
    (test-tetris 15 2)
    
    (test-tetris 100 2)))
+
+(require rackunit/docs-complete)
+(check-docs 'data/enumerate)
+(check-docs 'data/enumerate/lib)
