@@ -579,38 +579,47 @@ enumerations.
 
 }
 
-@defproc[(filter/e [e enum?] [p (-> any/c boolean?)]) enum?]{
-
-Returns an @tech{enumeration} identical to @racket[e] except that only
-elements where @racket[p] returns true are included. The encoding
-function and the size are wrong in the result and this is inefficient,
-so only use it for very small enumerations.
-
-@examples[#:eval the-eval
-(define filter-1/e
-  (filter/e nat/e even?))
-(from-nat filter-1/e 5)
-(to-nat filter-1/e 8)
-]}
-
-
-@defproc[(take/e [e enum?] [n exact-nonnegative-integer?]) enum?]{
+@defproc[(take/e [e enum?]
+                 [n (if (finite-enum? e)
+                        (integer-in 0 (enum-size e))
+                        exact-nonnegative-integer?)]
+                 [#:contract contract
+                             (λ (x)
+                               (and ((enum-contract e) x)
+                                    (< (to-nat e x) n)))])
+         finite-enum?]{
 
 Identical to @racket[e] but only includes the first @racket[n] values.
+             
+If the @racket[contract] argument is not supplied, then @racket[e] must
+be both a @tech{two way enumeration} and a @tech{flat enumeration}.
 
 @examples[#:eval the-eval
-(from-nat (take/e map-2/e 5) 3)
-(to-nat (take/e map-2/e 5) "1 1")
-]}
+                 (to-list (take/e nat/e 5))]
+}
 
-@defproc[(slice/e [e enum?] [lo exact-nonnegative-integer?] [hi exact-nonnegative-integer?]) enum?]{
+@defproc[(slice/e [e enum?]
+                  [lo (and/c (if (finite-enum? e)
+                                 (integer-in 0 (enum-size e))
+                                 exact-nonnegative-integer?)
+                             (<=/c hi))]
+                  [hi (if (finite-enum? e)
+                          (integer-in 0 (enum-size e))
+                          exact-nonnegative-integer?)]
+                  [#:contract contract
+                              (and/c (enum-contract e)
+                                     (λ (x)
+                                       (<= lo (to-nat e x))
+                                       (< (to-nat e x) hi)))])
+         finite-enum?]{
 
 Identical to @racket[e] but only includes the values between
-@racket[lo] and @racket[hi].
+@racket[lo] (inclusive) and @racket[hi] (exclusive).
 
 @examples[#:eval the-eval
-(to-list (slice/e map-2/e 5 10))
-]}
+                 (to-list (slice/e nat/e 5 10))
+                 (slice/e nat/e 20 20)]
+}
 
 
 @defproc[(fin/e [x (or/c symbol? boolean? char? keyword? null?
@@ -622,14 +631,13 @@ Identical to @racket[e] but only includes the values between
 
  If there are multiple arguments, then they must all be
  distinct; numbers except for @racket[+nan.0] and @racket[+nan.f] are
- compared using equality and all others are compared using
+ compared using @racket[=] and all others are compared using
  @racket[equal?]). 
  
  If some other
- equality function is appropriate, use @racket[disj-sum/e]
- (with calls to @racket[fin/e] with just one argument and
- explicit @racket[contract] arguments) to explicitly specify
- predicates that differentiate the elements of the
+ equality function is appropriate, use @racket[map/e]
+ with @racket[(below/e n)] as the first argument to explicitly specify
+ how to differentiate the elements of the
  enumeration.
 
  @examples[#:eval 

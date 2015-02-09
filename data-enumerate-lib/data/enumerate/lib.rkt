@@ -435,14 +435,13 @@
 (define (slice/e e lo hi 
                  #:contract 
                  [contract 
-                  (let ([c (enum-contract e)])
-                    (and/c c
-                           (let ([in-the-slice?
-                                  (λ (x)
-                                    (define n (to-nat e x))
-                                    (and (<= lo n)
-                                         (< n hi)))])
-                             in-the-slice?)))])
+                  (and/c (enum-contract e)
+                         (let ([in-the-slice?
+                                (λ (x)
+                                  (define n (to-nat e x))
+                                  (and (<= lo n)
+                                       (< n hi)))])
+                           in-the-slice?))])
   (map/e
    (λ (n) (from-nat e (n . + . lo)))
    (λ (x) (- (to-nat e x) lo))
