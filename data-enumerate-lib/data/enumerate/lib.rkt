@@ -628,7 +628,6 @@
 (provide
  char/e
  string/e
- from-1/e
  integer/e
  float/e
  exact-rational/e
@@ -683,12 +682,6 @@
    string->list
    better-ordering-for-sequences-of-chars/e
    #:contract string?))
-
-(define from-1/e
-  (map/e add1
-         sub1
-         nat/e
-         #:contract (and/c exact-nonnegative-integer? (>=/c 1))))
 
 (define integer/e
   (let ()

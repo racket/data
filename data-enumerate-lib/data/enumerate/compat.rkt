@@ -66,7 +66,7 @@
 ; (define fail/e :fail/e) ;; probably not used
 (define char/e :char/e)
 (define string/e :string/e)
-(define from-1/e :from-1/e)
+(define from-1/e (:nat+/e 1))
 (define integer/e :integer/e)
 (define float/e :float/e)
 (define real/e :real/e)

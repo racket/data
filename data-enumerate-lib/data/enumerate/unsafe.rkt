@@ -647,7 +647,7 @@ notes for eventual email:
               1))
        2)))
 
-(define (dep/e e f #:f-range-finite? [f-range-finite? #t])
+(define (dep/e e f #:f-range-finite? [f-range-finite? #f])
   (dep/e-internal e f f-range-finite?))
 
 (define (dep/e-internal e f f-range-finite?)

@@ -443,7 +443,7 @@
 (define 3-up
   (cons/de [hd (fin/e 0 1 2)]
            [tl (hd) (below/e (add1 hd))]
-           #:f-range-finite? #t))
+           #:dep-expression-finite? #t))
 
 (define from-3
   (cons/de
@@ -453,7 +453,7 @@
 (define nats-to
   (cons/de [hd nat/e]
            [tl (hd) (up-to hd)]
-           #:f-range-finite? #t))
+           #:dep-expression-finite? #t))
 
 (define nats-up
   (cons/de [hd nat/e]
@@ -501,16 +501,32 @@
 
  (check-bijection? nats-up))
 
+(check-equal? (approximate (flip-dep/e nat/e 
+                                       (λ (tl) (below/e tl))
+                                       #:f-range-finite? #t)
+                           10)
+              '((0 . 1)
+                (0 . 2) (1 . 2)
+                (0 . 3) (1 . 3) (2 . 3)
+                (0 . 4) (1 . 4) (2 . 4) (3 . 4)))
+(check-equal? (approximate (dep/e nat/e 
+                                  (λ (hd) (nat+/e (+ hd 1))))
+                           10)
+              '((0 . 1)
+                (0 . 2) (1 . 2)
+                (0 . 3) (1 . 3) (2 . 3)
+                (0 . 4) (1 . 4) (2 . 4) (3 . 4)))
+
 (define 3-up-2
   (cons/de
    [hd (fin/e 0 1 2)]
    [tl (hd) (up-to hd)]
-   #:f-range-finite? #t))
+   #:dep-expression-finite? #t))
 
 (define nats-to-2
   (cons/de [hd nat/e]
            [tl (hd) (up-to hd)]
-           #:f-range-finite? #t))
+           #:dep-expression-finite? #t))
 
 (check-equal? (one-way-enum?
                (cons/de
@@ -526,7 +542,7 @@
                (cons/de
                 [i (pam/e values (below/e 10) #:contract (enum-contract nat/e))]
                 [tl (i) (pam/e values (below/e i) #:contract (enum-contract (below/e i)))]
-                #:f-range-finite? #t))
+                #:dep-expression-finite? #t))
               #t)
 
 (test-begin

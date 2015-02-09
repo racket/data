@@ -99,7 +99,8 @@
         (#:ordering (or/c 'diagonal 'square)) 
         #:rest (listof enum?)
         enum?)]
-  [bounded-list/e (-> nat? nat? enum?)]))
+  [bounded-list/e (-> nat? nat? enum?)]
+  [dep/e dep/e-contract]))
 
 (define nat? exact-nonnegative-integer?)
 (define extended-nat/c (or/c nat? +inf.0))
