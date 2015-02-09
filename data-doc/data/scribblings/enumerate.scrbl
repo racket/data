@@ -22,7 +22,7 @@
 @author[@author+email["Max S. New" "maxnew@ccs.neu.edu"]]
 
 This library defines @deftech{enumerations}. Enumerations
-are bijections between the natural numbers (or a prefix of
+are represented as bijections between the natural numbers (or a prefix of
 them) and the values of some contract. Most of the
 enumerations defined in this library guarantee that the
 constructed bijection is efficient, in the sense that
@@ -169,12 +169,12 @@ lambda calculus.
 
 @section{Enumeration Properties}
 
-An enumeration has three boolean properties: if it is finite
+In addition to the functions that form the bijection, an
+enumeration also has a contract, a size, and three boolean
+properties associated with it: if it is finite
 or not, if it is a bijection to the natural numbers or
 merely maps from the natural numbers without going back, and
 if the contract is has is a @racket[flat-contract?].
-In addition, each enumeration has a contract associated with
-it and, if it is a finite enumeration, a size.
 
 The functions in this section are predicates for the boolean
 properties and selection functions for other properties.
@@ -243,12 +243,12 @@ that an enumeration enumerates.
 
   @examples[#:eval 
             the-eval
-            (approximate nat/e 5)]
+            (approximate (list/e nat/e nat/e) 8)]
 }
 
 @section{Constructing Enumerations}
 
-This section contains the basic operations for building
+This section contains the fundamental operations for building
 enumerations.
 
 @defthing[nat/e enum?]{
@@ -318,8 +318,11 @@ The empty @tech{enumeration}.
 }
 
 
-@defproc[(pam/e [f (-> a ... b)]
-                [e enum?] ...+) enum?]{
+@defproc[(pam/e [f (dynamic->* #:mandatory-domain-contracts (map enum-contract e)
+                               #:range-contracts (list c))]
+                [#:contract c contract?]
+                [e enum?] ...+)
+         one-way-enum?]{
   Builds a @tech{one way enumeration} from the given enumerations,
   combining their elements with @racket[f], in a manner similar
   to @racket[map/e].
@@ -334,14 +337,17 @@ The empty @tech{enumeration}.
            (approximate rationals/e 10)]
 }
 
-@defproc[(except/e [e enum?] 
+@defproc[(except/e [e (if c
+                          enum?
+                          two-way-enum?)] 
                    [#:contract c (or/c #f contract?) #f]
-                   [x any/c] ...) enum?]{
+                   [x (enum-contract e)] ...) 
+         enum?]{
 
-Returns an @tech{enumeration} identical to @racket[e] except that all
+Returns a @tech{two way enumeration} identical to @racket[e] except that all
 @racket[x] are removed from the enumeration.
 
-If @racket[c] is @racket[#f], then it is not treated as a contract, and
+If @racket[c] is @racket[#f], then it is not treated as a contract, instead
 the resulting contract is synthesized from contract on @racket[e]
 and the @racket[x]s. If @racket[c] is @racket[#f], then @racket[e]
 must be a @tech{two way enumeration}.
@@ -357,10 +363,10 @@ must be a @tech{two way enumeration}.
 @defproc[(or/e [e-p (or/c flat-enum? (cons/c enum? (-> any/c boolean?)))] ...) 
          enum?]{
 
-An @tech{enumeration} of the disjoint sum of the enumerations in
-@racket[e-p]. If a @racket[e-p] is a pair, then the predicate is used
-to identify its elements and the predicate needs only to be able
-to distinguish elements of its enumeration from the others. If
+An @tech{enumeration} of all of the elements of the enumerations in
+the @racket[e-p] arguments. If an @racket[e-p] is a pair, then the predicate is used
+to identify its elements (the predicate needs only to be able
+to distinguish elements of its enumeration from the others). If
 @racket[e-p] is a @tech{flat enumeration}, the predicate is extracted from the
 @tech{enumeration}'s predicate.
 
@@ -372,7 +378,7 @@ to distinguish elements of its enumeration from the others. If
 @defproc[(append/e [e-p (or/c flat-enum? (cons/c enum? (-> any/c boolean?)))] ...+) 
          enum?]{
 
-An @tech{enumeration} of the disjoint sum of the enumerations given in
+An @tech{enumeration} of the elements of the enumerations given in
 @racket[e-p] that enumerates the elements in order that the enumerations
 are supplied. All but the last enumeration must be finite.
 
@@ -383,9 +389,31 @@ are supplied. All but the last enumeration must be finite.
                   10)]
 }
 
-@defproc[(thunk/e [size (or/c exact-nonnegative-integer? +inf.0)] [ep (-> enum?)]) enum?]{
+@defproc[(thunk/e [eth (-> (and/c (if (= size +inf.0)
+                                      infinite-enum?
+                                      (and/c finite-enum?
+                                             (let ([matching-size? (λ (e) (= (enum-size e) size))])
+                                               matching-size?)))
+                                  (if is-two-way-enum?
+                                      two-way-enum?
+                                      one-way-enum?)
+                                  (if is-flat-enum?
+                                      flat-enum?
+                                      (not/c flat-enum?))))]
+                  [#:size size (or/c +inf.0 exact-nonnegative-integer?) +inf.0]
+                  [#:two-way-enum? is-two-way-enum? any/c #t]
+                  [#:flat-enum? is-flat-enum? any/c #t])
+         enum?]{
 
-A delayed @tech{enumeration} identical to the result of @racket[ep]. 
+A delayed @tech{enumeration} identical to the result of @racket[eth].
+          
+The @racket[size], @racket[is-two-way-enum?], and @racket[is-flat-enum?]
+arguments must be accurate predications of the properties of the result of 
+@racket[eth].
+
+The argument @racket[eth] is invoked when the result enumeration's contract
+or bijection is used, either directly or indirectly via a call to
+@racket[enum-contract], @racket[from-nat], or @racket[to-nat].
 
 @examples[#:eval the-eval
                  (letrec ([bt/e (thunk/e 
