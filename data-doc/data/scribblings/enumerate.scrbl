@@ -414,30 +414,27 @@ to naturals.
                  (approximate (list/e nat/e nat/e)
                               10)
                  (approximate (list/e #:ordering  'diagonal nat/e nat/e)
-                              10)]}
+                              10)]
+}
 
-@defform*[[(cons/de [car-id car-enumeration-expr] 
-                    [cdr-id (car-id) cdr-enumeration-expr] 
-                    cons/dc-option)
-           (cons/de [car-id (cdr-id) car-enumeration-expr]
-                    [cdr-id cdr-enumeration-expr]
-                    cons/dc-option)]
-          #:grammar ([cons/de-option (code:line)
-                                     #:f-range-finite? expr])]{
-  Constructs an @tech{enumeration} of pairs where the first component
-                of the pair is drawn from the @racket[car-enumeration-expr]'s
-                value and the second is drawn from the @racket[cdr-enumeration-expr]'s
-                value.
-                
-  In the first form, the @racket[cdr-enumeration-expr] can use @racket[car-id], which
-  is bound to the value of the car position of the pair, mutatis mutandis in the second case.
-  
+@defproc[(dep/e [e enum?] 
+                [f (-> (enum-contract e)
+                       (and/c (if f-range-finite?
+                                  finite-enum?
+                                  infinite-enum?)
+                              (if (two-way-enum? e)
+                                  two-way-enum?
+                                  one-way-enum?)))]
+                [#:f-range-finite? f-range-finite? boolean? #f])
+         enum?]{
+  Constructs an @tech{enumeration} of pairs like the first case of @racket[cons/de].
+        
   @examples[#:eval
             the-eval
-            (define ordered-pair/e
-              (cons/de [hd nat/e]
-                       [tl (hd) (nat+/e (+ hd 1))]))
-            (approximate ordered-pair/e 10)]
+            (define dep/e-ordered-pair/e
+              (dep/e nat/e 
+                     (λ (hd) (nat+/e (+ hd 1)))))
+            (approximate dep/e-ordered-pair/e 10)]
 }
 
 @defproc[(bounded-list/e [k exact-nonnegative-integer?] [n exact-nonnegative-integer?]) enum?]{
@@ -452,6 +449,63 @@ An @tech{enumeration} of tuples of naturals up to @racket[n] of length @racket[k
 
 @section{More Enumeration Operations}
 @defmodule[data/enumerate/lib]
+
+
+@defform*[[(cons/de [car-id car-enumeration-expr] 
+                    [cdr-id (car-id) cdr-enumeration-expr] 
+                    cons/dc-option)
+           (cons/de [car-id (cdr-id) car-enumeration-expr]
+                    [cdr-id cdr-enumeration-expr]
+                    cons/dc-option)]
+          #:grammar ([cons/de-option (code:line)
+                                     (code:line #:dep-expression-finite? expr)])]{
+  Constructs an @tech{enumeration} of pairs where the first component
+                of the pair is drawn from the @racket[car-enumeration-expr]'s
+                value and the second is drawn from the @racket[cdr-enumeration-expr]'s
+                value.
+                
+  In the first form, the @racket[cdr-enumeration-expr] can use @racket[car-id], which
+  is bound to the value of the car position of the pair, mutatis mutandis in the second case.
+  
+  If @racket[#:dep-expression-finite?] keyword and expression are present, then the
+  value of the dependent expression is expected to be an infinite enumeration 
+  if the expression evaluates to @racket[#f] and a finite enumeration otherwise. If
+  the keyword is not present, then the dependent expressions are expected to always
+  produce infinite enumerations.
+  
+  The dependent expressions are expected to always produce @tech{two way enumerations}
+  if the non-dependent expression is a @tech{two way enumeration} and the dependent
+  the dependent expressions are expected to always produce @tech{one way enumerations}
+  if the non-dependent expression is a @tech{one way enumeration}.
+  
+  @examples[#:eval
+            the-eval
+            (define ordered-pair/e
+              (cons/de [hd nat/e]
+                       [tl (hd) (nat+/e (+ hd 1))]))
+            (approximate ordered-pair/e 10)]
+}
+
+@defproc[(flip-dep/e [e enum?] 
+                     [f (-> (enum-contract e)
+                            (and/c (if f-range-finite?
+                                       finite-enum?
+                                       infinite-enum?)
+                                   (if (two-way-enum? e)
+                                       two-way-enum?
+                                       one-way-enum?)))]
+                     [#:f-range-finite? f-range-finite? boolean? #f])
+         enum?]{
+  Constructs an @tech{enumeration} of pairs like the second case of @racket[cons/de].
+        
+  @examples[#:eval
+            the-eval
+            (define flip-dep/e-ordered-pair/e
+              (flip-dep/e nat/e 
+                          (λ (tl) (below/e tl))
+                          #:f-range-finite? #t))
+            (approximate flip-dep/e-ordered-pair/e 10)]
+}
 
 @defproc[(filter/e [e enum?] [p (-> any/c boolean?)]) enum?]{
 

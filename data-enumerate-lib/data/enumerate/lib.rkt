@@ -102,19 +102,19 @@
 
 (provide cons/de)
 (define-syntax (cons/de stx)
-  (define f-range-finite #f)
+  (define dep-expression-finite #f)
   (define (parse-options options)
     (let loop ([options options])
       (syntax-case options ()
         [() (void)]
-        [(#:f-range-finite? exp . options)
+        [(#:dep-expression-finite? exp . options)
          (begin
-           (when f-range-finite
-             (raise-syntax-error 'cons/de "expected only one use for #:f-range-finite"
+           (when dep-expression-finite
+             (raise-syntax-error 'cons/de "expected only one use of #:dep-expression-finite?"
                                  stx
-                                 f-range-finite
+                                 dep-expression-finite
                                  (list #'exp)))
-           (set! f-range-finite #'exp)
+           (set! dep-expression-finite #'exp)
            (loop #'options))]
         [(x . y)
          (raise-syntax-error 'cons/de "bad syntax" stx #'x)])))
@@ -134,7 +134,7 @@
                              #'hd
                              (list #'hd2)))
        (parse-options #'options)
-       #`(cons/de/proc e1 (λ (hd2) e2) #,f-range-finite #f 
+       #`(cons/de/proc e1 (λ (hd2) e2) #,dep-expression-finite #f 
                        #,the-srcloc #,other-party-name))]
     [(_ [hd (tl2) e1] [tl e2] . options)
      (begin
@@ -144,7 +144,7 @@
                              #'tl
                              (list #'tl2)))
        (parse-options #'options)
-       #`(cons/de/proc e2 (λ (tl2) e1) #,f-range-finite #t 
+       #`(cons/de/proc e2 (λ (tl2) e1) #,dep-expression-finite #t 
                        #,the-srcloc #,other-party-name))]))
                        
 (define (cons/de/proc e _f f-range-finite? flip? the-srcloc other-party-name)
@@ -207,7 +207,7 @@
             p-sub1
             #:contract
             any/c)]
-       #:f-range-finite? #t)
+       #:dep-expression-finite? #t)
       #:contract
       (and/c (apply list/c (build-list n (λ (_) elem/c)))
              no-duplicates?))]))
@@ -321,7 +321,7 @@
               (cdr l)
               (cons/de [hd (xs) (f xs (car l))]
                        [xs acc]
-                       #:f-range-finite? f-range-finite?))])))
+                       #:dep-expression-finite? f-range-finite?))])))
   (map/e
    reverse
    reverse
