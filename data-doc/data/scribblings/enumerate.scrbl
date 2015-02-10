@@ -1,5 +1,7 @@
 #lang scribble/manual
 @(require scribble/eval
+          data/enumerate/lib
+          plot/pict
           (for-label data/enumerate
                      data/enumerate/lib
                      racket/math
@@ -734,24 +736,100 @@ An @tech{enumeration} of the exact integers between @racket[lo] and @racket[hi].
 ]}
 
 
-@defproc[(listof/e [e enum?]) enum?]{
+@defproc[(listof/e [e (if simple-recursive?
+                          infinite-enum?
+                          enum?)]
+                   [#:simple-recursive? simple-recursive? any/c #t])
+         enum?]{
 
-An @tech{enumeration} of lists of length @racket[n] of values
-enumerated by @racket[e]. If @racket[n] is not given, lists of any
-size are enumerated.
+An @tech{enumeration} of lists of values
+enumerated by @racket[e].
 
 @examples[#:eval the-eval
-(approximate (many/e nat/e) 5)
-(approximate (many/e nat/e 5) 5)
+(approximate (listof/e nat/e #:simple-recursive? #f) 10)
+(approximate (listof/e nat/e) 10)
+(to-nat (listof/e nat/e #:simple-recursive? #f) '(1 2 3 4 5 6))
+(to-nat (listof/e nat/e) '(1 2 3 4 5 6))
 ]}
 
-@defproc[(non-empty-listof [e enum?]) enum?]{
+If @racket[simple-recursive?] is @racket[#f], then the enumeration
+is constructed by first choosing a length and then using @racket[list/e]
+to build lists of that length. If not, it builds a recursive enumeration
+using @racket[delay/e]. The second (default) method is significantly
+more efficient when calling @racket[from-nat] with large numbers, but
+it also has much shorter lists near the beginning of the enumeration.
 
-An @tech{enumeration} of non-empty lists of values enumerated by
-@racket[e].
+
+@(define listof/e-limit 500)
+@(define lon (listof/e nat/e))
+@(define lon2 (listof/e nat/e #:simple-recursive? #f))
+
+@(define (build-length-stats)
+   (define (get-points e color sym)
+     (define lengths (make-hash))
+     (define nums (make-hash))
+     (for ([x (in-range listof/e-limit)])
+       (define lst (from-nat e x))
+       (define len (length lst))
+       (hash-set! lengths len (+ 1 (hash-ref lengths len 0))))
+     (points
+      #:sym sym
+      #:color color
+      (for/list ([(k v) (in-hash lengths)])
+        (vector k v))))
+   (plot
+    #:x-label "length"
+    #:y-label "number of lists at that length"
+    #:x-min -1
+    #:y-min -10
+    (list (get-points lon "red" 'circle) 
+          (get-points lon2 "blue" '5star))))
+
+@(define (build-value-stats)
+   (define (get-points e color sym)
+     (define values (make-hash))
+     (define nums (make-hash))
+     (for ([x (in-range listof/e-limit)])
+       (define lst (from-nat e x))
+       (for ([value (in-list lst)])
+         (hash-set! values value (+ 1 (hash-ref values value 0)))))
+     (points
+      #:color color
+      #:sym sym
+      (for/list ([(k v) (in-hash values)])
+        (vector k v))))
+   (parameterize ([plot-y-transform  log-transform])
+     (plot
+      #:x-label "value"
+      #:y-label "number of lists that contain that value"
+      (list (get-points lon "red" 'circle)
+            (get-points lon2 "blue" '5star)))))
+
+This plot shows some statistics for the first @(number->string listof/e-limit)
+items in each enumeration. The first plot shows how many different lengths
+each encounters. The red circles are when the @racket[#:simple-recursive?]
+argument is @racket[#t] and the blue stars are when that argument is
+@racket[#f].
+
+@(build-length-stats)
+
+This plot shows the different values, but this time on a log scale. As you can
+see, zero appears much more frequently when the @racket[#:simple-recursive?]
+argument is @racket[#f].
+
+@(build-value-stats)
+
+
+@defproc[(non-empty-listof/e [e (if simple-recursive?
+                                    infinite-enum?
+                                    enum?)]
+                             [#:simple-recursive? simple-recursive? any/c #t]) 
+         enum?]{
+
+Like @racket[listof/e], but without the empty list.
 
 @examples[#:eval the-eval
-(approximate (many1/e nat/e) 5)
+(approximate (non-empty-listof/e nat/e) 5)
 ]}
 
 @defproc[(vector/e [e enum?] ...) enum?]{
