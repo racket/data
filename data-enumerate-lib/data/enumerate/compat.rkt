@@ -32,7 +32,7 @@
 (define fin-cons/e :cons/e)
 (define cons/e :cons/e)
 (define (elegant-cons/e a b) (cons/e a b))
-(define traverse/e :traverse/e)
+(define (traverse/e f xs) (apply :list/e (map f xs)))
 (define hash-traverse/e :hash-traverse/e)
 (define (dep/e e f) (:cons/de [hd e] [tl (hd) (f hd)]))
 (define (dep2/e n e f) (:cons/de [hd e] [tl (hd) (f hd)]))
