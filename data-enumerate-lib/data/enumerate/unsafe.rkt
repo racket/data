@@ -147,7 +147,10 @@ notes for eventual email:
       [(#t) write]
       [(#f) display]
       [else (lambda (p port) (print p port mode))]))
-  (display "#<enum" port)
+  (display "#<" port)
+  (when (finite-enum? enum) (display "finite-" port))
+  (when (one-way-enum? enum) (display "one-way-" port))
+  (display "enum" port)
   (define the-size (enum-size enum))
   (define more-to-go?
     (cond

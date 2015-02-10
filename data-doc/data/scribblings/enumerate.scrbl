@@ -179,6 +179,13 @@ if the contract is has is a @racket[flat-contract?].
 The functions in this section are predicates for the boolean
 properties and selection functions for other properties.
 
+When an enumeration prints out, it shows the first few elements
+of the enumeration and, if it is either a @tech{finite enumeration}
+or a @tech{one way enumeration}, it prints @litchar{finite} 
+and @litchar{one-way}, as appropriate. If those prefixes are not
+printed, then the enumeration is not finite and is not one-way.
+
+
 @defproc[(enum? [x any/c]) boolean?]{
   Identifies a value as an @tech{enumeration}.
 }
