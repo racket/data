@@ -860,65 +860,28 @@ diverge if @racket[e] is infinite.
 
 @subsection{Pre-built Enumerations}
 
-@defthing[integer/e enum?]{
+This section describes enumerations of some common Racket
+datatypes.
 
-An @tech{enumeration} of the integers.
-
-@examples[#:eval the-eval
-(approximate int/e 10)
-]}
-
-
-
-@defthing[char/e enum?]{
+@defthing[char/e two-way-enum?]{
 
 An @tech{enumeration} of characters.
 
 @examples[#:eval the-eval
 (approximate char/e 5)
+(to-nat char/e #\λ)
 ]}
 
-@defthing[string/e enum?]{
+@defthing[string/e two-way-enum?]{
 
 An @tech{enumeration} of strings.
 
 @examples[#:eval the-eval
 (approximate string/e 5)
+(to-nat string/e "racket")
 ]}
 
-@defthing[float/e enum?]{
-
-An @tech{enumeration} of flonums.
-
-@examples[#:eval the-eval
-(approximate float/e 5)
-]}
-
-@defthing[real/e enum?]{
-
-An @tech{enumeration} of reals.
-
-@examples[#:eval the-eval
-(approximate real/e 5)
-]}
-
-@defthing[non-real/e enum?]{
-
-An @tech{enumeration} of non-real numbers.
-
-@examples[#:eval the-eval
-(approximate non-real/e 5)
-]}
-
-@defthing[num/e enum?]{
-
-An @tech{enumeration} of numbers.
-
-@examples[#:eval the-eval
-(approximate num/e 5)
-]}
-
-@defthing[bool/e enum?]{
+@defthing[bool/e two-way-enum?]{
 
 An @tech{enumeration} of booleans.
 
@@ -926,12 +889,82 @@ An @tech{enumeration} of booleans.
 (to-list bool/e)
 ]}
 
-@defthing[symbol/e enum?]{
+@defthing[symbol/e two-way-enum?]{
 
 An @tech{enumeration} of symbols.
 
 @examples[#:eval the-eval
 (approximate symbol/e 5)
+(to-nat symbol/e 'racket/base)
 ]}
+
+@defthing[integer/e two-way-enum?]{
+
+An @tech{enumeration} of the integers.
+
+@examples[#:eval the-eval
+(approximate integer/e 10)
+]}
+
+@defthing[flonum/e two-way-enum?]{
+
+An @tech{enumeration} of @racket[flonum?]s.
+
+@examples[#:eval the-eval
+(approximate flonum/e 10)
+(to-nat flonum/e 1.0)
+(to-nat flonum/e -1.0)
+]}
+
+@defthing[exact-rational/e one-way-enum?]{
+  An enumeration of rational numbers that
+  duplicates entries (roughly, it enumerates
+  all pairs of integers and natural numbers
+  and then divides them which leads to duplicates).
+  
+  @examples[#:eval the-eval
+                   (approximate exact-rational/e 13)]
+  }
+
+@defthing[two-way-real/e two-way-enum?]{
+
+An @tech{enumeration} of reals; it includes
+   only @racket[integer/e] and @racket[flonum/e].
+
+@examples[#:eval the-eval
+(approximate two-way-real/e 5)
+]}
+
+
+@defthing[real/e one-way-enum?]{
+
+An @tech{enumeration} of reals; it includes
+   @racket[exact-rational/e] and @racket[flonum/e].
+
+@examples[#:eval the-eval
+(approximate real/e 10)
+]}
+
+
+@defthing[two-way-number/e two-way-enum?]{
+
+An @tech{enumeration} of numbers; it includes
+   @racket[two-way-real/e] and complex numbers
+   made from pairs of those real numbers.
+
+@examples[#:eval the-eval
+(approximate two-way-number/e 10)
+]}
+
+@defthing[number/e one-way-enum?]{
+
+An @tech{enumeration} of numbers; it
+   includes @racket[real/e] and complex
+   numbers made from pairs of those real numbers.
+
+@examples[#:eval the-eval
+(approximate number/e 10)
+]}
+
 
 @close-eval[the-eval]

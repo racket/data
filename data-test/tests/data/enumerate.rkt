@@ -679,6 +679,23 @@
 (check-equal? (from-nat (range/e -10 10) 1) -9)
 (check-equal? (to-nat (range/e -10 10) -9) 1)
 
+(check-equal? (ormap negative? 
+                     (for/list ([i (in-range 20)])
+                       (from-nat exact-rational/e i)))
+              #t)
+(check-equal? (ormap positive? 
+                     (for/list ([i (in-range 20)])
+                       (from-nat exact-rational/e i)))
+              #t)
+(check-equal? (ormap integer? 
+                     (for/list ([i (in-range 20)])
+                       (from-nat exact-rational/e i)))
+              #t)
+(check-equal? (ormap (not/c integer?)
+                     (for/list ([i (in-range 20)])
+                       (from-nat exact-rational/e i)))
+              #t)
+
 (let ()
   (define sevens/e (infinite-sequence/e (below/e 7)))
   (check-not-false
@@ -807,12 +824,12 @@
                      #:contract 
                      (and/c (>=/c i) exact-integer?))]))
 (check-contract integer/e)
-(check-contract float/e)
+(check-contract flonum/e)
 (check-contract exact-rational/e)
 (check-contract two-way-real/e)
 (check-contract real/e)
-(check-contract two-way-num/e)
-(check-contract num/e)
+(check-contract two-way-number/e)
+(check-contract number/e)
 (check-contract (slice/e nat/e 10 20))
 (check-contract (permutations-of-n/e 4))
 (check-contract (permutations/e '(a b c)))

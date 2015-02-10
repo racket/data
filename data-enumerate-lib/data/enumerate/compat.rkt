@@ -68,11 +68,18 @@
 (define string/e :string/e)
 (define from-1/e (:nat+/e 1))
 (define integer/e :integer/e)
-(define float/e :float/e)
+(define float/e :flonum/e)
 (define real/e :real/e)
 ;; (define non-real/e :non-real/e) ;; hopefully not used
-(define num/e :num/e)
+(define num/e :number/e)
 (define bool/e :bool/e)
 (define symbol/e :symbol/e)
-(define base/e :base/e)
-(define any/e :any/e)
+(define base/e (:or/e (:fin/e '())
+                      (cons :two-way-number/e number?)
+                      :string/e
+                      :bool/e
+                      :symbol/e))
+(define any/e (:delay/e
+               (:or/e (cons base/e (λ (x) (not (pair? x))))
+                      (cons (cons/e any/e any/e) pair?))
+               #:size +inf.0))

@@ -647,12 +647,12 @@
  char/e
  string/e
  integer/e
- float/e
+ flonum/e
  exact-rational/e
  real/e
  two-way-real/e
- num/e
- two-way-num/e
+ number/e
+ two-way-number/e
  bool/e
  symbol/e)
 
@@ -726,18 +726,22 @@
                  (not/c infinite?)
                  (not/c nan?))))
 
-(define float/e
+(define flonum/e
   (append/e (fin/e +inf.0 -inf.0 +nan.0)
             normal-flonums/e-p))
 
 (define exact-rational/e
   (or/e (fin/e 0)
-        (pam/e (λ (pr) (/ (car pr) (cdr pr)))
-               (cons/e (nat+/e 1) (nat+/e 2))
-               #:contract (and/c rational? exact?))))
+        (let ([pos-exact-rational/e
+               (pam/e (λ (pr) (/ (car pr) (cdr pr)))
+                      (cons/e (nat+/e 1) (nat+/e 2))
+                      #:contract (and/c rational? positive?))])
+          (or/e pos-exact-rational/e
+                (pam/e - pos-exact-rational/e
+                       #:contract (and/c rational? exact? negative?))))))
          
-(define two-way-real/e (or/e integer/e float/e))
-(define real/e (or/e float/e exact-rational/e))
+(define two-way-real/e (or/e integer/e flonum/e))
+(define real/e (or/e flonum/e exact-rational/e))
 
 (define (make-non-real/e rp ip ctc)
   (map/e make-rectangular
@@ -755,7 +759,7 @@
   (make-non-real/e (except/e integer/e 0) (except/e integer/e 0)
                    (and/c complex-with-exact-integer-parts? (not/c real?))))
 (define float-non-real/e 
-  (make-non-real/e float/e float/e
+  (make-non-real/e flonum/e flonum/e
                    (and/c number? inexact? (not/c real?))))
 
 ;; only one-way, so don't need to skip 0
@@ -763,7 +767,7 @@
   (make-non-real/e exact-rational/e exact-rational/e
                    (and/c number? exact?)))
 
-(define num/e
+(define number/e
    (or/e real/e
          float-non-real/e
          exact-rational-complex/e))
@@ -771,7 +775,7 @@
   (and (number? x)
        (equal? 0 (real-part x))))
 
-(define two-way-num/e
+(define two-way-number/e
   (or/e two-way-real/e
         (map/e (λ (x) (make-rectangular 0 x)) 
                imag-part
