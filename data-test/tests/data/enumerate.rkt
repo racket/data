@@ -367,6 +367,38 @@
                  nat/e))
                #t)
  
+ (check-equal? (one-way-enum?
+                (list/e nat/e
+                        (pam/e values nat/e #:contract exact-nonnegative-integer?)
+                        nat/e))
+               #t)
+ 
+ (check-equal? (from-nat
+                (list/e nat/e
+                        (pam/e values nat/e #:contract exact-nonnegative-integer?)
+                        nat/e)
+                0)
+               '(0 0 0))
+ 
+ (check-equal? (one-way-enum?
+                (list/e nat/e
+                        (pam/e values nat/e #:contract exact-nonnegative-integer?)
+                        nat/e
+                        nat/e
+                        nat/e
+                        nat/e))
+               #t)
+ 
+ (check-equal? (from-nat
+                (list/e nat/e
+                        (pam/e values nat/e #:contract exact-nonnegative-integer?)
+                        nat/e
+                        nat/e
+                        nat/e
+                        nat/e)
+                0)
+               '(0 0 0 0 0 0))
+ 
  (check-range? n*n*n  0  1 '((0 0 0)))
  (check-range? n*n*n  1  4 '((0 0 1) (0 1 0) (1 0 0)))
  (check-range? n*n*n  4 10 '((0 0 2) (1 1 0) (0 1 1) (1 0 1) (0 2 0) (2 0 0)))

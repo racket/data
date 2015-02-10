@@ -1186,11 +1186,18 @@ notes for eventual email:
                #:contract (apply list/c (map enum-contract es)))]))]))
 
 (define (prime-length-box-list/e es)
-  (map/e (curry map from-nat es)
-         (curry map to-nat es)
-         (box-tuples/e (length es))
-         #:contract
-         (apply list/c (map enum-contract es))))
+  (cond
+    [(ormap one-way-enum? es)
+     (pam/e (curry map from-nat es)
+            (box-tuples/e (length es))
+            #:contract
+            (apply list/c (map enum-contract es)))]
+    [else
+     (map/e (curry map from-nat es)
+            (curry map to-nat es)
+            (box-tuples/e (length es))
+            #:contract
+            (apply list/c (map enum-contract es)))]))
 
 (define (box-tuples/e k)
   (-enum +inf.0 (box-untuple k) (box-tuple k) 
