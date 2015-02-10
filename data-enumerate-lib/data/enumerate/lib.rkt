@@ -654,9 +654,7 @@
  num/e
  two-way-num/e
  bool/e
- symbol/e
- base/e
- any/e)
+ symbol/e)
 
 (define (between? x low high)
   (and (>= x low)
@@ -790,20 +788,6 @@
    (compose string->list symbol->string)
    better-ordering-for-sequences-of-chars/e
    #:contract symbol?))
-
-(define base/e
-  (or/e (fin/e '())
-        (cons two-way-num/e number?)
-        string/e
-        bool/e
-        symbol/e))
-
-(define any/e
-  (delay/e
-   (or/e (cons base/e (negate pair?))
-         (cons (cons/e any/e any/e) pair?))
-   #:size +inf.0))
-
 
 (provide
  (contract-out

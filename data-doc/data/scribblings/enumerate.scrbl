@@ -934,20 +934,4 @@ An @tech{enumeration} of symbols.
 (approximate symbol/e 5)
 ]}
 
-@defthing[base/e enum?]{
-
-An @tech{enumeration} of atomic Racket values.
-
-@examples[#:eval the-eval
-(approximate base/e 5)
-]}
-
-@defthing[any/e enum?]{
-
-An @tech{enumeration} of S-expressions.
-
-@examples[#:eval the-eval
-(approximate any/e 5)
-]}
-
 @close-eval[the-eval]
