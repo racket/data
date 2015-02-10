@@ -344,20 +344,17 @@ The empty @tech{enumeration}.
            (approximate rationals/e 10)]
 }
 
-@defproc[(except/e [e (if c
-                          enum?
-                          two-way-enum?)] 
+@defproc[(except/e [e two-way-enum?]
                    [#:contract c (or/c #f contract?) #f]
                    [x (enum-contract e)] ...) 
-         enum?]{
+         two-way-enum?]{
 
 Returns a @tech{two way enumeration} identical to @racket[e] except that all
 @racket[x] are removed from the enumeration.
 
 If @racket[c] is @racket[#f], then it is not treated as a contract, instead
 the resulting contract is synthesized from contract on @racket[e]
-and the @racket[x]s. If @racket[c] is @racket[#f], then @racket[e]
-must be a @tech{two way enumeration}.
+and the @racket[x]s.
 
 @examples[#:eval the-eval
                  (define except-1/e
