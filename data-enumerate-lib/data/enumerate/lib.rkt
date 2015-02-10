@@ -793,7 +793,7 @@
 
 (define base/e
   (or/e (fin/e '())
-        (cons num/e number?)
+        (cons two-way-num/e number?)
         string/e
         bool/e
         symbol/e))
