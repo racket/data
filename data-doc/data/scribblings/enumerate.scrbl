@@ -653,8 +653,7 @@ Identical to @racket[e] but only includes the values between
 @defproc[(single/e [v any/c]
                    [#:equal? same? equal?])
          (and/c finite-enum? bijective-enum?)]{
-  Returns an enumeration of size @racket[1] containing
-                                 @racket[v].
+  Returns an enumeration of size one containing only @racket[v].
                                  
   It uses @racket[same?] to build the contract in
   the enumeration, always passing @racket[v] as the first
@@ -663,7 +662,6 @@ Identical to @racket[e] but only includes the values between
   @examples[#:eval the-eval 
                    (to-list (single/e 12345))
                    (to-list (single/e (λ (x) x)))]
-                                               
 }
 @defproc[(cons/e [e1 enum?] [e2 enum?]
                  [#:ordering ordering (or/c 'diagonal 'square) 'square])
@@ -680,11 +678,18 @@ controls how the resting elements appear.
 (approximate (cons/e nat/e nat/e) 5)]
 }
 
-@defproc[(hash-traverse/e [f (-> any/c enum?)] [xs (hash/c any/c any/c)]) enum?]{
+@defproc[(hash-traverse/e [f (-> any/c enum?)]
+                          [xs (hash/c any/c any/c)]
+                          [#:get-contract get-contract (-> any/c contract?)])
+         enum?]{
 
 Constructs an @tech{enumeration} that simultaneously enumerates each
 of the enumerations returned by @racket[f] applied to each value of
 @racket[xs].
+
+The @racket[get-contract] argument is applied to the keys in the
+hash and is expected to return the contract for the corresponding
+enumeration.
 
 @examples[#:eval the-eval
 (define hash-traverse-1/e
