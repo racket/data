@@ -450,38 +450,32 @@
 
 (provide
  (contract-out
-  [traverse/e
-   (-> (-> any/c enum?)
-       (listof any/c)
-       enum?)]
   [hash-traverse/e
-   (-> (-> any/c enum?) hash?
+   (-> (-> any/c enum?) 
+       hash?
+       #:get-contract (-> any/c contract?)
        enum?)]))
-
-;; Traversal (maybe come up with a better name
-;; traverse/e : (a -> enum b), (listof a) -> enum (listof b)
-(define (traverse/e f xs)
-  (apply list/e (map f xs)))
 
 ;; Hash Traversal
 ;; hash-traverse/e : (a -> enum b), (hash[k] -o> a) -> enum (hash[k] -o> b)
+#;
 (define (hash-traverse/e f ht)
   ;; as-list : listof (cons k a)
   (define as-list (hash->list ht))
   ;; on-cdr : (cons k a) -> enum (cons k b)
-  (define (on-cdr pr)
-    (match pr
-      [(cons k v)
-       (map/e (λ (x) (cons k x))
-              cdr
-              (f v)
-              #:contract any/c)]))
+  
+  (define/match (on-cdr pr)
+    [((cons k v))
+     (map/e (λ (x) (cons k x))
+            cdr
+            (f v)
+            #:contract any/c)])
   ;; enum (listof (cons k b))
   (define assoc/e
-    (traverse/e on-cdr as-list))
+    (apply list/e (map on-cdr as-list)))
   (define (hash-that-maps-correct-keys? candidate-ht)
     (define b (box #f))
-    (for/and ([(k v) (in-hash ht)])
+    (for/and ([k (in-hash-keys ht)])
       (not (eq? (hash-ref candidate-ht k b) b))))
   (map/e make-immutable-hash
          hash->list
@@ -492,6 +486,31 @@
           hash-that-maps-correct-keys?
           (hash/dc [k any/c]
                    [v (k) (enum-contract (f k))]))))
+
+;; Hash Traversal
+;; hash-traverse/e : (a -> enum b), (hash[k] -o> a) -> enum (hash[k] -o> b)
+(define (hash-traverse/e f ht #:get-contract get-contract)
+  ;; as-list : listof (cons k a)
+  (define as-list (hash->list ht))
+  ;; on-cdr : (cons k a) -> enum (cons k b)
+  (define/match (on-cdr pr)
+    [((cons k v))
+     (map/e (λ (x) (cons k x))
+            cdr
+            (f v)
+            #:contract any/c)])
+  ;; enum (listof (cons k b))
+  (define assoc/e
+    (apply list/e (map on-cdr as-list)))
+  (define (hash-that-maps-correct-keys? x) #t)
+  (map/e make-immutable-hash
+         hash->list
+         assoc/e
+         #:contract (and/c
+                     hash?
+                     hash-that-maps-correct-keys?
+                     (hash/dc [k any/c]
+                              [v (k) (get-contract k)]))))
 
 
 (provide
@@ -585,7 +604,7 @@
                        string? bytes? number?))]
         #:pre/name (elements) 
         "no duplicate elements"
-        (let() 
+        (let ()
           (define-values (nums non-nums) (partition number? elements))
           (and (= (length (remove-duplicates nums =))
                   (length nums))
@@ -800,3 +819,16 @@
          (apply list/e #:ordering ordering es)
          #:contract (apply vector/c (map enum-contract es))))
 
+
+(provide
+ (contract-out
+  [single/e
+   (->* (any/c)
+        (#:equal? (-> any/c any/c boolean?))
+        finite-enum?)]))
+(define (single/e v #:equal? [same? equal?])
+  (define (single/e-contract a) (same? v a))
+  (map/e (λ (_) v)
+         (λ (_) 0)
+         (below/e 1)
+         #:contract single/e-contract))

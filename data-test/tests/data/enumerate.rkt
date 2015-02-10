@@ -48,6 +48,14 @@
    (check-exn exn:fail? (λ () (to-nat e 0)))
    (check-bijection? e)))
 
+(let ([e (single/e 17)])
+  (test-begin
+   (check-eq? (from-nat e 0) 17)
+   (check-exn exn:fail? (λ () (from-nat e 1)))
+   (check-eq? (to-nat e 17) 0)
+   (check-exn exn:fail? (λ () (to-nat e 0)))
+   (check-bijection? e)))
+
 ;; fin/e tests
 (let ([e (fin/e 5 4 1 8)])
   (test-begin

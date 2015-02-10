@@ -55,13 +55,13 @@ To interleave two enumerations, use @racket[or/e]:
              (from-nat (or/e nat/e (list/e nat/e nat/e)) 3)
              (from-nat (or/e nat/e (list/e nat/e nat/e)) 4)]
 and to construct recursive data structures, use 
-@racket[delay/e] (with a little help from @racket[fin/e] to
-build a base-case that is not infinite):
+@racket[delay/e] (with a little help from @racket[single/e] to
+build a singleton enumeration for the base-case):
 @def+int[#:eval 
          the-eval
          (define bt/e
            (delay/e
-            (or/e (fin/e #f)
+            (or/e (single/e #f)
                   (list/e bt/e bt/e))))
          (from-nat bt/e 0)
          (from-nat bt/e 1)
@@ -418,7 +418,7 @@ or bijection is used, either directly or indirectly via a call to
 @examples[#:eval the-eval
                  (letrec ([bt/e (thunk/e 
                                  (λ ()
-                                   (or/e (fin/e #f)
+                                   (or/e (single/e #f)
                                          (list/e bt/e bt/e))))])
                    (approximate bt/e 5))]
 }
@@ -573,7 +573,7 @@ enumerations.
   @examples[#:eval
             the-eval
             (letrec ([bt/e (delay/e 
-                            (or/e (fin/e #f)
+                            (or/e (single/e #f)
                                   (list/e bt/e bt/e)))])
               (approximate bt/e 5))]
 
@@ -626,7 +626,7 @@ Identical to @racket[e] but only includes the values between
                          string? bytes? number?)] ...) 
          enum?]{
 
- An @tech{enumeration} of each @racket[x], in the order
+ Builds an @tech{enumeration} containing each @racket[x], in the order
  given.
 
  If there are multiple arguments, then they must all be
@@ -646,46 +646,49 @@ Identical to @racket[e] but only includes the values between
            (to-list (fin/e 1 3 5 7 9 11 13 15))]
 }
 
+@defproc[(single/e [v any/c]
+                   [#:equal? same? equal?])
+         (and/c finite-enum? bijective-enum?)]{
+  Returns an enumeration of size @racket[1] containing
+                                 @racket[v].
+                                 
+  It uses @racket[same?] to build the contract in
+  the enumeration, always passing @racket[v] as the first
+  argument to @racket[same?].
+  
+  @examples[#:eval the-eval 
+                   (to-list (single/e 12345))
+                   (to-list (single/e (λ (x) x)))]
+                                               
+}
+@defproc[(cons/e [e1 enum?] [e2 enum?]
+                 [#:ordering ordering (or/c 'diagonal 'square) 'square])
+         enum?]{
 
-@defproc[(cons/e [x enum?] [y enum?]) enum?]{
-
-An @tech{enumeration} of pairs of the values from @racket[x] and
-@racket[y].
+An @tech{enumeration} of pairs of the values from @racket[e1] and
+@racket[e2]. Like @racket[list/e], the @racket[ordering] argument
+controls how the resting elements appear.
 
 @examples[#:eval the-eval
 (approximate (cons/e (take/e nat/e 4) (take/e nat/e 5)) 5)
 (approximate (cons/e nat/e (take/e nat/e 5)) 5)
 (approximate (cons/e (take/e nat/e 4) nat/e) 5)
-(approximate (cons/e nat/e nat/e) 5)
-]}
-
-@defproc[(traverse/e [f (-> any/c enum?)] [xs (listof any/c)]) enum?]{
-
-Constructs an @tech{enumeration} that simulatenously enumerates each
-of the enumerations returned by @racket[f] applied to each element of
-@racket[xs].
-
-@examples[#:eval the-eval
-(define traverse-1/e
-  (traverse/e (λ (x) (map/e (λ (n) (cons x n))
-                            (λ (y) (cdr y))
-                            nat/e))
-              '("Brian" "Jenny" "Ted" "Ki")))
-(approximate traverse-1/e 5)
-(to-nat traverse-1/e 
-        '(("Brian" . 11) ("Jenny" . 15) ("Ted" . 16) ("Ki" . 7)))
-]}
+(approximate (cons/e nat/e nat/e) 5)]
+}
 
 @defproc[(hash-traverse/e [f (-> any/c enum?)] [xs (hash/c any/c any/c)]) enum?]{
 
-Constructs an @tech{enumeration} that simulatenously enumerates each
+Constructs an @tech{enumeration} that simultaneously enumerates each
 of the enumerations returned by @racket[f] applied to each value of
 @racket[xs].
 
 @examples[#:eval the-eval
 (define hash-traverse-1/e
-  (hash-traverse/e (λ (n) (below/e n))
-                   (hash "Brian" 5 "Jenny" 15 "Ted" 25 "Ki" 30)))
+  (let ([h (hash "Brian" 5 "Jenny" 15 "Ted" 25 "Ki" 30)])
+    (hash-traverse/e (λ (n) (below/e n))
+                     h
+                     #:get-contract
+                     (λ (v) (and/c exact-integer? (<=/c (hash-ref h v)))))))
 (approximate hash-traverse-1/e 5)
 (to-nat hash-traverse-1/e
         '#hash(("Brian" . 4) ("Jenny" . 1) ("Ted" . 16) ("Ki" . 7)))
@@ -707,12 +710,18 @@ is initialized to @racket['()].
 (to-nat fold-enum-1/e (list 0 1 1))
 ]}
 
-@defproc[(range/e [lo exact-nonnegative-integer?] [hi exact-nonnegative-integer?]) enum?]{
+@defproc[(range/e [lo (and/c (or/c -inf.0 exact-integer?)
+                             (<=/c hi))]
+                  [hi (or/c exact-integer? +inf.0)])
+         enum?]{
 
-An @tech{enumeration} of the naturals between @racket[lo] and @racket[hi].
+An @tech{enumeration} of the exact integers between @racket[lo] and @racket[hi].
 
 @examples[#:eval the-eval
-(approximate (range/e 42 64) 5)
+(to-list (range/e 10 20))
+(to-list (range/e 10 10))
+(approximate (range/e -inf.0 0) 10)
+(approximate (range/e -inf.0 +inf.0) 10)
 ]}
 
 
