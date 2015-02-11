@@ -10,5 +10,6 @@
 (define build-deps '("data-lib"
                      "data-enumerate-lib"
                      "racket-doc"
-                     "scribble-lib"))
+                     "scribble-lib"
+                     "plot-lib"))
 (define update-implies '("data-lib" "data-enumerate-lib"))

@@ -30,10 +30,9 @@
   (random-integer m0 m1))
 
 (define (random-index e)
-  (define k (enum-size e))
-  (if (infinite? k)
+  (if (infinite-enum? e)
       (random-natural-w/o-limit)
-      (random-natural k)))
+      (random-natural (enum-size e))))
 
 (define (BPP-digits N)
   (let loop ([8Pi -8])
@@ -254,13 +253,17 @@
 ;; to make enumerations just be streams if
 ;; that's a useful thing to do
 (define (to-stream e)
-  (define (loop n)
-    (cond [(n . >= . (enum-size e))
-           empty-stream]
-          [else
-           (stream-cons (from-nat e n)
-                        (loop (add1 n)))]))
-  (loop 0))
+  (cond
+    [(finite-enum? e)
+     (let loop ([n 0])
+       (cond [(n . >= . (enum-size e))
+              empty-stream]
+             [else
+              (stream-cons (from-nat e n)
+                           (loop (add1 n)))]))]
+    [else
+     (let loop ([n 0])
+       (stream-cons (from-nat e n) (loop (add1 n))))]))
 (provide (contract-out [to-stream (-> enum? stream?)]))
 
 (provide
@@ -271,8 +274,6 @@
         #:pre (low high) (<= low high)
         [res enum?])]))
 
-;; more utility enums
-;; nats of course
 (define (range/e low high)
   (cond 
     [(and (infinite? high) (infinite? low))
@@ -297,6 +298,18 @@
             (below/e (+ 1 (- high low)))
             #:contract (and/c (between/c low high)
                               exact-integer?))]))
+
+(provide
+ (contract-out
+  [nat+/e (-> exact-nonnegative-integer? enum?)]))
+(define (nat+/e n)
+  (map/e (λ (k) (+ k n))
+         (λ (k) (- k n))
+         nat/e
+         #:contract
+         (and/c (>=/c n) exact-integer?)))
+
+
 
 (provide
  (contract-out
@@ -512,16 +525,6 @@
                      (hash/dc [k any/c]
                               [v (k) (get-contract k)]))))
 
-
-(provide
- (contract-out
-  [nat+/e (-> exact-nonnegative-integer? enum?)]))
-(define (nat+/e n)
-  (map/e (λ (k) (+ k n))
-         (λ (k) (- k n))
-         nat/e
-         #:contract
-         (and/c (>=/c n) exact-integer?)))
 
 (provide
  (contract-out

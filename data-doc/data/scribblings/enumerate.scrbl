@@ -485,7 +485,7 @@ An @tech{enumeration} of tuples of naturals up to @racket[n] of length @racket[k
 @defmodule[data/enumerate/lib]
 
 The @racket[data/enumerate/lib] extends @racket[data/enumerate] with a bunch of
-new ways to build enumerations, some utility functions, and a bunch of pre-built
+additional ways to build enumerations, some utility functions, and a bunch of pre-built
 enumerations.
 
 @subsection{More Enumeration Constructors}
@@ -545,6 +545,130 @@ enumerations.
                           (λ (tl) (below/e tl))
                           #:f-range-finite? #t))
             (approximate flip-dep/e-ordered-pair/e 10)]
+}
+
+@defproc[(cons/e [e1 enum?] [e2 enum?]
+                 [#:ordering ordering (or/c 'diagonal 'square) 'square])
+         enum?]{
+
+An @tech{enumeration} of pairs of the values from @racket[e1] and
+@racket[e2]. Like @racket[list/e], the @racket[ordering] argument
+controls how the resting elements appear.
+
+@examples[#:eval the-eval
+(approximate (cons/e (take/e nat/e 4) (take/e nat/e 5)) 5)
+(approximate (cons/e nat/e (take/e nat/e 5)) 5)
+(approximate (cons/e (take/e nat/e 4) nat/e) 5)
+(approximate (cons/e nat/e nat/e) 5)]
+}
+
+@(begin
+   (define listof/e-limit 500)
+   (define lon (listof/e nat/e))
+   (define lon2 (listof/e nat/e #:simple-recursive? #f))
+   
+   (define (build-length-stats)
+     (define (get-points e color sym)
+       (define lengths (make-hash))
+       (define nums (make-hash))
+       (for ([x (in-range listof/e-limit)])
+         (define lst (from-nat e x))
+         (define len (length lst))
+         (hash-set! lengths len (+ 1 (hash-ref lengths len 0))))
+       (points
+        #:sym sym
+        #:color color
+        (for/list ([(k v) (in-hash lengths)])
+          (vector k v))))
+     (plot
+      #:x-label "length"
+      #:y-label "number of lists at that length"
+      #:x-min -1
+      #:y-min -10
+      (list (get-points lon "red" 'circle) 
+            (get-points lon2 "blue" '5star))))
+   
+   (define (build-value-stats)
+     (define (get-points e color sym)
+       (define values (make-hash))
+       (define nums (make-hash))
+       (for ([x (in-range listof/e-limit)])
+         (define lst (from-nat e x))
+         (for ([value (in-list lst)])
+           (hash-set! values value (+ 1 (hash-ref values value 0)))))
+       (points
+        #:color color
+        #:sym sym
+        (for/list ([(k v) (in-hash values)])
+          (vector k v))))
+     (parameterize ([plot-y-transform  log-transform])
+       (plot
+        #:x-label "value"
+        #:y-label "number of lists that contain that value"
+        (list (get-points lon "red" 'circle)
+              (get-points lon2 "blue" '5star))))))
+
+@defproc[(listof/e [e (if simple-recursive?
+                          infinite-enum?
+                          enum?)]
+                   [#:simple-recursive? simple-recursive? any/c #t])
+         enum?]{
+
+An @tech{enumeration} of lists of values
+enumerated by @racket[e].
+
+
+If @racket[simple-recursive?] is @racket[#f], then the enumeration
+is constructed by first choosing a length and then using @racket[list/e]
+to build lists of that length. If not, it builds a recursive enumeration
+using @racket[delay/e]. The second option (which is the default) method is significantly
+more efficient when calling @racket[from-nat] with large numbers, but
+it also has much shorter lists near the beginning of the enumeration.
+
+@examples[#:eval the-eval
+(approximate (listof/e nat/e #:simple-recursive? #f) 10)
+(approximate (listof/e nat/e) 10)
+(to-nat (listof/e nat/e #:simple-recursive? #f) '(1 2 3 4 5 6))
+(to-nat (listof/e nat/e) '(1 2 3 4 5 6))
+]
+
+
+This plot shows some statistics for the first @(number->string listof/e-limit)
+items in each enumeration. The first plot shows how many different lengths
+each encounters. The red circles are when the @racket[#:simple-recursive?]
+argument is @racket[#t] and the blue stars are when that argument is
+@racket[#f].
+
+@(build-length-stats)
+
+This plot shows the different values, but this time on a log scale. As you can
+see, zero appears much more frequently when the @racket[#:simple-recursive?]
+argument is @racket[#f].
+
+@(build-value-stats)
+}
+
+@defproc[(non-empty-listof/e [e (if simple-recursive?
+                                    infinite-enum?
+                                    enum?)]
+                             [#:simple-recursive? simple-recursive? any/c #t]) 
+         enum?]{
+
+Like @racket[listof/e], but without the empty list.
+
+@examples[#:eval the-eval
+(approximate (non-empty-listof/e nat/e) 5)
+]}
+
+@defproc[(listof-n/e [e (if simple-recursive?
+                            infinite-enum?
+                            enum?)]
+                     [n exact-nonnegative-integer?])
+         enum?]{
+                
+  @examples[#:eval 
+            the-eval
+            (approximate (listof-n/e nat/e 3) 10)]
 }
 
 @defform[(delay/e enum-expression keyword-options)
@@ -665,20 +789,90 @@ Identical to @racket[e] but only includes the values between
                    (to-list (single/e 12345))
                    (to-list (single/e (λ (x) x)))]
 }
-@defproc[(cons/e [e1 enum?] [e2 enum?]
-                 [#:ordering ordering (or/c 'diagonal 'square) 'square])
+
+
+@defproc[(range/e [lo (and/c (or/c -inf.0 exact-integer?)
+                             (<=/c hi))]
+                  [hi (or/c exact-integer? +inf.0)])
          enum?]{
 
-An @tech{enumeration} of pairs of the values from @racket[e1] and
-@racket[e2]. Like @racket[list/e], the @racket[ordering] argument
-controls how the resting elements appear.
+An @tech{enumeration} of the exact integers between @racket[lo] and @racket[hi].
 
 @examples[#:eval the-eval
-(approximate (cons/e (take/e nat/e 4) (take/e nat/e 5)) 5)
-(approximate (cons/e nat/e (take/e nat/e 5)) 5)
-(approximate (cons/e (take/e nat/e 4) nat/e) 5)
-(approximate (cons/e nat/e nat/e) 5)]
+(to-list (range/e 10 20))
+(to-list (range/e 10 10))
+(approximate (range/e -inf.0 0) 10)
+(approximate (range/e -inf.0 +inf.0) 10)
+]}
+
+@defproc[(nat+/e [lo exact-nonnegative-integer?]) enum?]{
+
+An @tech{enumeration} of natural numbers larger than @racket[lo].
+
+@examples[#:eval the-eval
+(approximate (nat+/e 42)
+             5)
+]}
+
+@defproc[(vector/e [#:ordering ordering (or/c 'diagonal 'square) 'square]
+                   [e enum?] ...) 
+         enum?]{
+
+An @tech{enumeration} of vectors of values enumerated by the
+@racket[e].
+
+The @racket[ordering] argument is the same as the one to @racket[list/e].
+
+@examples[#:eval the-eval
+                 (approximate (vector/e (fin/e "Brian" "Jenny" "Ki" "Ted") 
+                                        nat/e
+                                        (fin/e "Terra" "Locke" "Edgar" "Mash"))
+                              5)]
 }
+
+@defproc[(permutations-of-n/e [n exact-nonnegative-integer?])
+         enum?]{
+
+Returns an @tech{enumeration} of the permutations of the natural
+numbers smaller than @racket[n].
+
+@examples[#:eval the-eval
+(to-list (permutations-of-n/e 3))
+]}
+
+@defproc[(permutations/e [l list?])
+         enum?]{
+
+Returns an @tech{enumeration} of the permutations of @racket[l].
+
+@examples[#:eval the-eval
+(to-list (permutations/e '(Brian Jenny Ted Ki)))
+]}
+
+@defproc[(infinite-sequence/e [e enum?])
+         one-way-enum?]{
+
+Returns an @tech{enumeration} of infinite sequences of elements of
+@racket[e].
+
+The infinite sequence corresponding to the natural number @racket[_n]
+is based on dividing the bits of @racket[(* (+ 1 _n) pi)] into chunks
+of bits where the largest value is @racket[(enum-size e)]. Since
+@racket[(* (+ 1 _n) pi)] has infinite digits, there are infinitely
+many such chunks. Since @racket[*] is defined on all naturals, there
+are infinitely many such numbers. The generation of the sequence is
+efficient in the sense that the digits are generated incrementally
+without needing to go deeper than to find the requested value. 
+The generation of the sequence is inefficient in the sense that
+the approximation of @racket[(* (+ 1 _n) pi)] gets larger and larger
+as you go deeper into the sequence.
+
+@examples[#:eval the-eval
+(define bjtk/e (from-list/e '(Brian Jenny Ted Ki)))
+(define bjtks/e (infinite-sequence/e bjtk/e))
+(for ([e (from-nat bjtks/e 42)]
+      [i (in-range 10)])
+  (printf "~a = ~a\n" i e))]}
 
 @defproc[(hash-traverse/e [f (-> any/c enum?)]
                           [xs (hash/c any/c any/c)]
@@ -721,182 +915,6 @@ is initialized to @racket['()].
 (to-nat fold-enum-1/e (list 0 1 1))
 ]}
 
-@defproc[(range/e [lo (and/c (or/c -inf.0 exact-integer?)
-                             (<=/c hi))]
-                  [hi (or/c exact-integer? +inf.0)])
-         enum?]{
-
-An @tech{enumeration} of the exact integers between @racket[lo] and @racket[hi].
-
-@examples[#:eval the-eval
-(to-list (range/e 10 20))
-(to-list (range/e 10 10))
-(approximate (range/e -inf.0 0) 10)
-(approximate (range/e -inf.0 +inf.0) 10)
-]}
-
-
-@defproc[(listof/e [e (if simple-recursive?
-                          infinite-enum?
-                          enum?)]
-                   [#:simple-recursive? simple-recursive? any/c #t])
-         enum?]{
-
-An @tech{enumeration} of lists of values
-enumerated by @racket[e].
-
-@examples[#:eval the-eval
-(approximate (listof/e nat/e #:simple-recursive? #f) 10)
-(approximate (listof/e nat/e) 10)
-(to-nat (listof/e nat/e #:simple-recursive? #f) '(1 2 3 4 5 6))
-(to-nat (listof/e nat/e) '(1 2 3 4 5 6))
-]}
-
-If @racket[simple-recursive?] is @racket[#f], then the enumeration
-is constructed by first choosing a length and then using @racket[list/e]
-to build lists of that length. If not, it builds a recursive enumeration
-using @racket[delay/e]. The second (default) method is significantly
-more efficient when calling @racket[from-nat] with large numbers, but
-it also has much shorter lists near the beginning of the enumeration.
-
-
-@(define listof/e-limit 500)
-@(define lon (listof/e nat/e))
-@(define lon2 (listof/e nat/e #:simple-recursive? #f))
-
-@(define (build-length-stats)
-   (define (get-points e color sym)
-     (define lengths (make-hash))
-     (define nums (make-hash))
-     (for ([x (in-range listof/e-limit)])
-       (define lst (from-nat e x))
-       (define len (length lst))
-       (hash-set! lengths len (+ 1 (hash-ref lengths len 0))))
-     (points
-      #:sym sym
-      #:color color
-      (for/list ([(k v) (in-hash lengths)])
-        (vector k v))))
-   (plot
-    #:x-label "length"
-    #:y-label "number of lists at that length"
-    #:x-min -1
-    #:y-min -10
-    (list (get-points lon "red" 'circle) 
-          (get-points lon2 "blue" '5star))))
-
-@(define (build-value-stats)
-   (define (get-points e color sym)
-     (define values (make-hash))
-     (define nums (make-hash))
-     (for ([x (in-range listof/e-limit)])
-       (define lst (from-nat e x))
-       (for ([value (in-list lst)])
-         (hash-set! values value (+ 1 (hash-ref values value 0)))))
-     (points
-      #:color color
-      #:sym sym
-      (for/list ([(k v) (in-hash values)])
-        (vector k v))))
-   (parameterize ([plot-y-transform  log-transform])
-     (plot
-      #:x-label "value"
-      #:y-label "number of lists that contain that value"
-      (list (get-points lon "red" 'circle)
-            (get-points lon2 "blue" '5star)))))
-
-This plot shows some statistics for the first @(number->string listof/e-limit)
-items in each enumeration. The first plot shows how many different lengths
-each encounters. The red circles are when the @racket[#:simple-recursive?]
-argument is @racket[#t] and the blue stars are when that argument is
-@racket[#f].
-
-@(build-length-stats)
-
-This plot shows the different values, but this time on a log scale. As you can
-see, zero appears much more frequently when the @racket[#:simple-recursive?]
-argument is @racket[#f].
-
-@(build-value-stats)
-
-
-@defproc[(non-empty-listof/e [e (if simple-recursive?
-                                    infinite-enum?
-                                    enum?)]
-                             [#:simple-recursive? simple-recursive? any/c #t]) 
-         enum?]{
-
-Like @racket[listof/e], but without the empty list.
-
-@examples[#:eval the-eval
-(approximate (non-empty-listof/e nat/e) 5)
-]}
-
-@defproc[(vector/e [e enum?] ...) enum?]{
-
-An @tech{enumeration} of vectors of values enumerated by the
-@racket[e].
-
-@examples[#:eval the-eval
-(approximate (cantor-vec/e (fin/e "Brian" "Jenny" "Ki" "Ted") 
-                           nat/e
-                           (fin/e "Terra" "Locke" "Edgar" "Mash"))
-             5)
-]}
-
-@defproc[(nat+/e [lo exact-nonnegative-integer?]) enum?]{
-
-An @tech{enumeration} of tuples of naturals of larger than @racket[lo].
-
-@examples[#:eval the-eval
-(approximate (nat+/e 42)
-             5)
-]}
-
-
-@defproc[(permutations-of-n/e [n exact-nonnegative-integer?])
-         enum?]{
-
-Returns an @tech{enumeration} of the permutations of the natural
-numbers smaller than @racket[n].
-
-@examples[#:eval the-eval
-(approximate (permutations-of-n/e 3) 5)
-]}
-
-@defproc[(permutations/e [l list?])
-         enum?]{
-
-Returns an @tech{enumeration} of the permutations of @racket[l].
-
-@examples[#:eval the-eval
-(approximate (permutations/e '(Brian Jenny Ted Ki)) 5)
-]}
-
-@defproc[(infinite-sequence/e [e enum?])
-         one-way-enum?]{
-
-Returns an @tech{enumeration} of infinite sequences of elements of
-@racket[e].
-
-The infinite sequence corresponding to the natural number @racket[_n]
-is based on dividing the bits of @racket[(* (+ 1 _n) pi)] into chunks
-of bits where the largest value is @racket[(enum-size e)]. Since
-@racket[(* (+ 1 _n) pi)] has infinite digits, there are infinitely
-many such chunks. Since @racket[*] is defined on all naturals, there
-are infinitely many such numbers. The generation of the sequence is
-efficient in the sense that the digits are generated incrementally
-without needing to go deeper than to find the requested value. 
-The generation of the sequence is inefficient in the sense that
-the approximation of @racket[(* (+ 1 _n) pi)] gets larger and larger
-as you go deeper into the sequence.
-
-@examples[#:eval the-eval
-(define bjtk/e (from-list/e '(Brian Jenny Ted Ki)))
-(define bjtks/e (infinite-sequence/e bjtk/e))
-(for ([e (from-nat bjtks/e 42)]
-      [i (in-range 10)])
-  (printf "~a = ~a\n" i e))]}
 
 @subsection{Enumeration Utilities}
 
@@ -924,7 +942,7 @@ Returns a random index into @racket[e]. This works for
 Returns a stream of the values in @racket[e].
 
 @examples[#:eval the-eval
-(to-stream map-2/e)
+(to-stream nat/e)
 ]}
 
 @defproc[(to-list [e enum?]) list?]{
@@ -933,7 +951,7 @@ Returns a list of the @racket[n] values in @racket[e]. This will
 diverge if @racket[e] is infinite.
 
 @examples[#:eval the-eval
-(to-list (take/e map-2/e 5))
+(to-list (below/e 6))
 ]}
 
 @subsection{Pre-built Enumerations}

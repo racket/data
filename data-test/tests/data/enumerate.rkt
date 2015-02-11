@@ -4,6 +4,7 @@
          racket/set
          racket/contract
          racket/generator
+         racket/stream
          data/gvector
          data/enumerate
          data/enumerate/lib
@@ -17,10 +18,6 @@
   (set! last (current-process-milliseconds)))
 (define-syntax (show-here stx)
   #`(show-here/proc #,(syntax-line stx)))
-
-(eprintf "no-tests ~s\n" 
-         (list 'mixed-box-tuples/e
-               'hash-traverse/e))
 
 (define (do-check-bijection e confidence)
   (define nums (build-list (if (finite-enum? e)
@@ -725,6 +722,28 @@
                   (b c a)
                   (c a b)
                   (c b a))))
+
+(check-equal? (let ([h (hash "Brian" 5 "Jenny" 15 "Ted" 25 "Ki" 30)])
+                (approximate
+                 (hash-traverse/e (λ (n) (below/e n))
+                                  h
+                                  #:get-contract
+                                  (λ (v) (and/c exact-integer? (<=/c (hash-ref h v)))))
+                 5))
+              '(#hash(("Ki" . 0) ("Ted" . 0) ("Brian" . 0) ("Jenny" . 0))
+                #hash(("Ki" . 0) ("Ted" . 0) ("Brian" . 1) ("Jenny" . 0))
+                #hash(("Ki" . 0) ("Ted" . 0) ("Brian" . 2) ("Jenny" . 0))
+                #hash(("Ki" . 0) ("Ted" . 0) ("Brian" . 3) ("Jenny" . 0))
+                #hash(("Ki" . 0) ("Ted" . 0) ("Brian" . 4) ("Jenny" . 0))))
+
+(check-pred exact-nonnegative-integer? (random-index nat/e))
+(check-pred (and/c exact-nonnegative-integer?
+                   (<=/c 5))
+            (random-index (below/e 5)))
+
+(check-equal? (for/list ([x (in-stream (to-stream (below/e 5)))]) x)
+              (to-list (below/e 5)))
+(check-equal? (stream-first (to-stream nat/e)) 0)
 
 (define (to-str e print?)
   (define sp (open-output-string))

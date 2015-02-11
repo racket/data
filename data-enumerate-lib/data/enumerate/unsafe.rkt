@@ -46,6 +46,10 @@ todo:
 
  - code to use in docs for many/e
 
+ - change to-list to enum->list
+ - get rid of to-stream
+ - add an in-enumeration sequence constructor
+
 notes for eventual email:
  - finite vs infinite enumerations
  - invertible or not
