@@ -741,6 +741,7 @@
 (check-equal? (for/list ([i nat/e][j (in-range 10)]) i) (build-list 10 values))
 (check-equal? (for/list ([i (in-enum (below/e 10))]) i) (build-list 10 values))
 (check-equal? (for/list ([i (in-enum nat/e)][j (in-range 10)]) i) (build-list 10 values))
+(check-equal? (let ([es (in-enum (below/e 10))]) (for/list ([i es]) i)) (build-list 10 values))
 
 (define (to-str e print?)
   (define sp (open-output-string))

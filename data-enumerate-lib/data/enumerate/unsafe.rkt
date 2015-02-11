@@ -28,7 +28,6 @@ todo:
  - criterion for "less checked": avoid all checks that call from-nat/to-nat
  - find a better name than `unsafe.rkt`
  - change to-list to enum->list
- - get rid of to-stream
  - add an in-enumeration sequence constructor
 
 notes for eventual email:
