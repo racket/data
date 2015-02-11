@@ -28,8 +28,8 @@
     [else
      (let loop ([n 0])
        (stream-cons (:from-nat e n) (loop (add1 n))))]))
-(define approximate :approximate)
-(define to-list :to-list)
+(define approximate :enum->list)
+(define to-list :enum->list)
 (define take/e :take/e)
 (define slice/e :slice/e)
 (define below/e :below/e)

@@ -268,23 +268,29 @@ that an enumeration enumerates.
   Encodes @racket[x] from @racket[e].
 }
 
-@defproc[(approximate [e enum?] 
-                      [n (if (finite-enum? e)
-                             (integer-in 0 (enum-size e))
-                             exact-nonnegative-integer?)]) 
+@defproc[(enum->list [e enum?] 
+                     [n (if (finite-enum? e)
+                            (integer-in 0 (enum-size e))
+                            exact-nonnegative-integer?)
+                        (enum-size e)]) 
          (listof (enum-contract e))]{
   Returns a list of the first @racket[n] values in @racket[e].
 
+  If @racket[n] is not supplied, then @racket[e] must be
+  a finite-enum.
+                              
   @examples[#:eval 
             the-eval
-            (approximate (list/e nat/e nat/e) 8)]
+            (enum->list (list/e nat/e nat/e) 8)
+            (enum->list (below/e 8))]
 }
 
 @defproc[(in-enum [e enum?]) sequence?]{
   Constructs a sequence suitable for use with
-  @racket[for] loops from an enumeration. 
+  @racket[for] loops.
   
   Note that enumerations are also sequences directly, too.
+  
   @examples[#:eval 
             the-eval
             (for/list ([i (in-enum (below/e 5))])
@@ -310,7 +316,7 @@ An @tech{enumeration} of the natural numbers.
 An @tech{enumeration} of the first @racket[max] naturals.
 
 @examples[#:eval the-eval
-(to-list (below/e 10))
+(enum->list (below/e 10))
 ]}
 
 @defthing[empty/e enum?]{
@@ -318,7 +324,7 @@ An @tech{enumeration} of the first @racket[max] naturals.
 The empty @tech{enumeration}.
 
 @examples[#:eval the-eval
-(to-list empty/e)
+(enum->list empty/e)
 ]}
 
 
@@ -352,14 +358,14 @@ The empty @tech{enumeration}.
                     nat/e
                     #:contract (and/c exact-nonnegative-integer?
                                       even?)))
-           (approximate evens/e 10)
+           (enum->list evens/e 10)
            (define odds/e
              (map/e add1
                     sub1
                     evens/e
                     #:contract (and/c exact-nonnegative-integer?
                                       odd?)))
-           (approximate odds/e 10)]
+           (enum->list odds/e 10)]
 }
 
 
@@ -379,7 +385,7 @@ The empty @tech{enumeration}.
                       (nat+/e 1)
                       (nat+/e 2)
                       #:contract (and/c exact? rational? positive?)))
-           (approximate rationals/e 10)]
+           (enum->list rationals/e 10)]
 }
 
 @defproc[(except/e [e two-way-enum?]
@@ -413,8 +419,8 @@ to distinguish elements of its enumeration from the others). If
 @tech{enumeration}'s predicate.
 
 @examples[#:eval the-eval
-                 (approximate (or/e nat/e (list/e nat/e nat/e))
-                              10)]
+                 (enum->list (or/e nat/e (list/e nat/e nat/e))
+                             10)]
 }
 
 @defproc[(append/e [e-p (or/c flat-enum? (cons/c enum? (-> any/c boolean?)))] ...+) 
@@ -425,7 +431,7 @@ An @tech{enumeration} of the elements of the enumerations given in
 are supplied. All but the last enumeration must be finite.
 
 @examples[#:eval the-eval
-                 (approximate 
+                 (enum->list 
                   (append/e (take/e nat/e 4)
                             (list/e nat/e nat/e))
                   10)]
@@ -462,7 +468,7 @@ or bijection is used, either directly or indirectly via a call to
                                  (λ ()
                                    (or/e (single/e #f)
                                          (list/e bt/e bt/e))))])
-                   (approximate bt/e 5))]
+                   (enum->list bt/e 5))]
 }
 
 @defproc[(list/e [#:ordering ordering (or/c 'diagonal 'square) 'square] [e enum?] ...) enum?]{
@@ -476,15 +482,15 @@ it uses a generalized form of Cantor's mapping from pairs of naturals
 to naturals.
 
 @examples[#:eval the-eval
-                 (approximate (list/e
-                               (fin/e "Brian" "Jenny" "Ki" "Ted") 
-                               nat/e
-                               (fin/e "Terra" "Locke" "Edgar" "Mash"))
-                              5)
-                 (approximate (list/e nat/e nat/e)
-                              10)
-                 (approximate (list/e #:ordering  'diagonal nat/e nat/e)
-                              10)]
+                 (enum->list (list/e
+                              (fin/e "Brian" "Jenny" "Ki" "Ted") 
+                              nat/e
+                              (fin/e "Terra" "Locke" "Edgar" "Mash"))
+                             5)
+                 (enum->list (list/e nat/e nat/e)
+                             10)
+                 (enum->list (list/e #:ordering  'diagonal nat/e nat/e)
+                             10)]
 }
 
 @defproc[(dep/e [e enum?] 
@@ -504,7 +510,7 @@ to naturals.
             (define dep/e-ordered-pair/e
               (dep/e nat/e 
                      (λ (hd) (nat+/e (+ hd 1)))))
-            (approximate dep/e-ordered-pair/e 10)]
+            (enum->list dep/e-ordered-pair/e 10)]
 }
 
 @defproc[(bounded-list/e [k exact-nonnegative-integer?] [n exact-nonnegative-integer?]) enum?]{
@@ -512,8 +518,8 @@ to naturals.
 An @tech{enumeration} of tuples of naturals up to @racket[n] of length @racket[k].
 
 @examples[#:eval the-eval
-(approximate (bounded-list/e 3 2)
-             5)
+(enum->list (bounded-list/e 3 2)
+            5)
 ]}
 
 
@@ -559,7 +565,7 @@ enumerations.
             (define ordered-pair/e
               (cons/de [hd nat/e]
                        [tl (hd) (nat+/e (+ hd 1))]))
-            (approximate ordered-pair/e 10)]
+            (enum->list ordered-pair/e 10)]
 }
 
 @defproc[(flip-dep/e [e enum?] 
@@ -580,7 +586,7 @@ enumerations.
               (flip-dep/e nat/e 
                           (λ (tl) (below/e tl))
                           #:f-range-finite? #t))
-            (approximate flip-dep/e-ordered-pair/e 10)]
+            (enum->list flip-dep/e-ordered-pair/e 10)]
 }
 
 @defproc[(cons/e [e1 enum?] [e2 enum?]
@@ -592,10 +598,10 @@ An @tech{enumeration} of pairs of the values from @racket[e1] and
 controls how the resting elements appear.
 
 @examples[#:eval the-eval
-(approximate (cons/e (take/e nat/e 4) (take/e nat/e 5)) 5)
-(approximate (cons/e nat/e (take/e nat/e 5)) 5)
-(approximate (cons/e (take/e nat/e 4) nat/e) 5)
-(approximate (cons/e nat/e nat/e) 5)]
+(enum->list (cons/e (take/e nat/e 4) (take/e nat/e 5)) 5)
+(enum->list (cons/e nat/e (take/e nat/e 5)) 5)
+(enum->list (cons/e (take/e nat/e 4) nat/e) 5)
+(enum->list (cons/e nat/e nat/e) 5)]
 }
 
 @(begin
@@ -662,8 +668,8 @@ more efficient when calling @racket[from-nat] with large numbers, but
 it also has much shorter lists near the beginning of the enumeration.
 
 @examples[#:eval the-eval
-(approximate (listof/e nat/e #:simple-recursive? #f) 10)
-(approximate (listof/e nat/e) 10)
+(enum->list (listof/e nat/e #:simple-recursive? #f) 10)
+(enum->list (listof/e nat/e) 10)
 (to-nat (listof/e nat/e #:simple-recursive? #f) '(1 2 3 4 5 6))
 (to-nat (listof/e nat/e) '(1 2 3 4 5 6))
 ]
@@ -693,7 +699,7 @@ argument is @racket[#f].
 Like @racket[listof/e], but without the empty list.
 
 @examples[#:eval the-eval
-(approximate (non-empty-listof/e nat/e) 5)
+(enum->list (non-empty-listof/e nat/e) 5)
 ]}
 
 @defproc[(listof-n/e [e (if simple-recursive?
@@ -704,7 +710,7 @@ Like @racket[listof/e], but without the empty list.
                 
   @examples[#:eval 
             the-eval
-            (approximate (listof-n/e nat/e 3) 10)]
+            (enum->list (listof-n/e nat/e 3) 10)]
 }
 
 @defform[(delay/e enum-expression keyword-options)
@@ -741,7 +747,7 @@ Like @racket[listof/e], but without the empty list.
             (letrec ([bt/e (delay/e 
                             (or/e (single/e #f)
                                   (list/e bt/e bt/e)))])
-              (approximate bt/e 5))]
+              (enum->list bt/e 5))]
 
 }
 
@@ -761,7 +767,7 @@ If the @racket[contract] argument is not supplied, then @racket[e] must
 be both a @tech{two way enumeration} and a @tech{flat enumeration}.
 
 @examples[#:eval the-eval
-                 (to-list (take/e nat/e 5))]
+                 (enum->list (take/e nat/e 5))]
 }
 
 @defproc[(slice/e [e enum?]
@@ -783,7 +789,7 @@ Identical to @racket[e] but only includes the values between
 @racket[lo] (inclusive) and @racket[hi] (exclusive).
 
 @examples[#:eval the-eval
-                 (to-list (slice/e nat/e 5 10))
+                 (enum->list (slice/e nat/e 5 10))
                  (slice/e nat/e 20 20)]
 }
 
@@ -808,8 +814,8 @@ Identical to @racket[e] but only includes the values between
 
  @examples[#:eval 
            the-eval
-           (to-list (fin/e "Brian" "Jenny" "Ki" "Ted"))
-           (to-list (fin/e 1 3 5 7 9 11 13 15))]
+           (enum->list (fin/e "Brian" "Jenny" "Ki" "Ted"))
+           (enum->list (fin/e 1 3 5 7 9 11 13 15))]
 }
 
 @defproc[(single/e [v any/c]
@@ -822,8 +828,8 @@ Identical to @racket[e] but only includes the values between
   argument to @racket[same?].
   
   @examples[#:eval the-eval 
-                   (to-list (single/e 12345))
-                   (to-list (single/e (λ (x) x)))]
+                   (enum->list (single/e 12345))
+                   (enum->list (single/e (λ (x) x)))]
 }
 
 
@@ -835,10 +841,10 @@ Identical to @racket[e] but only includes the values between
 An @tech{enumeration} of the exact integers between @racket[lo] and @racket[hi].
 
 @examples[#:eval the-eval
-(to-list (range/e 10 20))
-(to-list (range/e 10 10))
-(approximate (range/e -inf.0 0) 10)
-(approximate (range/e -inf.0 +inf.0) 10)
+(enum->list (range/e 10 20))
+(enum->list (range/e 10 10))
+(enum->list (range/e -inf.0 0) 10)
+(enum->list (range/e -inf.0 +inf.0) 10)
 ]}
 
 @defproc[(nat+/e [lo exact-nonnegative-integer?]) enum?]{
@@ -846,8 +852,7 @@ An @tech{enumeration} of the exact integers between @racket[lo] and @racket[hi].
 An @tech{enumeration} of natural numbers larger than @racket[lo].
 
 @examples[#:eval the-eval
-(approximate (nat+/e 42)
-             5)
+(enum->list (nat+/e 42) 5)
 ]}
 
 @defproc[(vector/e [#:ordering ordering (or/c 'diagonal 'square) 'square]
@@ -860,10 +865,10 @@ An @tech{enumeration} of vectors of values enumerated by the
 The @racket[ordering] argument is the same as the one to @racket[list/e].
 
 @examples[#:eval the-eval
-                 (approximate (vector/e (fin/e "Brian" "Jenny" "Ki" "Ted") 
-                                        nat/e
-                                        (fin/e "Terra" "Locke" "Edgar" "Mash"))
-                              5)]
+                 (enum->list (vector/e (fin/e "Brian" "Jenny" "Ki" "Ted") 
+                                       nat/e
+                                       (fin/e "Terra" "Locke" "Edgar" "Mash"))
+                             5)]
 }
 
 @defproc[(permutations-of-n/e [n exact-nonnegative-integer?])
@@ -873,7 +878,7 @@ Returns an @tech{enumeration} of the permutations of the natural
 numbers smaller than @racket[n].
 
 @examples[#:eval the-eval
-(to-list (permutations-of-n/e 3))
+(enum->list (permutations-of-n/e 3))
 ]}
 
 @defproc[(permutations/e [l list?])
@@ -882,7 +887,7 @@ numbers smaller than @racket[n].
 Returns an @tech{enumeration} of the permutations of @racket[l].
 
 @examples[#:eval the-eval
-(to-list (permutations/e '(Brian Jenny Ted Ki)))
+(enum->list (permutations/e '(Brian Jenny Ted Ki)))
 ]}
 
 @defproc[(infinite-sequence/e [e enum?])
@@ -930,7 +935,7 @@ enumeration.
                      h
                      #:get-contract
                      (λ (v) (and/c exact-integer? (<=/c (hash-ref h v)))))))
-(approximate hash-traverse-1/e 5)
+(enum->list hash-traverse-1/e 5)
 (to-nat hash-traverse-1/e
         '#hash(("Brian" . 4) ("Jenny" . 1) ("Ted" . 16) ("Ki" . 7)))
 ]}
@@ -947,7 +952,7 @@ is initialized to @racket['()].
   (fold-enum (λ (as b)
                (below/e (+ (foldr + 0 as) b)))
              (list 1 2 3)))
-(approximate fold-enum-1/e 5)
+(enum->list fold-enum-1/e 5)
 (to-nat fold-enum-1/e (list 0 1 1))
 ]}
 
@@ -981,15 +986,6 @@ Returns a stream of the values in @racket[e].
 (to-stream nat/e)
 ]}
 
-@defproc[(to-list [e enum?]) list?]{
-
-Returns a list of the @racket[n] values in @racket[e]. This will
-diverge if @racket[e] is infinite.
-
-@examples[#:eval the-eval
-(to-list (below/e 6))
-]}
-
 @subsection{Pre-built Enumerations}
 
 This section describes enumerations of some common Racket
@@ -1000,7 +996,7 @@ datatypes.
 An @tech{enumeration} of characters.
 
 @examples[#:eval the-eval
-(approximate char/e 5)
+(enum->list char/e 5)
 (to-nat char/e #\λ)
 ]}
 
@@ -1009,7 +1005,7 @@ An @tech{enumeration} of characters.
 An @tech{enumeration} of strings.
 
 @examples[#:eval the-eval
-(approximate string/e 5)
+(enum->list string/e 5)
 (to-nat string/e "racket")
 ]}
 
@@ -1018,7 +1014,7 @@ An @tech{enumeration} of strings.
 An @tech{enumeration} of booleans.
 
 @examples[#:eval the-eval
-(to-list bool/e)
+(enum->list bool/e)
 ]}
 
 @defthing[symbol/e two-way-enum?]{
@@ -1026,7 +1022,7 @@ An @tech{enumeration} of booleans.
 An @tech{enumeration} of symbols.
 
 @examples[#:eval the-eval
-(approximate symbol/e 5)
+(enum->list symbol/e 5)
 (to-nat symbol/e 'racket/base)
 ]}
 
@@ -1035,7 +1031,7 @@ An @tech{enumeration} of symbols.
 An @tech{enumeration} of the integers.
 
 @examples[#:eval the-eval
-(approximate integer/e 10)
+(enum->list integer/e 10)
 ]}
 
 @defthing[flonum/e two-way-enum?]{
@@ -1043,7 +1039,7 @@ An @tech{enumeration} of the integers.
 An @tech{enumeration} of @racket[flonum?]s.
 
 @examples[#:eval the-eval
-(approximate flonum/e 10)
+(enum->list flonum/e 10)
 (to-nat flonum/e 1.0)
 (to-nat flonum/e -1.0)
 ]}
@@ -1055,7 +1051,7 @@ An @tech{enumeration} of @racket[flonum?]s.
   and then divides them which leads to duplicates).
   
   @examples[#:eval the-eval
-                   (approximate exact-rational/e 13)]
+                   (enum->list exact-rational/e 13)]
   }
 
 @defthing[two-way-real/e two-way-enum?]{
@@ -1064,7 +1060,7 @@ An @tech{enumeration} of reals; it includes
    only @racket[integer/e] and @racket[flonum/e].
 
 @examples[#:eval the-eval
-(approximate two-way-real/e 5)
+(enum->list two-way-real/e 5)
 ]}
 
 
@@ -1074,7 +1070,7 @@ An @tech{enumeration} of reals; it includes
    @racket[exact-rational/e] and @racket[flonum/e].
 
 @examples[#:eval the-eval
-(approximate real/e 10)
+(enum->list real/e 10)
 ]}
 
 
@@ -1085,7 +1081,7 @@ An @tech{enumeration} of numbers; it includes
    made from pairs of those real numbers.
 
 @examples[#:eval the-eval
-(approximate two-way-number/e 10)
+(enum->list two-way-number/e 10)
 ]}
 
 @defthing[number/e one-way-enum?]{
@@ -1095,7 +1091,7 @@ An @tech{enumeration} of numbers; it
    numbers made from pairs of those real numbers.
 
 @examples[#:eval the-eval
-(approximate number/e 10)
+(enum->list number/e 10)
 ]}
 
 

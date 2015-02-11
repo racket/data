@@ -28,10 +28,13 @@
   [enum-size (-> finite-enum? nat?)]
   [enum-contract (-> enum? contract?)]
   
-  [approximate
-   (->i ([e enum?] [s (e) (if (finite-enum? e)
-                              (integer-in 0 (enum-size e))
-                              exact-nonnegative-integer?)])
+  [enum->list
+   (->i ([e enum?])
+        ([s (e) (if (finite-enum? e)
+                    (integer-in 0 (enum-size e))
+                    exact-nonnegative-integer?)])
+        #:pre (e s)
+        (implies (unsupplied-arg? s) (finite-enum? e))
         [res (e) (listof (enum-contract e))])]
   
   [nat/e enum?]

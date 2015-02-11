@@ -211,8 +211,8 @@
  
  (check-bijection? multi-layered)
  
- (check-equal? (approximate (or/e (cons/e nat/e nat/e) nat/e)
-                            6)
+ (check-equal? (enum->list (or/e (cons/e nat/e nat/e) nat/e)
+                           6)
               (list (from-nat (cons/e nat/e nat/e) 0)
                     0
                     (from-nat (cons/e nat/e nat/e) 1)
@@ -539,17 +539,17 @@
 
  (check-bijection? nats-up))
 
-(check-equal? (approximate (flip-dep/e nat/e 
-                                       (λ (tl) (below/e tl))
-                                       #:f-range-finite? #t)
-                           10)
+(check-equal? (enum->list (flip-dep/e nat/e 
+                                      (λ (tl) (below/e tl))
+                                      #:f-range-finite? #t)
+                          10)
               '((0 . 1)
                 (0 . 2) (1 . 2)
                 (0 . 3) (1 . 3) (2 . 3)
                 (0 . 4) (1 . 4) (2 . 4) (3 . 4)))
-(check-equal? (approximate (dep/e nat/e 
-                                  (λ (hd) (nat+/e (+ hd 1))))
-                           10)
+(check-equal? (enum->list (dep/e nat/e 
+                                 (λ (hd) (nat+/e (+ hd 1))))
+                          10)
               '((0 . 1)
                 (0 . 2) (1 . 2)
                 (0 . 3) (1 . 3) (2 . 3)
@@ -625,12 +625,12 @@
 
 ;; slic/e test
 (test-begin
- (check-equal? (to-list (slice/e nat/e 3 5)) '(3 4))
+ (check-equal? (enum->list (slice/e nat/e 3 5)) '(3 4))
  (check-bijection? (slice/e nat/e 3 5)))
 
-;; to-list test
+;; enum->list test
 (test-begin
- (check-equal? (to-list (up-to 3))
+ (check-equal? (enum->list (up-to 3))
                '(0 1 2 3)))
 
 ;; except/e test
@@ -725,7 +725,7 @@
                   (c b a))))
 
 (check-equal? (let ([h (hash "Brian" 5 "Jenny" 15 "Ted" 25 "Ki" 30)])
-                (approximate
+                (enum->list
                  (hash-traverse/e (λ (n) (below/e n))
                                   h
                                   #:get-contract

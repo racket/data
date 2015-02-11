@@ -573,12 +573,6 @@
 
 (provide
  (contract-out
-  [to-list (->i ([e finite-enum?]) 
-                [result (e) (listof (enum-contract e))])]))
-(define (to-list e) (approximate e (enum-size e)))
-
-(provide
- (contract-out
   [fin/e
    (->i ()
         #:rest

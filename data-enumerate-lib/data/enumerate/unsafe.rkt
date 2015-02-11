@@ -50,7 +50,7 @@ notes for eventual email:
  map/e
  pam/e
  except/e
- approximate
+ enum->list
  below/e
  empty/e
  nat/e
@@ -295,7 +295,7 @@ notes for eventual email:
          (enum-to w/wrong-contract)
          contract))
 
-(define (approximate e n)
+(define (enum->list e [n (enum-size e)])
   (for/list ([i (in-range n)])
     (from-nat e i)))
 
@@ -742,7 +742,7 @@ notes for eventual email:
              (gvector-add! sizes sum)
              sum))
          (gvector-ref sizes 0)
-         (map (compose enum-size f) (cdr (approximate e (enum-size e)))))))
+         (map (compose enum-size f) (cdr (enum->list e (enum-size e)))))))
   
   (-enum the-enum-size
          (λ (n)
