@@ -957,7 +957,7 @@ is initialized to @racket['()].
 ]}
 
 
-@subsection{Enumeration Utilities}
+@subsection{Enumeration Utility}
 
 
 @defproc[(random-index [e enum?])
@@ -977,14 +977,6 @@ Returns a random index into @racket[e]. This works for
 (random-index (below/e 5000000000))
 ]}
 
-
-@defproc[(to-stream [e enum?]) stream?]{
-
-Returns a stream of the values in @racket[e].
-
-@examples[#:eval the-eval
-(to-stream nat/e)
-]}
 
 @subsection{Pre-built Enumerations}
 
