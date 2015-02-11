@@ -260,7 +260,9 @@
  (check-equal? (from-nat bool-or-nat 0) #t)
  (check-equal? (from-nat bool-or-nat 1) #f)
  (check-equal? (from-nat bool-or-nat 2) 0)
- (check-bijection? bool-or-nat))
+ (check-bijection? bool-or-nat)
+ 
+ (check-bijection? (append/e (below/e 10) bool/e (cons/e nat/e nat/e))))
 
 ;; cons/e tests
 (define bool*bool (cons/e bool/e bool/e))

@@ -25,27 +25,8 @@ changes:
 
 todo:
  - make 'enum' arguments go first
- - change names to match contract names
  - criterion for "less checked": avoid all checks that call from-nat/to-nat
- - add a coercion function to turn lists into enumerations of
-   their elements automatically and non-lists into constant
-   enumerations.
- - split data/enum into two libraries, one smaller with "essential" stuff called
-   data/enumerate and one larger with other stuff, called data/enumerate/lib
-
- - add argument to thunk/e, check uses
-
- - add contract to fix/e to check
-     that the sizes are right
-     change the argument order so optional arguments work....
-
- - get rid of the printfs in lib.rkt
- - change disj-append/e to work like or/e (allowing enumerators with
-   flat contract to double as the predicates)
  - find a better name than `unsafe.rkt`
-
- - code to use in docs for many/e
-
  - change to-list to enum->list
  - get rid of to-stream
  - add an in-enumeration sequence constructor
@@ -120,43 +101,49 @@ notes for eventual email:
        (display " «∅»" port)
        #f]
       [else
-       (parameterize ([enum-printing (+ 1 (enum-printing))])
-         (let loop ([i 0] [chars 0])
-           ;; chars is an approximation on how much
-           ;; we've printed so far.
-           (cond
-             [(not (< i the-size)) #f]
-             [(> (enum-printing) 10)
-              ;; we appear to be in some kind of a bad loop here; just give up
-              #f]
-             [(<= chars 20)
-              (define ele (from-nat enum i))
-              (define sp (open-output-string))
-              (recur ele sp)
-              (define s (get-output-string sp))
-              (cond
-                [(equal? s "")
-                 ;; if any enumeration values print as empty 
-                 ;; strings, then we just give up so as to avoid
-                 ;; 'i' never incrementing and never terminating
-                 #t]
-                [else
-                 (if (zero? i)
-                     (display ": " port)
-                     (display " " port))
-                 
-                 ;; only print twice up to depth 2 in order to avoid bad
-                 ;; algorithmic behavior (so enumerations of enumerations
-                 ;; of enumerations might look less beautiful in drracket)
-                 (cond
-                   [(<= (enum-printing) 2)
-                    (display s port)]
-                   [else
-                    (recur ele port)])
-                 
-                 (loop (+ i 1)
-                       (+ chars (string-length s) 1))])]
-             [else #t])))]))
+       (let/ec failed
+         (parameterize ([enum-printing (+ 1 (enum-printing))])
+           (let loop ([i 0] [chars 0])
+             ;; chars is an approximation on how much
+             ;; we've printed so far.
+             (cond
+               [(not (< i the-size)) #f]
+               [(> (enum-printing) 10)
+                ;; we appear to be in some kind of a bad loop here; just give up
+                #f]
+               [(<= chars 20)
+                (define ele 
+                  ;; if something goes wrong while trying to extract
+                  ;; an element, just give up (since we could very
+                  ;; well be trying to print an error message here!)
+                  (with-handlers ([exn:fail? (λ (x) (failed #t))])
+                    (from-nat enum i)))
+                (define sp (open-output-string))
+                (recur ele sp)
+                (define s (get-output-string sp))
+                (cond
+                  [(equal? s "")
+                   ;; if any enumeration values print as empty 
+                   ;; strings, then we just give up so as to avoid
+                   ;; 'i' never incrementing and never terminating
+                   #t]
+                  [else
+                   (if (zero? i)
+                       (display ": " port)
+                       (display " " port))
+                   
+                   ;; only print twice up to depth 2 in order to avoid bad
+                   ;; algorithmic behavior (so enumerations of enumerations
+                   ;; of enumerations might look less beautiful in drracket)
+                   (cond
+                     [(<= (enum-printing) 2)
+                      (display s port)]
+                     [else
+                      (recur ele port)])
+                   
+                   (loop (+ i 1)
+                         (+ chars (string-length s) 1))])]
+               [else #t]))))]))
   (if more-to-go?
       (display "...>" port)
       (display ">" port)))
