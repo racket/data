@@ -2,7 +2,6 @@
 (require racket/contract
          racket/function
          racket/generator
-         racket/stream
          racket/bool
          racket/match
          (only-in racket/list remove-duplicates partition)
@@ -246,25 +245,6 @@
    (-> list? enum?)]
   [permutations-of-n/e
    (-> exact-nonnegative-integer? enum?)]))
-
-
-
-;; to-stream seems like a bad idea; better
-;; to make enumerations just be streams if
-;; that's a useful thing to do
-(define (to-stream e)
-  (cond
-    [(finite-enum? e)
-     (let loop ([n 0])
-       (cond [(n . >= . (enum-size e))
-              empty-stream]
-             [else
-              (stream-cons (from-nat e n)
-                           (loop (add1 n)))]))]
-    [else
-     (let loop ([n 0])
-       (stream-cons (from-nat e n) (loop (add1 n))))]))
-(provide (contract-out [to-stream (-> enum? stream?)]))
 
 (provide
  (contract-out

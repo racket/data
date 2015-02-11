@@ -2,6 +2,7 @@
 
 (require (prefix-in : "lib.rkt")
          (prefix-in unsafe: "unsafe.rkt")
+         racket/stream
          racket/contract)
 
 (provide (all-defined-out))
@@ -15,7 +16,18 @@
 (define to-nat :to-nat)
 (define (filter/e . args) (error 'filter/e "this one is gone; don't use it"))
 (define except/e :except/e)
-(define to-stream :to-stream)
+(define (to-stream e)
+  (cond
+    [(:finite-enum? e)
+     (let loop ([n 0])
+       (cond [(n . >= . (:enum-size e))
+              empty-stream]
+             [else
+              (stream-cons (:from-nat e n)
+                           (loop (add1 n)))]))]
+    [else
+     (let loop ([n 0])
+       (stream-cons (:from-nat e n) (loop (add1 n))))]))
 (define approximate :approximate)
 (define to-list :to-list)
 (define take/e :take/e)

@@ -4,7 +4,6 @@
          racket/set
          racket/contract
          racket/generator
-         racket/stream
          data/gvector
          data/enumerate
          data/enumerate/lib
@@ -737,10 +736,6 @@
                 #hash(("Ki" . 0) ("Ted" . 0) ("Brian" . 2) ("Jenny" . 0))
                 #hash(("Ki" . 0) ("Ted" . 0) ("Brian" . 3) ("Jenny" . 0))
                 #hash(("Ki" . 0) ("Ted" . 0) ("Brian" . 4) ("Jenny" . 0))))
-
-(check-equal? (for/list ([x (in-stream (to-stream (below/e 5)))]) x)
-              (to-list (below/e 5)))
-(check-equal? (stream-first (to-stream nat/e)) 0)
 
 (check-equal? (for/list ([i (below/e 10)]) i) (build-list 10 values))
 (check-equal? (for/list ([i nat/e][j (in-range 10)]) i) (build-list 10 values))
