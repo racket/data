@@ -280,6 +280,17 @@ that an enumeration enumerates.
             (approximate (list/e nat/e nat/e) 8)]
 }
 
+@defproc[(in-enum [e enum?]) sequence?]{
+  Constructs a sequence suitable for use with
+  @racket[for] loops from an enumeration. 
+  
+  Note that enumerations are also sequences directly, too.
+  @examples[#:eval 
+            the-eval
+            (for/list ([i (in-enum (below/e 5))])
+              i)]
+}
+
 @section{Constructing Enumerations}
 
 This section contains the fundamental operations for building

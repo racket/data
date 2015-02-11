@@ -5,6 +5,7 @@
          racket/bool)
 
 (provide 
+ in-enum
  (contract-out
   [enum? (-> any/c boolean?)]
   [finite-enum? (-> any/c boolean?)]

@@ -47,6 +47,7 @@ notes for eventual email:
  from-nat
  to-nat
  enum-contract
+ in-enum
  map/e
  pam/e
  except/e
@@ -165,11 +166,60 @@ notes for eventual email:
   (syntax-case stx ()
     [(_ a b c d) #'(enum a b c d)]))
 
+(define in-enum/proc
+  (let ([in-enum
+         (λ (enum)
+           (check-sequence-enum enum)
+           (cond
+             [(finite-enum? enum)
+              (define size (enum-size enum))
+              (make-do-sequence
+               (λ ()
+                 (values 
+                  (λ (pos) (from-nat enum pos))
+                  add1
+                  0
+                  (λ (pos) (< pos size))
+                  #f #f)))]
+             [else
+              (make-do-sequence
+               (λ ()
+                 (values 
+                  (λ (pos) (from-nat enum pos))
+                  add1
+                  0
+                  (λ (pos) #t)
+                  #f #f)))]))])
+    in-enum))
+
+(define (check-sequence-enum enum)
+  (unless (enum? enum)
+    (raise-argument-error 'in-enum "enum?" enum)))
+
+(define-sequence-syntax in-enum
+  (λ () #'in-enum/proc)
+  (λ (stx)
+    (syntax-case stx ()
+      [[(enum-val) (_ enum)]
+       #'[(id) (:do-in ([(e the-size) 
+                         (let ([e enum])
+                           (values e
+                                   (if (finite-enum? enum)
+                                       (enum-size enum)
+                                       +inf.0)))])
+                       (check-sequence-enum e)
+                       ([index 0])
+                       (< index the-size)
+                       ([(enum-val) (from-nat e index)])
+                       #t #t 
+                       [(add1 index)])]]
+      [_ #f])))
+
 ;; an enum a is a struct of < Nat or +Inf, Nat -> a, a -> Nat >
 (struct enum (size from to ctc)
   #:methods gen:custom-write
-  [(define write-proc enum-write-proc)])
-
+  [(define write-proc enum-write-proc)]
+  #:property prop:sequence in-enum/proc)
 
 (define (map/e #:contract [ctc any/c] f inv-f e . es)
   (cond 
