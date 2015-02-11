@@ -27,8 +27,6 @@ todo:
  - make 'enum' arguments go first
  - criterion for "less checked": avoid all checks that call from-nat/to-nat
  - find a better name than `unsafe.rkt`
- - change to-list to enum->list
- - add an in-enumeration sequence constructor
 
 notes for eventual email:
  - finite vs infinite enumerations

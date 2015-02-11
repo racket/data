@@ -10,7 +10,8 @@
                      racket/set
                      racket/contract
                      racket/match
-                     racket/base))
+                     racket/base
+                     math/base))
 
 @title{Enumerations}
 @defmodule[data/enumerate #:no-declare]
@@ -909,8 +910,8 @@ the approximation of @racket[(* (+ 1 _n) pi)] gets larger and larger
 as you go deeper into the sequence.
 
 @examples[#:eval the-eval
-(define bjtk/e (from-list/e '(Brian Jenny Ted Ki)))
-(define bjtks/e (infinite-sequence/e bjtk/e))
+(define bjtks/e (infinite-sequence/e 
+                 (fin/e 'Brian 'Jenny 'Ted 'Ki)))
 (for ([e (from-nat bjtks/e 42)]
       [i (in-range 10)])
   (printf "~a = ~a\n" i e))]}
@@ -941,7 +942,12 @@ enumeration.
 ]}
 
 
-@defproc[(fold-enum [f (-> (listof a) b enum?)] [bs (listof b)]) enum?]{
+@defproc[(fold-enum [f (if f-range-finite?
+                           (-> list? any/c finite-enum?)
+                           (-> list? any/c infinite-enum?))]
+                    [bs list?]
+                    [#:f-range-finite? f-range-finite? #f])
+         enum?]{
 
 This is like @racket[foldr], but @racket[f] returns
 @tech{enumerations} of @racket[_a]s and assumes that the accumulator
@@ -951,7 +957,8 @@ is initialized to @racket['()].
 (define fold-enum-1/e
   (fold-enum (λ (as b)
                (below/e (+ (foldr + 0 as) b)))
-             (list 1 2 3)))
+             (list 1 2 3)
+             #:f-range-finite? #t))
 (enum->list fold-enum-1/e 5)
 (to-nat fold-enum-1/e (list 0 1 1))
 ]}
@@ -968,9 +975,10 @@ Returns a random index into @racket[e]. This works for
  of the enumeration. For finite enumerations, it picks
  an index uniformly at random using @racket[random-natural]
  and for infinite enumerations it picks a natural number 
+ @racket[n]
  from the geometric distribution and uses that as an
  exponent, picking uniformly at random in the interval
- between 2 to that number and 2 to that power plus one.
+ between @racket[(expt 2 n)] and @racket[(expt 2 (+ n 1))].
 
 @examples[#:eval the-eval
 (random-index nat/e)
