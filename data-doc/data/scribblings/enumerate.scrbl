@@ -4,6 +4,8 @@
           plot/pict
           (for-label data/enumerate
                      data/enumerate/lib
+                     pict
+                     pict/tree-layout
                      racket/math
                      racket/set
                      racket/contract
@@ -16,8 +18,9 @@
 
 @(define the-eval (make-base-eval))
 @(the-eval '(require data/enumerate data/enumerate/lib
-                     racket/set racket/string 
-                     racket/contract racket/match))
+                     racket/set racket/string
+                     racket/contract racket/match
+                     pict pict/tree-layout))
 @(define-syntax-rule (ex e ...) (examples #:eval the-eval e ...))
 
 
@@ -120,6 +123,28 @@ probability, signals a contract violation.
                     (λ (x) (* x 100))
                     nat/e
                     #:contract exact-nonnegative-integer?)]
+
+Sometimes, there is no easy way to make two functions that form a bijection. In 
+that case you can use @racket[pam/e] and supply only one function 
+to make a @tech{one way enumeration}. For example,
+we can make an enumeration of picts of binary trees like this:
+
+@def+int[#:eval
+         the-eval
+         (define pict-bt/e
+           (pam/e
+            (λ (bt)
+              (binary-tidier
+               (let loop ([bt bt])
+                 (cond
+                   [(list? bt) (apply tree-layout (map loop bt))]
+                   [else #f]))))
+            bt/e
+            #:contract pict?))
+
+         (from-nat pict-bt/e 10)
+         (from-nat pict-bt/e 11)
+         (from-nat pict-bt/e 12)]
 
 
 Putting all these pieces together, here is a definition of
