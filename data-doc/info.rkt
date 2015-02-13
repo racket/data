@@ -11,5 +11,9 @@
                      "data-enumerate-lib"
                      "racket-doc"
                      "scribble-lib"
-                     "plot-lib"))
+                     "plot-lib"
+                     "math-doc"
+                     "math-lib"
+                     "pict-doc"
+                     "pict-lib"))
 (define update-implies '("data-lib" "data-enumerate-lib"))
