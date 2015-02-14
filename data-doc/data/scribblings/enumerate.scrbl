@@ -112,18 +112,21 @@ values.
           (for/list ([i (in-range 10)])
             (from-nat ordered-pair/e i))]
 
-Until we got to @racket[map/e], all of the enumeration functions have built
-enumerations that are guaranteed to be bijections. But since @racket[map/e]
-accepts arbitrary functions, enumerations that it produces may not be bijections.
-To help avoid errors, it's contract does some random checking to see if
-the argument functions form a bijection. Here's an example that, with high
-probability, signals a contract violation.
+Some of the combinators in the library are guaranteed to build
+enumeration functions that are bijections. But since @racket[map/e]
+accepts arbitrary functions and @racket[or/e] accepts enumerations with
+arbitrary contracts, they may projection enumerations that are not be bijections.
+To help avoid errors, the contracts on @racket[map/e] and @racket[or/e] does some
+random checking to see if the result would be a bijection. 
+Here's an example that, with high probability, signals a contract violation.
 @interaction[#:eval
              the-eval
              (map/e (λ (x) (floor (/ x 100)))
                     (λ (x) (* x 100))
                     nat/e
                     #:contract exact-nonnegative-integer?)]
+The contract on @racket[or/e] has a similar kind of checking that attempts to
+find overlaps between the elements of the enumerations in its arguments.
 
 Sometimes, there is no easy way to make two functions that form a bijection. In 
 that case you can use @racket[pam/e] and supply only one function 
@@ -409,15 +412,23 @@ and the @racket[x]s.
                  (to-nat except-1/e 2)
                  (to-nat except-1/e 4)]}
 
-@defproc[(or/e [e-p (or/c flat-enum? (cons/c enum? (-> any/c boolean?)))] ...) 
+@defproc[(or/e [e-p (or/c enum? (cons/c enum? (-> any/c boolean?)))] ...) 
          enum?]{
 
 An @tech{enumeration} of all of the elements of the enumerations in
-the @racket[e-p] arguments. If an @racket[e-p] is a pair, then the predicate is used
-to identify its elements (the predicate needs only to be able
-to distinguish elements of its enumeration from the others). If
-@racket[e-p] is a @tech{flat enumeration}, the predicate is extracted from the
-@tech{enumeration}'s predicate.
+the @racket[e-p] arguments. 
+
+If all of the arguments have or are @tech{two way enumerations}, then 
+the result is also a @tech{two way enumeration} and
+each argument must come with a predicate to distinguish its elements 
+from the elements of the other enumerations. If the argument is
+a pair, then the predicate in the second position of the pair is used.
+If the argument is an enumeration, then it must be a @tech{flat enumeration}
+and the contract is used as its predicate. 
+
+If any of the arguments are @tech{one way enumerations}, then the result
+is a @tech{one way enumeration} and any predicates in the arguments
+are ignored.
 
 @examples[#:eval the-eval
                  (enum->list (or/e nat/e (list/e nat/e nat/e))
