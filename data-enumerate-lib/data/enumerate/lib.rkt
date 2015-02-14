@@ -735,9 +735,14 @@
 (define exact-integer-non-real/e
   (make-non-real/e (except/e integer/e 0) (except/e integer/e 0)
                    (and/c complex-with-exact-integer-parts? (not/c real?))))
+
+(define (real-part-inexact? x) (inexact? (real-part x)))
 (define float-non-real/e 
   (make-non-real/e flonum/e flonum/e
-                   (and/c number? inexact? (not/c real?))))
+                   (and/c number?
+                          inexact?
+                          (not/c real?)
+                          real-part-inexact?)))
 
 ;; only one-way, so don't need to skip 0
 (define exact-rational-complex/e 
@@ -753,12 +758,11 @@
        (equal? 0 (real-part x))))
 
 (define two-way-number/e
-  (or/e two-way-real/e
+  (or/e (except/e two-way-real/e 0)
         (map/e (λ (x) (make-rectangular 0 x)) 
                imag-part
                two-way-real/e 
                #:contract complex-with-exact-zero-real-part?)
-        exact-integer-non-real/e
         float-non-real/e))
 
 (define bool/e (fin/e #t #f))
