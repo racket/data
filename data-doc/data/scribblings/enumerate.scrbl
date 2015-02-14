@@ -736,7 +736,7 @@ Like @racket[listof/e], but without the empty list.
  enumeration is inspected (directly or indirectly) via 
  @racket[from-nat], @racket[to-nat], or 
  @racket[enum-contract], the @racket[enum-expression] is
- evaluated and it's value cached. The value is then used as
+ evaluated and its value cached. The value is then used as
  the enumeration.
            
   If the @racket[size-expression] is not supplied or if it evaluates to @racket[+inf.0],
