@@ -26,7 +26,9 @@ changes:
 todo:
  - criterion for "less checked": avoid all checks that call from-nat/to-nat
  - find a better name than `unsafe.rkt`
- - coerce valid `fin/e` arguments as singleton enumerations.
+ - coerce valid `fin/e` arguments as singleton enumerations (except #f)
+ - provide false/e (from data/enumerate/lib)
+ - nat/e => natural/e
 
 notes for eventual email:
  - finite vs infinite enumerations
