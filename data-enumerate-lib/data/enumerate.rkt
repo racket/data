@@ -69,9 +69,15 @@
         [res two-way-enum?])]
   
   [or/e
-   (->* () #:rest (listof (or/c (cons/c enum? (-> any/c boolean?))
-                                flat-enum?))
-        enum?)]
+   (->i ()
+        #:rest
+        [enums (listof (or/c (cons/c enum? (-> any/c boolean?))
+                             enum?))]
+        #:pre/name (enums)
+        "the enums must either have at least one one-way-enum?\n or must all either by flat-enum? or have predicates"
+        (either-a-one-way-enum-or-all-have-predicates? enums)
+        #:pre/desc (enums) (non-overlapping? enums)
+        [result enum?])]
   [append/e
    (->* ((or/c (cons/c enum? (-> any/c boolean?))
                flat-enum?))
@@ -105,6 +111,97 @@
         enum?)]
   [bounded-list/e (-> nat? nat? enum?)]
   [dep/e dep/e-contract]))
+
+(define (either-a-one-way-enum-or-all-have-predicates? r)
+  (cond
+    [(has-one-way-enum? r) #t]
+    [(for/and ([e/p (in-list r)])
+       (or (flat-enum? e/p)
+           (pair? e/p)))
+     #t]
+    [else #f]))
+
+(define (non-overlapping? enum/pairs)
+  (define upper-limit-to-explore 1000)
+  (define howmany (length enum/pairs))
+  (cond
+    [(has-one-way-enum? enum/pairs) #t]
+    [(< howmany 2) #t]
+    [else
+     (define enums
+       (for/list ([i (in-list enum/pairs)])
+         (if (pair? i) (car i) i)))
+     (define preds
+       (for/list ([i (in-list enum/pairs)])
+         (if (pair? i) (cdr i) (enum-contract i))))
+     (let/ec k
+       (parameterize ([give-up-escape (λ () (k #t))])
+         (for ([x (in-range 10)])
+           (define starter-enum-index/zero-based (random howmany))
+           (define starter-enum-index/one-based (+ starter-enum-index/zero-based 1))
+           (define starter-enum (list-ref enums starter-enum-index/zero-based))
+           (when (or (infinite-enum? starter-enum)
+                     (not (zero? (enum-size starter-enum))))
+             (define index (random (if (finite-enum? starter-enum)
+                                       (min upper-limit-to-explore (enum-size starter-enum))
+                                       upper-limit-to-explore)))
+             (define value (from-nat starter-enum index))
+             (define true-returning-indicies/one-based
+               (for/list ([pred (in-list preds)]
+                          [i (in-naturals)]
+                          #:when (pred value))
+                 (+ i 1)))
+             
+             (unless (member starter-enum-index/one-based true-returning-indicies/one-based)
+               (k
+                (list
+                 (format "enumeration passed as argument ~a has a predicate that does not"
+                         starter-enum-index/one-based)
+                 "accept one of the values that the enumeration itself produces,"
+                 (format "index: ~a" index)
+                 (format "value: ~e" value))))
+             
+             (when (> (length true-returning-indicies/one-based) 1)
+               (define exactly-two? (= 2 (length true-returning-indicies/one-based)))
+               (define other-enums-indicies
+                 (remove starter-enum-index/one-based true-returning-indicies/one-based))
+               (define prefix
+                 (list "new enumeration would not be two-way because of overlapping predicates"
+                       (format
+                        "the enum passed as argument ~a, when passed to `from-nat' with index ~a"
+                        starter-enum-index/one-based
+                        index)
+                       (format "produces ~e," value)
+                       (cond
+                         [exactly-two?
+                          (format "and the enumeration passed as argument ~a also accepts that value"
+                                  (car other-enums-indicies))]
+                         [else
+                          (format "and the enumerations passed as arguments~a also accept that value"
+                                  (cond
+                                    [(= 2 (length other-enums-indicies))
+                                     (format " ~a and ~a"
+                                             (car other-enums-indicies)
+                                             (cadr other-enums-indicies))]
+                                    [else
+                                     (apply string-append
+                                            (let loop ([is other-enums-indicies])
+                                              (cond
+                                                [(null? (cdr is))
+                                                 (list (format " and ~a" (car is)))]
+                                                [else
+                                                 (cons (format " ~a," (car is))
+                                                       (loop (cdr is)))])))]))])))
+               (k (append prefix
+                          (for/list ([i (in-list true-returning-indicies/one-based)])
+                            (format "arg ~a: ~e" i (list-ref enum/pairs (- i 1)))))))))
+         #t))]))
+     
+(define (has-one-way-enum? r)
+  (for/or ([e/p (in-list r)])
+    (or (one-way-enum? e/p)
+        (and (pair? e/p)
+             (one-way-enum? (car e/p))))))
 
 (define nat? exact-nonnegative-integer?)
 (define extended-nat/c (or/c nat? +inf.0))
@@ -142,7 +239,7 @@
                         [e (in-list es)])
                (to-nat e element)))
            (unless (equal? indicies round-trip-indicies)
-             (define line1 "new enumeration would not be bijective")
+             (define line1 "new enumeration would not be two-way")
              (cond
                [(null? (cdr es))
                 (k (list line1
