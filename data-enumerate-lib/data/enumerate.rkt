@@ -70,13 +70,15 @@
   
   [or/e
    (->i ()
+        (#:one-way-enum? [is-one-way-enum? boolean?])
         #:rest
         [enums (listof (or/c (cons/c enum? (-> any/c boolean?))
                              enum?))]
-        #:pre/name (enums)
+        #:pre/name (enums is-one-way-enum?)
         "the enums must either have at least one one-way-enum?\n or must all either by flat-enum? or have predicates"
-        (either-a-one-way-enum-or-all-have-predicates? enums)
-        #:pre/desc (enums) (non-overlapping? enums)
+        (or is-one-way-enum?
+            (either-a-one-way-enum-or-all-have-predicates? enums))
+        #:pre/desc (enums is-one-way-enum?) (non-overlapping? enums is-one-way-enum?)
         [result enum?])]
   [append/e
    (->* ((or/c (cons/c enum? (-> any/c boolean?))
@@ -121,11 +123,14 @@
      #t]
     [else #f]))
 
-(define (non-overlapping? enum/pairs)
+(define (non-overlapping? enum/pairs is-one-way-enum?)
   (define upper-limit-to-explore 1000)
   (define howmany (length enum/pairs))
   (cond
-    [(has-one-way-enum? enum/pairs) #t]
+    [(or (and is-one-way-enum?
+              (not (unsupplied-arg? is-one-way-enum?)))
+         (has-one-way-enum? enum/pairs))
+     #t]
     [(< howmany 2) #t]
     [else
      (define enums

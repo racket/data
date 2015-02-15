@@ -505,7 +505,7 @@ notes for eventual email:
   (values prev-max-index tuple-bound exhs inexhs))
 
 ;; fairly interleave a list of enumerations
-(define (or/e . e-or-e/ps)
+(define (or/e #:one-way-enum? [one-way-enum? #f] . e-or-e/ps)
   (define e-ps (for/list ([x (in-list e-or-e/ps)])
                  (cond
                    [(enum? x) (cons x (enum-contract x))]
@@ -529,7 +529,8 @@ notes for eventual email:
        (define this-e (car (vector-ref es r))) 
        (from-nat this-e (+ q prev-ib)))
      (define enc
-       (and (andmap (λ (x) (two-way-enum? (car x))) e-ps)
+       (and (not one-way-enum?)
+            (andmap (λ (x) (two-way-enum? (car x))) e-ps)
             (λ (x)
               (define-values (index which-e)
                 (find-index x non-empty-e-ps))

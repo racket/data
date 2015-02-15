@@ -412,13 +412,18 @@ and the @racket[x]s.
                  (to-nat except-1/e 2)
                  (to-nat except-1/e 4)]}
 
-@defproc[(or/e [e-p (or/c enum? (cons/c enum? (-> any/c boolean?)))] ...) 
+@defproc[(or/e [#:one-way-enum? one-way-enum? boolean? #f]
+               [e-p (or/c enum? (cons/c enum? (-> any/c boolean?)))] ...) 
          enum?]{
 
 An @tech{enumeration} of all of the elements of the enumerations in
 the @racket[e-p] arguments. 
 
-If all of the arguments have or are @tech{two way enumerations}, then 
+If the enumerations have overlapping elements, then pass @racket[#f] as
+@racket[one-way-enum?] so the result is a @tech{one way enumeration}.
+
+In more detail, if all of the arguments have or are @tech{two way enumerations} 
+and @racket[one-way-enum?] is @racket[#f], then 
 the result is also a @tech{two way enumeration} and
 each argument must come with a predicate to distinguish its elements 
 from the elements of the other enumerations. If the argument is
@@ -426,9 +431,9 @@ a pair, then the predicate in the second position of the pair is used.
 If the argument is an enumeration, then it must be a @tech{flat enumeration}
 and the contract is used as its predicate. 
 
-If any of the arguments are @tech{one way enumerations}, then the result
-is a @tech{one way enumeration} and any predicates in the arguments
-are ignored.
+If any of the arguments are @tech{one way enumerations} (or @racket[one-way-enum?] is
+@racket[#f]), then the result is a @tech{one way enumeration} and any predicates
+in the arguments are ignored.
 
 @examples[#:eval the-eval
                  (enum->list (or/e nat/e (list/e nat/e nat/e))

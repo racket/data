@@ -228,6 +228,10 @@
  #f)
 (check-equal? 
  (two-way-enum? 
+  (or/e nat/e nat/e #:one-way-enum? #t))
+ #f)
+(check-equal? 
+ (two-way-enum? 
   (unsafe:fin-cons/e
    (pam/e (λ (x) (floor (/ x 2))) (below/e 100) #:contract exact-integer?)
    (pam/e (λ (x) (floor (/ x 3))) (below/e 100) #:contract exact-integer?)))
