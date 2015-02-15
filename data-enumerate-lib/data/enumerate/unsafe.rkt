@@ -547,7 +547,7 @@ notes for eventual email:
             (apply or/c (map (λ (x) (enum-contract (car x))) non-empty-e-ps)))]))
 
 ;; Like or/e, but sequences the enumerations instead of interleaving
-(define (append/e e-p . e-ps)
+(define (append/e e-p #:one-way-enum? [one-way-enum? #f] . e-ps)
   (define/match (disj-append2/e e-p1 e-p2)
     [((cons e1 1?) (cons e2 2?))
      (define s1 (enum-size e1))
@@ -558,7 +558,8 @@ notes for eventual email:
        (cond [(< n s1) (from-nat e1 n)]
              [else (from-nat e2 (- n s1))]))
      (define to-nat2
-       (and (two-way-enum? e1)
+       (and (not one-way-enum?)
+            (two-way-enum? e1)
             (two-way-enum? e2)
             (λ (x)
               (cond [(1? x) (to-nat e1 x)]

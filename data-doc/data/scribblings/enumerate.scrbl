@@ -440,12 +440,18 @@ in the arguments are ignored.
                              10)]
 }
 
-@defproc[(append/e [e-p (or/c flat-enum? (cons/c enum? (-> any/c boolean?)))] ...+) 
+@defproc[(append/e [#:one-way-enum? one-way-enum? boolean? #f]
+                   [e-p (or/c enum? (cons/c enum? (-> any/c boolean?)))] ...+) 
          enum?]{
 
 An @tech{enumeration} of the elements of the enumerations given in
 @racket[e-p] that enumerates the elements in order that the enumerations
 are supplied. All but the last enumeration must be finite.
+
+Like @racket[or/e] the resulting enumeration is either a @tech{one way enumeration} or 
+a @tech{two way enumeration} depending on the status of the arguments, and 
+@racket[append/e] has the same constraints on overlapping elements in the
+arguments.
 
 @examples[#:eval the-eval
                  (enum->list 

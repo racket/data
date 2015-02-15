@@ -81,11 +81,18 @@
         #:pre/desc (enums is-one-way-enum?) (non-overlapping? enums is-one-way-enum?)
         [result enum?])]
   [append/e
-   (->* ((or/c (cons/c enum? (-> any/c boolean?))
-               flat-enum?))
-        #:rest (listof (or/c (cons/c enum? (-> any/c boolean?))
-                             flat-enum?))
-        enum?)]
+   (->i ([first (or/c (cons/c enum? (-> any/c boolean?))
+                      enum?)])
+        (#:one-way-enum? [is-one-way-enum? boolean?])
+        #:rest [rest (listof (or/c (cons/c enum? (-> any/c boolean?))
+                                   enum?))]
+        #:pre/name (first rest is-one-way-enum?)
+        "the enums must either have at least one one-way-enum?\n or must all either by flat-enum? or have predicates"
+        (or is-one-way-enum?
+            (either-a-one-way-enum-or-all-have-predicates? (cons first rest)))
+        #:pre/desc (first rest is-one-way-enum?) 
+        (non-overlapping? (cons first rest) is-one-way-enum?)
+        [result enum?])]
   [thunk/e
    (->i ([mk-e (size is-two-way-enum? is-flat-enum?)
                (-> (and/c (if (or (unsupplied-arg? size) (= size +inf.0))
