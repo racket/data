@@ -7,8 +7,8 @@
          data/gvector
          data/enumerate
          data/enumerate/lib
-         (submod data/enumerate/lib test)
-         (prefix-in unsafe: data/enumerate/unsafe))
+         (prefix-in unsafe: data/enumerate/private/more)
+         (prefix-in unsafe: data/enumerate/private/core))
 
 (require (for-syntax racket/base))
 (define last (current-process-milliseconds))
@@ -879,13 +879,13 @@
        (error 'digits "Missed some: ~a" total)))
    
    (define (test-digits N)
-     (test-seq 10 (in-generator (BPP-digits N))))
+     (test-seq 10 (in-generator (unsafe:BPP-digits N))))
    
    (test-digits 1)
    (test-digits 9)
    
    (define (test-tetris K N)
-     (test-seq K (10-sequence->K-sequence K (in-generator (BPP-digits N)))))
+     (test-seq K (unsafe:10-sequence->K-sequence K (in-generator (unsafe:BPP-digits N)))))
    
    (test-tetris 7 1)
    (test-tetris 7 2)

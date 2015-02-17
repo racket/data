@@ -1,5 +1,5 @@
 #lang racket/base
-(require "enumerate/unsafe.rkt"
+(require "enumerate/private/core.rkt"
          racket/contract
          racket/list
          racket/bool)
@@ -52,8 +52,8 @@
          [e enum?] 
          #:contract [c contract?])
         #:rest [es (listof enum?)]
-        #:pre/desc (in out e es)
-        (appears-to-be-a-bijection? in out (cons e es))
+        ;#:pre/desc (in out e es)
+        ;(appears-to-be-a-bijection? in out (cons e es))
         [result enum?])]
   [pam/e (->i ([in (e es c)
                    (dynamic->* #:mandatory-domain-contracts (map enum-contract (cons e es))
@@ -78,7 +78,7 @@
         "the enums must either have at least one one-way-enum?\n or must all either by flat-enum? or have predicates"
         (or is-one-way-enum?
             (either-a-one-way-enum-or-all-have-predicates? enums))
-        #:pre/desc (enums is-one-way-enum?) (non-overlapping? enums is-one-way-enum?)
+        ;#:pre/desc (enums is-one-way-enum?) (non-overlapping? enums is-one-way-enum?)
         [result enum?])]
   [append/e
    (->i ([first (or/c (cons/c enum? (-> any/c boolean?))
@@ -90,8 +90,8 @@
         "the enums must either have at least one one-way-enum?\n or must all either by flat-enum? or have predicates"
         (or is-one-way-enum?
             (either-a-one-way-enum-or-all-have-predicates? (cons first rest)))
-        #:pre/desc (first rest is-one-way-enum?) 
-        (non-overlapping? (cons first rest) is-one-way-enum?)
+        ;#:pre/desc (first rest is-one-way-enum?) 
+        ;(non-overlapping? (cons first rest) is-one-way-enum?)
         [result enum?])]
   [thunk/e
    (->i ([mk-e (size is-two-way-enum? is-flat-enum?)
