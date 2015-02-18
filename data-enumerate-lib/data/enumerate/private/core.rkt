@@ -1079,7 +1079,7 @@ notes for eventual email:
                          rest-inf?s)])])))
      (map/e reconstruct
             deconstruct
-            (inf-fin-cons/e (apply list/e #:ordering 'ordering inf-es)
+            (inf-fin-cons/e (apply list/e #:ordering ordering inf-es)
                             (apply list/e fin-es))
             #:contract (apply list/c (map enum-contract es)))]))
 
