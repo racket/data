@@ -338,6 +338,28 @@
               (for/list ([x (in-range 100)])
                 (from-nat (list/e #:ordering 'square nat/e nat/e nat/e) x)))
 
+;; check to make sure that the #:ordering keyword argument is treated
+;; properly when there is a mixture of finite and infintite enumerations.
+(check-equal? (for/list ([x (in-range 9)])
+                (from-nat (list/e nat/e nat/e (fin/e 'x)) x))
+              '((0 0 x)
+                (0 1 x) (1 0 x) (1 1 x)
+                (0 2 x) (1 2 x) (2 0 x) (2 1 x) (2 2 x)))
+
+(check-equal? (for/list ([x (in-range 9)])
+                (from-nat (list/e nat/e nat/e (fin/e 'x) #:ordering 'square) x))
+              '((0 0 x)
+                (0 1 x) (1 0 x) (1 1 x)
+                (0 2 x) (1 2 x) (2 0 x) (2 1 x) (2 2 x)))
+
+(check-equal? (for/list ([x (in-range 10)])
+                (from-nat (list/e nat/e nat/e (fin/e 'x) #:ordering 'diagonal) x))
+              '((0 0 x)
+                (0 1 x) (1 0 x)
+                (0 2 x) (1 1 x) (2 0 x)
+                (0 3 x) (1 2 x) (2 1 x) (3 0 x)))
+
+
 
 ;; fair product tests
 (define-simple-check (check-range? e l u approx)
