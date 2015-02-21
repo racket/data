@@ -32,6 +32,11 @@ todo:
  - document unsafe properly 
     => export the parameter that disables the fancy contract checks
        from data/enumerate/unsafe
+ - change enum struct to hold a promise of the size (forced only
+   by enum-size) and a predicate "is this nat in range of the size?"
+   that should be used by the contracts. (enum-in-range?)
+      => if that predicate is #f, then the enumeration is infinite
+ - set/e from Neil's email with the subject "Simple set/e enumerator"
 
 notes for eventual email:
  - finite vs infinite enumerations
