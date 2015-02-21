@@ -502,6 +502,13 @@
                       (cons/e m/e m/e)))])
    m/e))
 
+(check-bijection? 
+ (letrec ([m/e (thunk/e
+                (λ ()
+                  (or/e (fin/e #f)
+                        (cons/e m/e m/e))))])
+   m/e))
+
 ;; cons/de tests
 (define (up-to n) (below/e (add1 n)))
 (define 3-up
