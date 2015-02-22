@@ -564,14 +564,17 @@
  (check-equal? (from-nat nats-up 0) (cons 0 0))
  (check-equal? (from-nat nats-up 1) (cons 0 1))
  (check-equal? (from-nat nats-up 2) (cons 1 1))
- (check-equal? (from-nat nats-up 3) (cons 0 2))
- (check-equal? (from-nat nats-up 4) (cons 1 2))
- (check-equal? (from-nat nats-up 5) (cons 2 2))
- (check-equal? (from-nat nats-up 6) (cons 0 3))
- (check-equal? (from-nat nats-up 7) (cons 1 3))
+ (check-equal? (from-nat nats-up 3) (cons 1 2))
+ (check-equal? (from-nat nats-up 4) (cons 0 2))
+ (check-equal? (from-nat nats-up 5) (cons 1 3))
+ (check-equal? (from-nat nats-up 6) (cons 2 2))
+ (check-equal? (from-nat nats-up 7) (cons 2 3))
 
  (check-bijection? nats-up))
 
+(check-equal? (enum->list (dep/e nat/e (λ (i) nat/e)) 20)
+              (enum->list (cons/e nat/e nat/e #:ordering 'square) 20))
+(check-bijection? (dep/e nat/e (λ (i) nat/e)))
 (check-equal? (enum->list (flip-dep/e nat/e 
                                       (λ (tl) (below/e tl))
                                       #:f-range-finite? #t)
@@ -584,9 +587,9 @@
                                  (λ (hd) (nat+/e (+ hd 1))))
                           10)
               '((0 . 1)
-                (0 . 2) (1 . 2)
-                (0 . 3) (1 . 3) (2 . 3)
-                (0 . 4) (1 . 4) (2 . 4) (3 . 4)))
+                (0 . 2) (1 . 2) (1 . 3) (0 . 3)
+                (1 . 4) (2 . 3) (2 . 4) (2 . 5)
+                (0 . 4)))
 
 (define 3-up-2
   (cons/de

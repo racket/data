@@ -679,15 +679,14 @@ notes for eventual email:
                       (to-nat e (car ab)))))
             the-ctc)]
     [else ;; both infinite, same as cons/e
+     (define 2nums->num (box-tuple 2))
+     (define num->2nums (box-untuple 2))
      (-enum +inf.0               
             (λ (n)
-              (let* ([k (floor-untri n)]
-                     [t (tri k)]
-                     [l (- n t)]
-                     [m (- k l)]
-                     [a (from-nat e l)])
-                (cons a
-                      (from-nat (f a) m))))
+              (define 2nums (num->2nums n))
+              (define a (from-nat e (car 2nums)))
+              (cons a
+                    (from-nat (f a) (cadr 2nums))))
             (and (two-way-enum? e)
                  (λ (xs) ;; bijection from nxn -> n, inverse of previous
                    ;; (n,m) -> (n+m)(n+m+1)/2 + n
@@ -695,9 +694,7 @@ notes for eventual email:
                      (error 'dep2/e "not a pair"))
                    (let ([l (to-nat e (car xs))]
                          [m (to-nat (f (car xs)) (cdr xs))])
-                     (+ (/ (* (+ l m) (+ l m 1))
-                           2)
-                        l))))
+                     (2nums->num (list l m)))))
             the-ctc)]))
 
 (define dep/e-contract
