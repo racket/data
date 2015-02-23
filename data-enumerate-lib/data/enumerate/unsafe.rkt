@@ -14,7 +14,7 @@
  enum->list
  below/e
  empty/e
- nat/e
+ natural/e
  or/e
  append/e
  fin-cons/e

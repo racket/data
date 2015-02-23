@@ -120,7 +120,7 @@
      (loop))))
 
 (define (infinite-sequence/e inner/e)
-  (define seed/e nat/e)
+  (define seed/e natural/e)
   (define K (enum-size inner/e))
   (define (seed->seq N)
     (define K-seq
@@ -274,13 +274,13 @@
         (+ n low))
       (λ (n)
         (- n low))
-      nat/e
+      natural/e
       #:contract (and/c exact-integer? (>=/c low)))]
     [(infinite? low)
      (map/e
       (λ (n) (- high n))
       (λ (n) (- high n))
-      nat/e
+      natural/e
       #:contract (and/c exact-integer? (<=/c high)))]
     [else
      (map/e (λ (n) (+ n low))
@@ -292,7 +292,7 @@
 (define (nat+/e n)
   (map/e (λ (k) (+ k n))
          (λ (k) (- k n))
-         nat/e
+         natural/e
          #:contract
          (and/c (>=/c n) exact-integer?)))
 
@@ -367,7 +367,7 @@
       cdr 
       (λ (x) (cons (- (length x) 1) x))
       (cons/de
-       [i nat/e]
+       [i natural/e]
        [tl (i) (apply list/e (build-list (+ i 1) (λ (_) e)))])
       #:contract (non-empty-listof (enum-contract e)))]))
 
@@ -575,7 +575,7 @@
         [else (- (* x 2) 1)]))
     (map/e i-from-nat
            i-to-nat
-           nat/e
+           natural/e
            #:contract exact-integer?)))
 
 (define normal-flonums/e-p

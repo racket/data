@@ -81,7 +81,7 @@
 (test-begin
  (check-exn exn:fail?
             (λ ()
-               (from-nat nat/e -1))))
+               (from-nat natural/e -1))))
 
 ;; ints checks
 (test-begin
@@ -109,10 +109,10 @@
 
  (define bool-or-nat
    (or/e (cons bool/e boolean?)
-         (cons nat/e number?)))
+         (cons natural/e number?)))
 
  (define nat-or-bool
-   (or/e (cons nat/e number?)
+   (or/e (cons natural/e number?)
          (cons bool/e boolean?)))
 
  (define odd-or-even
@@ -126,7 +126,7 @@
                          (>= n 0))
                     (/ n 2)
                     (error 'even)))
-              nat/e
+              natural/e
               #:contract (and/c exact-integer? even?)))
      
      (define odds/e
@@ -137,7 +137,7 @@
                          (>= n 0))
                     (/ (- n 1) 2)
                     (error 'odd)))
-              nat/e
+              natural/e
               #:contract (and/c exact-integer? odd?)))
      
      (or/e (cons evens/e even?)
@@ -153,7 +153,7 @@
  (check-equal? (from-nat bool-or-num 5) 3)
    
  (check-equal? (for/list ([i (in-range 5)])
-                 (from-nat (take/e nat/e 5) i))
+                 (from-nat (take/e natural/e 5) i))
                '(0 1 2 3 4))
  
  (check-exn exn:fail?
@@ -184,7 +184,7 @@
  (define multi-layered
    (or/e (cons (take/e string/e 5) string?)
          (cons (fin/e 'a 'b 'c 'd) symbol?)
-         (cons nat/e number?)
+         (cons natural/e number?)
          (cons bool/e boolean?)
          (cons (listof/e bool/e) list?)))
 
@@ -211,24 +211,24 @@
  
  (check-bijection? multi-layered)
  
- (check-equal? (enum->list (or/e (cons/e nat/e nat/e) nat/e)
+ (check-equal? (enum->list (or/e (cons/e natural/e natural/e) natural/e)
                            6)
-              (list (from-nat (cons/e nat/e nat/e) 0)
+              (list (from-nat (cons/e natural/e natural/e) 0)
                     0
-                    (from-nat (cons/e nat/e nat/e) 1)
+                    (from-nat (cons/e natural/e natural/e) 1)
                     1
-                    (from-nat (cons/e nat/e nat/e) 2)
+                    (from-nat (cons/e natural/e natural/e) 2)
                     2)))
 
 ;; make sure various combinators correctly propagate bijectionness.
 (check-equal? 
  (two-way-enum? 
-  (or/e (pam/e (λ (x) (floor (/ x 2))) nat/e #:contract exact-integer?)
-        (pam/e (λ (x) (floor (/ x 3))) nat/e #:contract exact-integer?)))
+  (or/e (pam/e (λ (x) (floor (/ x 2))) natural/e #:contract exact-integer?)
+        (pam/e (λ (x) (floor (/ x 3))) natural/e #:contract exact-integer?)))
  #f)
 (check-equal? 
  (two-way-enum? 
-  (or/e nat/e nat/e #:one-way-enum? #t))
+  (or/e natural/e natural/e #:one-way-enum? #t))
  #f)
 (check-equal? 
  (two-way-enum? 
@@ -243,7 +243,7 @@
              (cons (fin/e 0 1 2 3) number?)))
  (define bool-or-nat
    (append/e (cons bool/e boolean?)
-             (cons nat/e number?)))
+             (cons natural/e number?)))
  
  (check-equal? (enum-size bool-or-num) 6)
    
@@ -265,15 +265,15 @@
  (check-equal? (from-nat bool-or-nat 2) 0)
  (check-bijection? bool-or-nat)
  
- (check-bijection? (append/e (below/e 10) bool/e (cons/e nat/e nat/e))))
+ (check-bijection? (append/e (below/e 10) bool/e (cons/e natural/e natural/e))))
 
 ;; cons/e tests
 (define bool*bool (cons/e bool/e bool/e))
 (define 1*b (cons/e (fin/e 1) bool/e))
 (define b*1 (cons/e bool/e (fin/e 1)))
-(define bool*nats (cons/e bool/e nat/e))
-(define nats*bool (cons/e nat/e bool/e))
-(define nats*nats (cons/e nat/e nat/e))
+(define bool*nats (cons/e bool/e natural/e))
+(define nats*bool (cons/e natural/e bool/e))
+(define nats*nats (cons/e natural/e natural/e))
 (define ns-equal? (λ (ns ms)
                      (and (= (car ns)
                              (car ms))
@@ -303,31 +303,31 @@
  (check-bijection? 
   (apply list/e
          (for/list ([i (in-range 24)])
-           (map/e (curry cons i) cdr nat/e
+           (map/e (curry cons i) cdr natural/e
                   #:contract (cons/c i exact-nonnegative-integer?))))))
 
 (check-equal? (for/list ([i (in-range 10)])
-                (from-nat (cons/e nat/e nat/e #:ordering 'diagonal) i))
+                (from-nat (cons/e natural/e natural/e #:ordering 'diagonal) i))
               '((0 . 0) 
                 (0 . 1) (1 . 0) 
                 (0 . 2) (1 . 1) (2 . 0)
                 (0 . 3) (1 . 2) (2 . 1) (3 . 0)))
 
 (check-equal? (for/list ([i (in-range 9)])
-                (from-nat (cons/e nat/e nat/e #:ordering 'square) i))
+                (from-nat (cons/e natural/e natural/e #:ordering 'square) i))
               '((0 . 0)
                 (0 . 1) (1 . 0) (1 . 1)
                 (0 . 2) (1 . 2) (2 . 0) (2 . 1) (2 . 2)))
 
 (check-equal? (for/list ([i (in-range 10)])
-                (from-nat (vector/e nat/e nat/e #:ordering 'diagonal) i))
+                (from-nat (vector/e natural/e natural/e #:ordering 'diagonal) i))
               '(#(0 0) 
                 #(0 1) #(1 0) 
                 #(0 2) #(1 1) #(2 0)
                 #(0 3) #(1 2) #(2 1) #(3 0)))
 
 (check-equal? (for/list ([i (in-range 9)])
-                (from-nat (vector/e nat/e nat/e #:ordering 'square) i))
+                (from-nat (vector/e natural/e natural/e #:ordering 'square) i))
               '(#(0 0)
                 #(0 1) #(1 0) #(1 1)
                 #(0 2) #(1 2) #(2 0) #(2 1) #(2 2)))
@@ -336,24 +336,24 @@
 (check-equal? (for/list ([x (in-range 100)])
                 (from-nat (unsafe:box-tuples/e 3) x))
               (for/list ([x (in-range 100)])
-                (from-nat (list/e #:ordering 'square nat/e nat/e nat/e) x)))
+                (from-nat (list/e #:ordering 'square natural/e natural/e natural/e) x)))
 
 ;; check to make sure that the #:ordering keyword argument is treated
 ;; properly when there is a mixture of finite and infintite enumerations.
 (check-equal? (for/list ([x (in-range 9)])
-                (from-nat (list/e nat/e nat/e (fin/e 'x)) x))
+                (from-nat (list/e natural/e natural/e (fin/e 'x)) x))
               '((0 0 x)
                 (0 1 x) (1 0 x) (1 1 x)
                 (0 2 x) (1 2 x) (2 0 x) (2 1 x) (2 2 x)))
 
 (check-equal? (for/list ([x (in-range 9)])
-                (from-nat (list/e nat/e nat/e (fin/e 'x) #:ordering 'square) x))
+                (from-nat (list/e natural/e natural/e (fin/e 'x) #:ordering 'square) x))
               '((0 0 x)
                 (0 1 x) (1 0 x) (1 1 x)
                 (0 2 x) (1 2 x) (2 0 x) (2 1 x) (2 2 x)))
 
 (check-equal? (for/list ([x (in-range 10)])
-                (from-nat (list/e nat/e nat/e (fin/e 'x) #:ordering 'diagonal) x))
+                (from-nat (list/e natural/e natural/e (fin/e 'x) #:ordering 'diagonal) x))
               '((0 0 x)
                 (0 1 x) (1 0 x)
                 (0 2 x) (1 1 x) (2 0 x)
@@ -368,58 +368,58 @@
         [expected (list->set approx)])
     (equal? actual expected)))
 (test-begin
- (define n*n     (unsafe:cantor-list/e nat/e nat/e))
+ (define n*n     (unsafe:cantor-list/e natural/e natural/e))
  (check-range? n*n  0  1 '((0 0)))
  (check-range? n*n  1  3 '((0 1) (1 0)))
  (check-range? n*n  3  6 '((0 2) (1 1) (2 0)))
  (check-range? n*n  6 10 '((0 3) (1 2) (2 1) (3 0)))
  (check-range? n*n 10 15 '((0 4) (1 3) (2 2) (3 1) (4 0))))
 (test-begin
- (define n*n     (list/e #:ordering 'diagonal nat/e nat/e))
+ (define n*n     (list/e #:ordering 'diagonal natural/e natural/e))
  (check-range? n*n  0  1 '((0 0)))
  (check-range? n*n  1  3 '((0 1) (1 0)))
  (check-range? n*n  3  6 '((0 2) (1 1) (2 0)))
  (check-range? n*n  6 10 '((0 3) (1 2) (2 1) (3 0)))
  (check-range? n*n 10 15 '((0 4) (1 3) (2 2) (3 1) (4 0))))
 (test-begin
- (define n*n*n   (unsafe:cantor-list/e nat/e nat/e nat/e))
- (define n*n*n*n (unsafe:cantor-list/e nat/e nat/e nat/e nat/e))
+ (define n*n*n   (unsafe:cantor-list/e natural/e natural/e natural/e))
+ (define n*n*n*n (unsafe:cantor-list/e natural/e natural/e natural/e natural/e))
  
  (check-equal? (one-way-enum?
                 (unsafe:cantor-list/e 
-                 (pam/e values nat/e #:contract (enum-contract nat/e))
-                 nat/e))
+                 (pam/e values natural/e #:contract (enum-contract natural/e))
+                 natural/e))
                #t)
  
  (check-equal? (one-way-enum?
-                (list/e nat/e
-                        (pam/e values nat/e #:contract exact-nonnegative-integer?)
-                        nat/e))
+                (list/e natural/e
+                        (pam/e values natural/e #:contract exact-nonnegative-integer?)
+                        natural/e))
                #t)
  
  (check-equal? (from-nat
-                (list/e nat/e
-                        (pam/e values nat/e #:contract exact-nonnegative-integer?)
-                        nat/e)
+                (list/e natural/e
+                        (pam/e values natural/e #:contract exact-nonnegative-integer?)
+                        natural/e)
                 0)
                '(0 0 0))
  
  (check-equal? (one-way-enum?
-                (list/e nat/e
-                        (pam/e values nat/e #:contract exact-nonnegative-integer?)
-                        nat/e
-                        nat/e
-                        nat/e
-                        nat/e))
+                (list/e natural/e
+                        (pam/e values natural/e #:contract exact-nonnegative-integer?)
+                        natural/e
+                        natural/e
+                        natural/e
+                        natural/e))
                #t)
  
  (check-equal? (from-nat
-                (list/e nat/e
-                        (pam/e values nat/e #:contract exact-nonnegative-integer?)
-                        nat/e
-                        nat/e
-                        nat/e
-                        nat/e)
+                (list/e natural/e
+                        (pam/e values natural/e #:contract exact-nonnegative-integer?)
+                        natural/e
+                        natural/e
+                        natural/e
+                        natural/e)
                 0)
                '(0 0 0 0 0 0))
  
@@ -431,17 +431,17 @@
                              (1 1 1))))
 
 (test-begin
- (check-bijection? (vector/e string/e nat/e two-way-real/e))
- (check-bijection? (unsafe:cantor-list/e string/e nat/e two-way-real/e))
+ (check-bijection? (vector/e string/e natural/e two-way-real/e))
+ (check-bijection? (unsafe:cantor-list/e string/e natural/e two-way-real/e))
  (check-bijection? (unsafe:cantor-list/e)))
 
 (test-begin
- (define n*n     (unsafe:box-list/e nat/e nat/e))
+ (define n*n     (unsafe:box-list/e natural/e natural/e))
  (check-range? n*n  0  1 '((0 0)))
  (check-range? n*n  1  4 '((0 1) (1 0) (1 1)))
  (check-range? n*n  4  9 '((0 2) (1 2) (2 1) (2 0) (2 2))))
 (test-begin
- (define n*n*n   (unsafe:box-list/e nat/e nat/e nat/e))
+ (define n*n*n   (unsafe:box-list/e natural/e natural/e natural/e))
 
  (check-range? n*n*n  0  1 '((0 0 0)))
  (check-range? n*n*n  1  8 '((0 0 1) (0 1 1) (0 1 0)
@@ -458,7 +458,7 @@
                              (2 2 0) (2 2 1) (2 2 2))))
 
 (test-begin
- (define n*n*n   (list/e #:ordering 'square nat/e nat/e nat/e))
+ (define n*n*n   (list/e #:ordering 'square natural/e natural/e natural/e))
 
  (check-range? n*n*n  0  1 '((0 0 0)))
  (check-range? n*n*n  1  8 '((0 0 1) (0 1 1) (0 1 0)
@@ -475,7 +475,7 @@
                              (2 2 0) (2 2 1) (2 2 2))))
 
 (test-begin
- (check-bijection? (unsafe:box-list/e string/e nat/e two-way-real/e))
+ (check-bijection? (unsafe:box-list/e string/e natural/e two-way-real/e))
  (check-bijection? (unsafe:box-list/e)))
 
 ;; multi-arg map/e test
@@ -522,12 +522,12 @@
    [tl (hd) (nat+/e hd)]))
 
 (define nats-to
-  (cons/de [hd nat/e]
+  (cons/de [hd natural/e]
            [tl (hd) (up-to hd)]
            #:dep-expression-finite? #t))
 
 (define nats-up
-  (cons/de [hd nat/e]
+  (cons/de [hd natural/e]
            [tl (hd) (nat+/e hd)]))
 
 (test-begin
@@ -572,10 +572,10 @@
 
  (check-bijection? nats-up))
 
-(check-equal? (enum->list (dep/e nat/e (λ (i) nat/e)) 20)
-              (enum->list (cons/e nat/e nat/e #:ordering 'square) 20))
-(check-bijection? (dep/e nat/e (λ (i) nat/e)))
-(check-equal? (enum->list (flip-dep/e nat/e 
+(check-equal? (enum->list (dep/e natural/e (λ (i) natural/e)) 20)
+              (enum->list (cons/e natural/e natural/e #:ordering 'square) 20))
+(check-bijection? (dep/e natural/e (λ (i) natural/e)))
+(check-equal? (enum->list (flip-dep/e natural/e 
                                       (λ (tl) (below/e tl))
                                       #:f-range-finite? #t)
                           10)
@@ -583,7 +583,7 @@
                 (0 . 2) (1 . 2)
                 (0 . 3) (1 . 3) (2 . 3)
                 (0 . 4) (1 . 4) (2 . 4) (3 . 4)))
-(check-equal? (enum->list (dep/e nat/e 
+(check-equal? (enum->list (dep/e natural/e 
                                  (λ (hd) (nat+/e (+ hd 1))))
                           10)
               '((0 . 1)
@@ -598,23 +598,23 @@
    #:dep-expression-finite? #t))
 
 (define nats-to-2
-  (cons/de [hd nat/e]
+  (cons/de [hd natural/e]
            [tl (hd) (up-to hd)]
            #:dep-expression-finite? #t))
 
 (check-equal? (one-way-enum?
                (cons/de
-                [i (pam/e values nat/e #:contract (enum-contract nat/e))]
-                [tl (i) (pam/e values nat/e #:contract (enum-contract nat/e))]))
+                [i (pam/e values natural/e #:contract (enum-contract natural/e))]
+                [tl (i) (pam/e values natural/e #:contract (enum-contract natural/e))]))
               #t)
 (check-equal? (one-way-enum?
                (cons/de
-                [i (pam/e values (below/e 10) #:contract (enum-contract nat/e))]
-                [tl (i) (pam/e values nat/e #:contract (enum-contract nat/e))]))
+                [i (pam/e values (below/e 10) #:contract (enum-contract natural/e))]
+                [tl (i) (pam/e values natural/e #:contract (enum-contract natural/e))]))
               #t)
 (check-equal? (one-way-enum?
                (cons/de
-                [i (pam/e values (below/e 10) #:contract (enum-contract nat/e))]
+                [i (pam/e values (below/e 10) #:contract (enum-contract natural/e))]
                 [tl (i) (pam/e values (below/e i) #:contract (enum-contract (below/e i)))]
                 #:dep-expression-finite? #t))
               #t)
@@ -661,8 +661,8 @@
 
 ;; slic/e test
 (test-begin
- (check-equal? (enum->list (slice/e nat/e 3 5)) '(3 4))
- (check-bijection? (slice/e nat/e 3 5)))
+ (check-equal? (enum->list (slice/e natural/e 3 5)) '(3 4))
+ (check-bijection? (slice/e natural/e 3 5)))
 
 ;; enum->list test
 (test-begin
@@ -671,7 +671,7 @@
 
 ;; except/e test
 
-(define not-3 (except/e nat/e 3))
+(define not-3 (except/e natural/e 3))
 (test-begin
  (check-equal? (from-nat not-3 0) 0)
  (check-equal? (from-nat not-3 3) 4)
@@ -688,15 +688,15 @@
  (check-bijection? complicated))
 
 (test-begin
- (check-bijection? (listof/e nat/e))
+ (check-bijection? (listof/e natural/e))
  (check-equal? (from-nat (listof/e empty/e) 0) '())
  (check-bijection? (listof/e empty/e))
- (check-bijection/just-a-few? (listof/e nat/e #:simple-recursive? #f))
- (check-bijection/just-a-few? (non-empty-listof/e nat/e #:simple-recursive? #f))
+ (check-bijection/just-a-few? (listof/e natural/e #:simple-recursive? #f))
+ (check-bijection/just-a-few? (non-empty-listof/e natural/e #:simple-recursive? #f))
  (check-bijection? (non-empty-listof/e empty/e))
- (check-bijection? (non-empty-listof/e nat/e)))
+ (check-bijection? (non-empty-listof/e natural/e)))
 
-(check-bijection? (listof-n/e nat/e 4))
+(check-bijection? (listof-n/e natural/e 4))
 
 (check-equal? (from-nat (range/e -inf.0 10) 0) 10)
 (check-equal? (to-nat (range/e -inf.0 10) 10) 0)
@@ -774,9 +774,9 @@
                 #hash(("Ki" . 0) ("Ted" . 0) ("Brian" . 4) ("Jenny" . 0))))
 
 (check-equal? (for/list ([i (below/e 10)]) i) (build-list 10 values))
-(check-equal? (for/list ([i nat/e][j (in-range 10)]) i) (build-list 10 values))
+(check-equal? (for/list ([i natural/e][j (in-range 10)]) i) (build-list 10 values))
 (check-equal? (for/list ([i (in-enum (below/e 10))]) i) (build-list 10 values))
-(check-equal? (for/list ([i (in-enum nat/e)][j (in-range 10)]) i) (build-list 10 values))
+(check-equal? (for/list ([i (in-enum natural/e)][j (in-range 10)]) i) (build-list 10 values))
 (check-equal? (let ([es (in-enum (below/e 10))]) (for/list ([i es]) i)) (build-list 10 values))
 
 (define (to-str e print?)
@@ -786,11 +786,11 @@
       (write e sp))
   (get-output-string sp))
 ;; printer tests
-(check-equal? (to-str nat/e #t) "#<enum: 0 1 2 3 4 5 6 7 8 9 10...>")
-(check-equal? (to-str (cons/e nat/e nat/e) #t) "#<enum: '(0 . 0) '(0 . 1) '(1 . 0)...>")
-(check-equal? (to-str (cons/e nat/e nat/e) #f) "#<enum: (0 . 0) (0 . 1) (1 . 0)...>")
+(check-equal? (to-str natural/e #t) "#<enum: 0 1 2 3 4 5 6 7 8 9 10...>")
+(check-equal? (to-str (cons/e natural/e natural/e) #t) "#<enum: '(0 . 0) '(0 . 1) '(1 . 0)...>")
+(check-equal? (to-str (cons/e natural/e natural/e) #f) "#<enum: (0 . 0) (0 . 1) (1 . 0)...>")
 (check-equal? (to-str (fin/e 0) #t) "#<finite-enum: 0>")
-(check-equal? (to-str (pam/e values nat/e #:contract exact-nonnegative-integer?) #t)
+(check-equal? (to-str (pam/e values natural/e #:contract exact-nonnegative-integer?) #t)
               "#<one-way-enum: 0 1 2 3 4 5 6 7 8 9 10...>")
 (check-equal? (to-str (pam/e values (below/e 3) #:contract (integer-in 0 2)) #t)
               "#<finite-one-way-enum: 0 1 2>")
@@ -803,13 +803,13 @@
                                  (map/e (λ (j)
                                           (map/e (λ (k) (+ i j k))
                                                  (λ (k) (- k (+ i j)))
-                                                 nat/e
+                                                 natural/e
                                                  #:contract exact-nonnegative-integer?))
                                         (λ (e) (- (from-nat e 0) i))
-                                        nat/e
+                                        natural/e
                                         #:contract enum?))
                                (λ (e) (from-nat (from-nat e 0) 0))
-                               nat/e
+                               natural/e
                                #:contract enum?)
                         #t))
               #t)
@@ -856,24 +856,24 @@
                              (raise x))])
             (to-nat enum value)))))))
 
-(check-contract nat/e)
-(check-contract (cons/e nat/e nat/e))
-(check-contract (cons/e nat/e nat/e #:ordering 'diagonal))
-(check-contract (except/e nat/e 0))
+(check-contract natural/e)
+(check-contract (cons/e natural/e natural/e))
+(check-contract (cons/e natural/e natural/e #:ordering 'diagonal))
+(check-contract (except/e natural/e 0))
 (check-contract (below/e 50))
 (check-contract (fin/e 1 2 #f 'c +inf.0 +nan.0 '#:x))
-(check-contract (or/e (cons (cons/e nat/e nat/e) pair?)
-                      (cons nat/e real?)))
-(check-contract (map/e add1 sub1 nat/e #:contract (and/c exact-integer? positive?)))
+(check-contract (or/e (cons (cons/e natural/e natural/e) pair?)
+                      (cons natural/e real?)))
+(check-contract (map/e add1 sub1 natural/e #:contract (and/c exact-integer? positive?)))
 
 ;; use pam/e to skip the to-nat check (it gets slow)
-(check-contract (let ([e (listof/e nat/e)])
+(check-contract (let ([e (listof/e natural/e)])
                   (pam/e values e #:contract (enum-contract e))))
 
 (check-contract 
- (cons/de [i nat/e]
+ (cons/de [i natural/e]
           [tl (i)
-              (map/e (λ (x) (+ x i)) (λ (x) (- x i)) nat/e 
+              (map/e (λ (x) (+ x i)) (λ (x) (- x i)) natural/e 
                      #:contract 
                      (and/c (>=/c i) exact-integer?))]))
 (check-contract integer/e)
@@ -883,14 +883,14 @@
 (check-contract real/e)
 (check-contract two-way-number/e)
 (check-contract number/e)
-(check-contract (slice/e nat/e 10 20))
+(check-contract (slice/e natural/e 10 20))
 (check-contract (permutations-of-n/e 4))
 (check-contract (permutations/e '(a b c)))
 (check-contract (range/e -inf.0 10))
 (check-contract (range/e 10 +inf.0))
 (check-contract (range/e -inf.0 +inf.0))
 (check-contract (range/e -10 10))
-(check-contract (delay/e nat/e))
+(check-contract (delay/e natural/e))
 
 (check-not-exn
  (λ ()
@@ -930,7 +930,7 @@
 (check-docs 'data/enumerate)
 (check-docs 'data/enumerate/lib)
 
-(check-pred exact-nonnegative-integer? (random-index nat/e))
+(check-pred exact-nonnegative-integer? (random-index natural/e))
 (check-pred (and/c exact-nonnegative-integer?
                    (<=/c 5))
             (random-index (below/e 5)))

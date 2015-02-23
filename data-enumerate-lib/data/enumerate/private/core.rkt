@@ -25,13 +25,12 @@ changes:
 
 todo:
  - criterion for "less checked": avoid all checks that call from-nat/to-nat
- - find a better name than `unsafe.rkt`
  - coerce valid `fin/e` arguments as singleton enumerations (except #f)
  - provide false/e (from data/enumerate/lib)
- - nat/e => natural/e
  - document unsafe properly 
     => export the parameter that disables the fancy contract checks
        from data/enumerate/unsafe
+ - set/e from Neil's email with the subject "Simple set/e enumerator"
  - change enum struct to hold a promise of the size (forced only
    by enum-size) and a predicate "is this nat in range of the size?"
    that should be used by the contracts. (enum-in-range?)
@@ -61,7 +60,7 @@ notes for eventual email:
  enum->list
  below/e
  empty/e
- nat/e
+ natural/e
  or/e
  append/e
  fin-cons/e
@@ -317,7 +316,7 @@ notes for eventual email:
            (error 'to-nat "no elements in the enumerator"))
          none/c))
 
-(define nat/e (-enum +inf.0 values values exact-nonnegative-integer?))
+(define natural/e (-enum +inf.0 values values exact-nonnegative-integer?))
 
 (define (empty/e? e)
   (= 0 (enum-size e)))

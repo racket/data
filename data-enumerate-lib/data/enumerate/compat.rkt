@@ -37,7 +37,7 @@
 (define const/e :fin/e)
 (define (from-list/e l) (apply fin/e l))
 (define fin/e :fin/e)
-(define nat/e :nat/e)
+(define nat/e :natural/e)
 (define int/e :integer/e)
 (define disj-sum/e :or/e)
 (define disj-append/e :append/e)

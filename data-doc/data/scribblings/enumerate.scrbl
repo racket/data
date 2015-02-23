@@ -38,28 +38,29 @@ taken to represent the number.
 The two main options on an enumeration convert natural numbers
 back (@racket[from-nat]) and forth (@racket[to-nat]) between
 the elements of the contract. The simplest enumeration, 
-@racket[nat/e] is just a pair of identity functions:
+@racket[natural/e] is just a pair of identity functions:
 @interaction[#:eval
              the-eval
-             (from-nat nat/e 0)
-             (to-nat nat/e 1)]
+             (from-nat natural/e 0)
+             (to-nat natural/e 1)]
 but the library builds up more complex enumerations from
 simple ones. For example, you can enumerate lists of the
 elements of other enumerations using @racket[list/e]:
 @interaction[#:eval
              the-eval
-             (from-nat (list/e nat/e nat/e nat/e) 0)
-             (from-nat (list/e nat/e nat/e nat/e) 1)
-             (from-nat (list/e nat/e nat/e nat/e) (expt 2 100))
-             (to-nat (list/e nat/e nat/e nat/e) (list 123456789 123456789 123456789))]
+             (from-nat (list/e natural/e natural/e natural/e) 0)
+             (from-nat (list/e natural/e natural/e natural/e) 1)
+             (from-nat (list/e natural/e natural/e natural/e) (expt 2 100))
+             (to-nat (list/e natural/e natural/e natural/e)
+                     (list 123456789 123456789 123456789))]
 To interleave two enumerations, use @racket[or/e]:
 @interaction[#:eval
              the-eval
-             (from-nat (or/e nat/e (list/e nat/e nat/e)) 0)
-             (from-nat (or/e nat/e (list/e nat/e nat/e)) 1)
-             (from-nat (or/e nat/e (list/e nat/e nat/e)) 2)
-             (from-nat (or/e nat/e (list/e nat/e nat/e)) 3)
-             (from-nat (or/e nat/e (list/e nat/e nat/e)) 4)]
+             (from-nat (or/e natural/e (list/e natural/e natural/e)) 0)
+             (from-nat (or/e natural/e (list/e natural/e natural/e)) 1)
+             (from-nat (or/e natural/e (list/e natural/e natural/e)) 2)
+             (from-nat (or/e natural/e (list/e natural/e natural/e)) 3)
+             (from-nat (or/e natural/e (list/e natural/e natural/e)) 4)]
 and to construct recursive data structures, use 
 @racket[delay/e] (with a little help from @racket[single/e] to
 build a singleton enumeration for the base-case):
@@ -86,7 +87,7 @@ that are larger than or equal to its argument:
 @def+int[#:eval 
          the-eval
          (define ordered-pair/e
-           (cons/de [hd nat/e]
+           (cons/de [hd natural/e]
                     [tl (hd) (nat+/e (+ hd 1))]))
          (for/list ([i (in-range 10)])
            (from-nat ordered-pair/e i))]
@@ -123,7 +124,7 @@ Here's an example that, with high probability, signals a contract violation.
              the-eval
              (map/e (λ (x) (floor (/ x 100)))
                     (λ (x) (* x 100))
-                    nat/e
+                    natural/e
                     #:contract exact-nonnegative-integer?)]
 The contract on @racket[or/e] has a similar kind of checking that attempts to
 find overlaps between the elements of the enumerations in its arguments.
@@ -285,7 +286,7 @@ that an enumeration enumerates.
                               
   @examples[#:eval 
             the-eval
-            (enum->list (list/e nat/e nat/e) 8)
+            (enum->list (list/e natural/e natural/e) 8)
             (enum->list (below/e 8))]
 }
 
@@ -306,13 +307,13 @@ that an enumeration enumerates.
 This section contains the fundamental operations for building
 enumerations.
 
-@defthing[nat/e enum?]{
+@defthing[natural/e enum?]{
 
 An @tech{enumeration} of the natural numbers.
    
 @examples[#:eval the-eval
-(from-nat nat/e 5)
-(to-nat nat/e 5)
+(from-nat natural/e 5)
+(to-nat natural/e 5)
 ]}
 
 @defproc[(below/e [max exact-nonnegative-integer?]) enum?]{
@@ -359,7 +360,7 @@ The empty @tech{enumeration}.
            (define evens/e
              (map/e (λ (x) (* x 2))
                     (λ (x) (/ x 2))
-                    nat/e
+                    natural/e
                     #:contract (and/c exact-nonnegative-integer?
                                       even?)))
            (enum->list evens/e 10)
@@ -406,7 +407,7 @@ and the @racket[x]s.
 
 @examples[#:eval the-eval
                  (define except-1/e
-                   (except/e nat/e 3))
+                   (except/e natural/e 3))
                  (from-nat except-1/e 2)
                  (from-nat except-1/e 4)
                  (to-nat except-1/e 2)
@@ -436,7 +437,7 @@ If any of the arguments are @tech{one way enumerations} (or @racket[one-way-enum
 in the arguments are ignored.
 
 @examples[#:eval the-eval
-                 (enum->list (or/e nat/e (list/e nat/e nat/e))
+                 (enum->list (or/e natural/e (list/e natural/e natural/e))
                              10)]
 }
 
@@ -455,8 +456,8 @@ arguments.
 
 @examples[#:eval the-eval
                  (enum->list 
-                  (append/e (take/e nat/e 4)
-                            (list/e nat/e nat/e))
+                  (append/e (take/e natural/e 4)
+                            (list/e natural/e natural/e))
                   10)]
 }
 
@@ -507,12 +508,12 @@ to naturals.
 @examples[#:eval the-eval
                  (enum->list (list/e
                               (fin/e "Brian" "Jenny" "Ki" "Ted") 
-                              nat/e
+                              natural/e
                               (fin/e "Terra" "Locke" "Edgar" "Mash"))
                              5)
-                 (enum->list (list/e nat/e nat/e)
+                 (enum->list (list/e natural/e natural/e)
                              10)
-                 (enum->list (list/e #:ordering  'diagonal nat/e nat/e)
+                 (enum->list (list/e #:ordering  'diagonal natural/e natural/e)
                              10)]
 }
 
@@ -531,7 +532,7 @@ to naturals.
   @examples[#:eval
             the-eval
             (define dep/e-ordered-pair/e
-              (dep/e nat/e 
+              (dep/e natural/e 
                      (λ (hd) (nat+/e (+ hd 1)))))
             (enum->list dep/e-ordered-pair/e 10)]
 }
@@ -586,7 +587,7 @@ enumerations.
   @examples[#:eval
             the-eval
             (define ordered-pair/e
-              (cons/de [hd nat/e]
+              (cons/de [hd natural/e]
                        [tl (hd) (nat+/e (+ hd 1))]))
             (enum->list ordered-pair/e 10)]
 }
@@ -606,7 +607,7 @@ enumerations.
   @examples[#:eval
             the-eval
             (define flip-dep/e-ordered-pair/e
-              (flip-dep/e nat/e 
+              (flip-dep/e natural/e 
                           (λ (tl) (below/e tl))
                           #:f-range-finite? #t))
             (enum->list flip-dep/e-ordered-pair/e 10)]
@@ -621,16 +622,16 @@ An @tech{enumeration} of pairs of the values from @racket[e1] and
 controls how the resting elements appear.
 
 @examples[#:eval the-eval
-(enum->list (cons/e (take/e nat/e 4) (take/e nat/e 5)) 5)
-(enum->list (cons/e nat/e (take/e nat/e 5)) 5)
-(enum->list (cons/e (take/e nat/e 4) nat/e) 5)
-(enum->list (cons/e nat/e nat/e) 5)]
+(enum->list (cons/e (take/e natural/e 4) (take/e natural/e 5)) 5)
+(enum->list (cons/e natural/e (take/e natural/e 5)) 5)
+(enum->list (cons/e (take/e natural/e 4) natural/e) 5)
+(enum->list (cons/e natural/e natural/e) 5)]
 }
 
 @(begin
    (define listof/e-limit 500)
-   (define lon (listof/e nat/e))
-   (define lon2 (listof/e nat/e #:simple-recursive? #f))
+   (define lon (listof/e natural/e))
+   (define lon2 (listof/e natural/e #:simple-recursive? #f))
    
    (define (build-length-stats)
      (define (get-points e color sym)
@@ -691,10 +692,10 @@ more efficient when calling @racket[from-nat] with large numbers, but
 it also has much shorter lists near the beginning of the enumeration.
 
 @examples[#:eval the-eval
-(enum->list (listof/e nat/e #:simple-recursive? #f) 10)
-(enum->list (listof/e nat/e) 10)
-(to-nat (listof/e nat/e #:simple-recursive? #f) '(1 2 3 4 5 6))
-(to-nat (listof/e nat/e) '(1 2 3 4 5 6))
+(enum->list (listof/e natural/e #:simple-recursive? #f) 10)
+(enum->list (listof/e natural/e) 10)
+(to-nat (listof/e natural/e #:simple-recursive? #f) '(1 2 3 4 5 6))
+(to-nat (listof/e natural/e) '(1 2 3 4 5 6))
 ]
 
 
@@ -722,7 +723,7 @@ argument is @racket[#f].
 Like @racket[listof/e], but without the empty list.
 
 @examples[#:eval the-eval
-(enum->list (non-empty-listof/e nat/e) 5)
+(enum->list (non-empty-listof/e natural/e) 5)
 ]}
 
 @defproc[(listof-n/e [e (if simple-recursive?
@@ -733,7 +734,7 @@ Like @racket[listof/e], but without the empty list.
                 
   @examples[#:eval 
             the-eval
-            (enum->list (listof-n/e nat/e 3) 10)]
+            (enum->list (listof-n/e natural/e 3) 10)]
 }
 
 @defform[(delay/e enum-expression keyword-options)
@@ -790,7 +791,7 @@ If the @racket[contract] argument is not supplied, then @racket[e] must
 be both a @tech{two way enumeration} and a @tech{flat enumeration}.
 
 @examples[#:eval the-eval
-                 (enum->list (take/e nat/e 5))]
+                 (enum->list (take/e natural/e 5))]
 }
 
 @defproc[(slice/e [e enum?]
@@ -812,8 +813,8 @@ Identical to @racket[e] but only includes the values between
 @racket[lo] (inclusive) and @racket[hi] (exclusive).
 
 @examples[#:eval the-eval
-                 (enum->list (slice/e nat/e 5 10))
-                 (slice/e nat/e 20 20)]
+                 (enum->list (slice/e natural/e 5 10))
+                 (slice/e natural/e 20 20)]
 }
 
 
@@ -889,7 +890,7 @@ The @racket[ordering] argument is the same as the one to @racket[list/e].
 
 @examples[#:eval the-eval
                  (enum->list (vector/e (fin/e "Brian" "Jenny" "Ki" "Ted") 
-                                       nat/e
+                                       natural/e
                                        (fin/e "Terra" "Locke" "Edgar" "Mash"))
                              5)]
 }
@@ -1003,7 +1004,7 @@ Returns a random index into @racket[e]. This works for
  between @racket[(expt 2 n)] and @racket[(expt 2 (+ n 1))].
 
 @examples[#:eval the-eval
-(random-index nat/e)
+(random-index natural/e)
 (random-index (below/e 5000000000))
 ]}
 
