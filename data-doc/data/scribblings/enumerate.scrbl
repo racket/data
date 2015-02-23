@@ -524,8 +524,12 @@ to naturals.
                                   infinite-enum?)
                               (if (two-way-enum? e)
                                   two-way-enum?
-                                  one-way-enum?)))]
-                [#:f-range-finite? f-range-finite? boolean? #f])
+                                  one-way-enum?)
+                              (if flat?
+                                  flat-enum?
+                                  (not/c flat-enum?))))]
+                [#:f-range-finite? f-range-finite? boolean? #f]
+                [#:flat? flat? boolean? #t])
          enum?]{
   Constructs an @tech{enumeration} of pairs like the first case of @racket[cons/de].
         
@@ -559,12 +563,13 @@ enumerations.
 
 @defform*[[(cons/de [car-id car-enumeration-expr] 
                     [cdr-id (car-id) cdr-enumeration-expr] 
-                    cons/dc-option)
+                    cons/de-option)
            (cons/de [car-id (cdr-id) car-enumeration-expr]
                     [cdr-id cdr-enumeration-expr]
-                    cons/dc-option)]
+                    cons/de-option)]
           #:grammar ([cons/de-option (code:line)
-                                     (code:line #:dep-expression-finite? expr)])]{
+                                     (code:line #:dep-expression-finite? expr cons/de-option)
+                                     (code:line #:flat? expr cons/de-option)])]{
   Constructs an @tech{enumeration} of pairs where the first component
                 of the pair is drawn from the @racket[car-enumeration-expr]'s
                 value and the second is drawn from the @racket[cdr-enumeration-expr]'s
@@ -574,10 +579,16 @@ enumerations.
   is bound to the value of the car position of the pair, mutatis mutandis in the second case.
   
   If @racket[#:dep-expression-finite?] keyword and expression are present, then the
-  value of the dependent expression is expected to be an infinite enumeration 
+  value of the dependent expression is expected to be an @tech{infinite enumeration}
   if the expression evaluates to @racket[#f] and a finite enumeration otherwise. If
   the keyword is not present, then the dependent expressions are expected to always
   produce infinite enumerations.
+  
+  If @racket[#:flat?] is present and evaluates to a true value, then the
+  value of both sub-expressions are expected to be @tech{flat enumerations}
+  and if it evaluates to @racket[#f], then the enumerations must not be @tech{flat enumerations}.
+  If the keyword is not present, then the dependent expressions are expected to always
+  produce @tech{flat enumerations}.
   
   The dependent expressions are expected to always produce @tech{two way enumerations}
   if the non-dependent expression is a @tech{two way enumeration} and the dependent
@@ -599,8 +610,12 @@ enumerations.
                                        infinite-enum?)
                                    (if (two-way-enum? e)
                                        two-way-enum?
-                                       one-way-enum?)))]
-                     [#:f-range-finite? f-range-finite? boolean? #f])
+                                       one-way-enum?)
+                                   (if flat?
+                                       flat-enum?
+                                       (not/c flat-enum?))))]
+                     [#:f-range-finite? f-range-finite? boolean? #f]
+                     [#:flat? flat? #t])
          enum?]{
   Constructs an @tech{enumeration} of pairs like the second case of @racket[cons/de].
         

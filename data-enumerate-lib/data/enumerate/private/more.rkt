@@ -132,6 +132,7 @@
 
 (define-syntax (cons/de stx)
   (define dep-expression-finite #f)
+  (define flat #f)
   (define (parse-options options)
     (let loop ([options options])
       (syntax-case options ()
@@ -145,8 +146,20 @@
                                  (list #'exp)))
            (set! dep-expression-finite #'exp)
            (loop #'options))]
+        [(#:flat? exp . options)
+         (begin
+           (when flat
+             (raise-syntax-error 'cons/de "expected only one use of #:flat"
+                                 stx
+                                 flat
+                                 (list #'exp)))
+           (set! flat #'exp)
+           (loop #'options))]
         [(x . y)
-         (raise-syntax-error 'cons/de "bad syntax" stx #'x)])))
+         (let ()
+           (when (keyword? (syntax-e #'x))
+             (raise-syntax-error 'cons/de "unknown keyword" stx #'x))
+         (raise-syntax-error 'cons/de "bad syntax" stx #'x))])))
   (define the-srcloc
     #`(srcloc '#,(syntax-source stx)
               #,(syntax-line stx)
@@ -163,7 +176,7 @@
                              #'hd
                              (list #'hd2)))
        (parse-options #'options)
-       #`(cons/de/proc e1 (λ (hd2) e2) #,dep-expression-finite #f 
+       #`(cons/de/proc e1 (λ (hd2) e2) #,dep-expression-finite #,flat #f 
                        #,the-srcloc #,other-party-name))]
     [(_ [hd (tl2) e1] [tl e2] . options)
      (begin
@@ -173,10 +186,10 @@
                              #'tl
                              (list #'tl2)))
        (parse-options #'options)
-       #`(cons/de/proc e2 (λ (tl2) e1) #,dep-expression-finite #t 
+       #`(cons/de/proc e2 (λ (tl2) e1) #,dep-expression-finite #,flat #t 
                        #,the-srcloc #,other-party-name))]))
                        
-(define (cons/de/proc e _f f-range-finite? flip? the-srcloc other-party-name)
+(define (cons/de/proc e _f f-range-finite? flat? flip? the-srcloc other-party-name)
   (define f-range-ctc
     (and/c (if f-range-finite?
                finite-enum?
@@ -191,21 +204,23 @@
               'data/enumerate 
               'cons/de/dependent-expression
               the-srcloc))
-  (define forward (core:dep/e-internal e f f-range-finite?))
+  (define forward (core:dep/e-internal e f f-range-finite? flat?))
   (if flip?
-      (flip-it forward e f)
+      (flip-it forward e f flat?)
       forward))
 
 
-(define (flip-dep/e e f #:f-range-finite? [f-range-finite? #f])
-  (flip-it (core:dep/e-internal e f f-range-finite?) e f))
-(define (flip-it to-flip e f)
+(define (flip-dep/e e f #:f-range-finite? [f-range-finite? #f] #:flat? [flat? #t])
+  (flip-it (core:dep/e-internal e f f-range-finite? flat?) e f flat?))
+(define (flip-it to-flip e f flat?)
   (define (flip-pr ab) (cons (cdr ab) (car ab)))
   (map/e
    flip-pr flip-pr 
    to-flip
    #:contract
-   (cons/dc [hd (tl) (enum-contract (f tl))] [tl (enum-contract e)])))
+   (if flat?
+       (cons/dc [hd (tl) (enum-contract (f tl))] [tl (enum-contract e)] #:flat)
+       (cons/dc [hd (tl) (enum-contract (f tl))] [tl (enum-contract e)]))))
 
 (define (permutations-of-n/e n)
   (cond

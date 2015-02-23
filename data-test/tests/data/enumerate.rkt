@@ -510,6 +510,12 @@
    m/e))
 
 ;; cons/de tests
+
+(check-equal? (flat-enum? (cons/de [hd natural/e] [tl (hd) natural/e]))
+              #t)
+(check-equal? (flat-enum? (dep/e natural/e (λ (_) natural/e)))
+              #t)
+
 (define (up-to n) (below/e (add1 n)))
 (define 3-up
   (cons/de [hd (fin/e 0 1 2)]

@@ -657,11 +657,14 @@ notes for eventual email:
               1))
        2)))
 
-(define (dep/e e f #:f-range-finite? [f-range-finite? #f])
-  (dep/e-internal e f f-range-finite?))
+(define (dep/e e f #:f-range-finite? [f-range-finite? #f] #:flat? [flat? #t])
+  (dep/e-internal e f f-range-finite? flat?))
 
-(define (dep/e-internal e f f-range-finite?)
-  (define the-ctc (cons/dc [hd (enum-contract e)] [tl (hd) (enum-contract (f hd))]))
+(define (dep/e-internal e f f-range-finite? flat?)
+  (define the-ctc
+    (if flat?
+        (cons/dc [hd (enum-contract e)] [tl (hd) (enum-contract (f hd))] #:flat)
+        (cons/dc [hd (enum-contract e)] [tl (hd) (enum-contract (f hd))])))
   (cond
     [(= 0 (enum-size e)) empty/e]
     [f-range-finite?
@@ -697,8 +700,10 @@ notes for eventual email:
             the-ctc)]))
 
 (define dep/e-contract
-  (->i ([e enum?]
-        [f (e f-range-finite?)
+  (->i ([e (flat?) (if (or (unsupplied-arg? flat?) flat?)
+                       flat-enum?
+                       (not/c flat-enum?))]
+        [f (e f-range-finite? flat?)
            (-> (enum-contract e)
                (and/c (if (or (unsupplied-arg? f-range-finite?)
                               (not f-range-finite?))
@@ -706,8 +711,13 @@ notes for eventual email:
                           finite-enum?)
                       (if (two-way-enum? e)
                           two-way-enum?
-                          one-way-enum?)))])
-       (#:f-range-finite? [f-range-finite? boolean?])
+                          one-way-enum?)
+                      (if (or (unsupplied-arg? flat?) flat?)
+                          flat-enum?
+                          (not/c flat-enum?))))])
+       (#:f-range-finite? 
+        [f-range-finite? boolean?]
+        #:flat? [flat? boolean?])
        [res enum?]))
 
 (define (cons/de-dependent-ranges-all-finite e f the-ctc)
