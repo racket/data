@@ -1210,7 +1210,11 @@ notes for eventual email:
   (-enum +inf.0 (box-untuple k) (box-tuple k) 
          (apply list/c (build-list k (λ (_) exact-nonnegative-integer?)))))
 
-;; Tuples of length k with maximum bound
+;; Enumeration of lists of length `len` of nats <= bound, 
+;; containing bound at least once
+;; 
+;; (enum->list (bounded-list/e 2 3))
+;; => '((0 3) (1 3) (2 3) (3 0) (3 1) (3 2) (3 3))
 (define (bounded-list/e len bound)
   (define (loop len)
     (match len
