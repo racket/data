@@ -76,9 +76,11 @@
                              enum?))]
         #:pre/name (enums is-one-way-enum?)
         "the enums must either have at least one one-way-enum?\n or must all either by flat-enum? or have predicates"
-        (or is-one-way-enum?
+        (or (and is-one-way-enum?
+                 (not (unsupplied-arg? is-one-way-enum?)))
             (either-a-one-way-enum-or-all-have-predicates? enums))
-        #:pre/desc (enums is-one-way-enum?) (non-overlapping? enums is-one-way-enum?)
+        #:pre/desc (enums is-one-way-enum?)
+        (non-overlapping? enums is-one-way-enum?)
         [result enum?])]
   [append/e
    (->i ([first (or/c (cons/c enum? (-> any/c boolean?))
@@ -88,7 +90,8 @@
                                    enum?))]
         #:pre/name (first rest is-one-way-enum?)
         "the enums must either have at least one one-way-enum?\n or must all either by flat-enum? or have predicates"
-        (or is-one-way-enum?
+        (or (and is-one-way-enum?
+                 (not (unsupplied-arg? is-one-way-enum?)))
             (either-a-one-way-enum-or-all-have-predicates? (cons first rest)))
         #:pre/desc (first rest is-one-way-enum?) 
         (non-overlapping? (cons first rest) is-one-way-enum?)
@@ -123,7 +126,8 @@
 
 (define (either-a-one-way-enum-or-all-have-predicates? r)
   (cond
-    [(has-one-way-enum? r) #t]
+    [(has-one-way-enum? r) 
+     #t]
     [(for/and ([e/p (in-list r)])
        (or (flat-enum? e/p)
            (pair? e/p)))

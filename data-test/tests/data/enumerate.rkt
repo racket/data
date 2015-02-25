@@ -515,6 +515,25 @@
               #t)
 (check-equal? (flat-enum? (dep/e natural/e (λ (_) natural/e)))
               #t)
+(check-equal? (flat-enum?
+               (cons/de [len (nat+/e 1)]
+                        [lst (len)
+                             (listof-n/e natural/e (len . * . 2))]))
+              #t)
+
+(check-equal? (from-nat (or/e (single/e '())
+                              (cons/de [len (nat+/e 1)]
+                                       [lst (len)
+                                            (listof-n/e natural/e (len . * . 2))]))
+                        0)
+              '())
+
+(check-equal? (from-nat (or/e (single/e '())
+                              (cons/de [len (nat+/e 1)]
+                                       [lst (len)
+                                            (listof-n/e natural/e (len . * . 2))]))
+                        1)
+              '(1 0 0))
 
 (define (up-to n) (below/e (add1 n)))
 (define 3-up

@@ -176,7 +176,7 @@
                              #'hd
                              (list #'hd2)))
        (parse-options #'options)
-       #`(cons/de/proc e1 (λ (hd2) e2) #,dep-expression-finite #,flat #f 
+       #`(cons/de/proc e1 (λ (hd2) e2) #,dep-expression-finite #,(or flat #'#t) #f 
                        #,the-srcloc #,other-party-name))]
     [(_ [hd (tl2) e1] [tl e2] . options)
      (begin
@@ -186,7 +186,7 @@
                              #'tl
                              (list #'tl2)))
        (parse-options #'options)
-       #`(cons/de/proc e2 (λ (tl2) e1) #,dep-expression-finite #,flat #t 
+       #`(cons/de/proc e2 (λ (tl2) e1) #,dep-expression-finite #,(or flat #'#t) #t 
                        #,the-srcloc #,other-party-name))]))
                        
 (define (cons/de/proc e _f f-range-finite? flat? flip? the-srcloc other-party-name)
