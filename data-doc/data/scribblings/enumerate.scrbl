@@ -206,7 +206,7 @@ enumeration also has a contract, a size, and three boolean
 properties associated with it: if it is finite
 or not, if it is a bijection to the natural numbers or
 merely maps from the natural numbers without going back, and
-if the contract is has is a @racket[flat-contract?].
+if the contract it has is a @racket[flat-contract?].
 
 The functions in this section are predicates for the boolean
 properties and selection functions for other properties.
@@ -370,7 +370,20 @@ The empty @tech{enumeration}.
                     evens/e
                     #:contract (and/c exact-nonnegative-integer?
                                       odd?)))
-           (enum->list odds/e 10)]
+           (enum->list odds/e 10)
+           (define ordered-pair/e
+             (map/e (λ (x y) (cons x (+ x y)))
+                    (λ (p)
+                      (define x (car p))
+                      (define y (cdr p))
+                      (values x (- y x)))
+                    natural/e
+                    natural/e
+                    #:contract (and/c (cons/c exact-nonnegative-integer?
+                                              exact-nonnegative-integer?)
+                                      (λ (xy) (<= (car xy) (cdr xy))))))
+           (enum->list ordered-pair/e 10)
+           ]
 }
 
 
@@ -543,7 +556,7 @@ to naturals.
 
 @defproc[(bounded-list/e [k exact-nonnegative-integer?] [n exact-nonnegative-integer?]) enum?]{
 
-An @tech{enumeration} of tuples of naturals up to @racket[n] of length @racket[k].
+An @tech{enumeration} of tuples of naturals with @racket[max] @racket[n] of length @racket[k].
 
 @examples[#:eval the-eval
 (enum->list (bounded-list/e 3 2)
@@ -690,8 +703,8 @@ controls how the resting elements appear.
               (get-points lon2 "blue" '5star))))))
 
 @defproc[(listof/e [e (if simple-recursive?
-                          infinite-enum?
-                          enum?)]
+                          enum?
+                          infinite-enum?)]
                    [#:simple-recursive? simple-recursive? any/c #t])
          enum?]{
 
@@ -730,8 +743,8 @@ argument is @racket[#f].
 }
 
 @defproc[(non-empty-listof/e [e (if simple-recursive?
-                                    infinite-enum?
-                                    enum?)]
+                                    enum?
+                                    infinite-enum?)]
                              [#:simple-recursive? simple-recursive? any/c #t]) 
          enum?]{
 
