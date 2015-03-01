@@ -26,7 +26,7 @@
   [random-index
    (-> enum? exact-nonnegative-integer?)]
   [infinite-sequence/e
-   (-> enum? enum?)]
+   (-> finite-enum? enum?)]
   [permutations/e
    (-> list? enum?)]
   [permutations-of-n/e

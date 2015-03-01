@@ -942,11 +942,11 @@ Returns an @tech{enumeration} of the permutations of @racket[l].
 (enum->list (permutations/e '(Brian Jenny Ted Ki)))
 ]}
 
-@defproc[(infinite-sequence/e [e enum?])
+@defproc[(infinite-sequence/e [e finite-enum?])
          one-way-enum?]{
 
 Returns an @tech{enumeration} of infinite sequences of elements of
-@racket[e].
+@racket[e]. If @racket[e] is an empty enumeration, returns an empty enumeration.
 
 The infinite sequence corresponding to the natural number @racket[_n]
 is based on dividing the bits of @racket[(* (+ 1 _n) pi)] into chunks
@@ -1042,7 +1042,7 @@ Returns a random index into @racket[e]. This works for
 This section describes enumerations of some common Racket
 datatypes.
 
-@defthing[char/e (and/c infinite-enum? two-way-enum? flat-enum?)]{
+@defthing[char/e (and/c finite-enum? two-way-enum? flat-enum?)]{
 
 An @tech{enumeration} of characters.
 

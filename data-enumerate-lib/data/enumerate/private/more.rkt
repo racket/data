@@ -120,15 +120,17 @@
      (loop))))
 
 (define (infinite-sequence/e inner/e)
-  (define seed/e natural/e)
-  (define K (enum-size inner/e))
-  (define (seed->seq N)
-    (define K-seq
-      (10-sequence->K-sequence K (in-generator (BPP-digits (+ 1 N)))))
-    (in-generator
-     (for ([k K-seq])
-       (yield (from-nat inner/e k)))))
-  (pam/e seed->seq seed/e #:contract sequence?))
+  (cond [(= 0 (enum-size inner/e)) empty/e]
+        [else
+         (define seed/e natural/e)
+         (define K (enum-size inner/e))
+         (define (seed->seq N)
+           (define K-seq
+             (10-sequence->K-sequence K (in-generator (BPP-digits (+ 1 N)))))
+           (in-generator
+            (for ([k K-seq])
+              (yield (from-nat inner/e k)))))
+         (pam/e seed->seq seed/e #:contract sequence?)]))
 
 (define-syntax (cons/de stx)
   (define dep-expression-finite #f)
