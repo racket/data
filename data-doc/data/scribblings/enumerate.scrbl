@@ -307,7 +307,7 @@ that an enumeration enumerates.
 This section contains the fundamental operations for building
 enumerations.
 
-@defthing[natural/e enum?]{
+@defthing[natural/e (and/c infinite-enum? two-way-enum? flat-enum?)]{
 
 An @tech{enumeration} of the natural numbers.
    
@@ -316,7 +316,7 @@ An @tech{enumeration} of the natural numbers.
 (to-nat natural/e 5)
 ]}
 
-@defproc[(below/e [max exact-nonnegative-integer?]) enum?]{
+@defproc[(below/e [max exact-nonnegative-integer?]) (and/c finite-enum? two-way-enum? flat-enum?)]{
 
 An @tech{enumeration} of the first @racket[max] naturals.
 
@@ -324,7 +324,7 @@ An @tech{enumeration} of the first @racket[max] naturals.
 (enum->list (below/e 10))
 ]}
 
-@defthing[empty/e enum?]{
+@defthing[empty/e (and/c finite-enum? two-way-enum? flat-enum?)]{
 
 The empty @tech{enumeration}.
 
@@ -554,7 +554,7 @@ to naturals.
             (enum->list dep/e-ordered-pair/e 10)]
 }
 
-@defproc[(bounded-list/e [k exact-nonnegative-integer?] [n exact-nonnegative-integer?]) enum?]{
+@defproc[(bounded-list/e [k exact-nonnegative-integer?] [n exact-nonnegative-integer?]) (and/c finite-enum? two-way-enum? flat-enum?)]{
 
 An @tech{enumeration} of tuples of naturals with @racket[max] @racket[n] of length @racket[k].
 
@@ -755,8 +755,8 @@ Like @racket[listof/e], but without the empty list.
 ]}
 
 @defproc[(listof-n/e [e (if simple-recursive?
-                            infinite-enum?
-                            enum?)]
+                            enum?
+                            infinite-enum?)]
                      [n exact-nonnegative-integer?])
          enum?]{
                 
@@ -848,7 +848,7 @@ Identical to @racket[e] but only includes the values between
 
 @defproc[(fin/e [x (or/c symbol? boolean? char? keyword? null?
                          string? bytes? number?)] ...) 
-         enum?]{
+         (and/c finite-enum? two-way-enum? flat-enum?)]{
 
  Builds an @tech{enumeration} containing each @racket[x], in the order
  given.
@@ -872,7 +872,7 @@ Identical to @racket[e] but only includes the values between
 
 @defproc[(single/e [v any/c]
                    [#:equal? same? equal?])
-         (and/c finite-enum? bijective-enum?)]{
+         (and/c finite-enum? two-way-enum?)]{
   Returns an enumeration of size one containing only @racket[v].
                                  
   It uses @racket[same?] to build the contract in
@@ -888,7 +888,7 @@ Identical to @racket[e] but only includes the values between
 @defproc[(range/e [lo (and/c (or/c -inf.0 exact-integer?)
                              (<=/c hi))]
                   [hi (or/c exact-integer? +inf.0)])
-         enum?]{
+         (and/c two-way-enum? flat-enum?)]{
 
 An @tech{enumeration} of the exact integers between @racket[lo] and @racket[hi].
 
@@ -899,7 +899,7 @@ An @tech{enumeration} of the exact integers between @racket[lo] and @racket[hi].
 (enum->list (range/e -inf.0 +inf.0) 10)
 ]}
 
-@defproc[(nat+/e [lo exact-nonnegative-integer?]) enum?]{
+@defproc[(nat+/e [lo exact-nonnegative-integer?]) (and/c infinite-enum? two-way-enum? flat-enum?)]{
 
 An @tech{enumeration} of natural numbers larger than @racket[lo].
 
@@ -924,7 +924,7 @@ The @racket[ordering] argument is the same as the one to @racket[list/e].
 }
 
 @defproc[(permutations-of-n/e [n exact-nonnegative-integer?])
-         enum?]{
+         (and/c finite-enum? two-way-enum? flat-enum?)]{
 
 Returns an @tech{enumeration} of the permutations of the natural
 numbers smaller than @racket[n].
@@ -1042,7 +1042,7 @@ Returns a random index into @racket[e]. This works for
 This section describes enumerations of some common Racket
 datatypes.
 
-@defthing[char/e two-way-enum?]{
+@defthing[char/e (and/c infinite-enum? two-way-enum? flat-enum?)]{
 
 An @tech{enumeration} of characters.
 
@@ -1051,7 +1051,7 @@ An @tech{enumeration} of characters.
 (to-nat char/e #\λ)
 ]}
 
-@defthing[string/e two-way-enum?]{
+@defthing[string/e (and/c infinite-enum? two-way-enum? flat-enum?)]{
 
 An @tech{enumeration} of strings.
 
@@ -1060,7 +1060,7 @@ An @tech{enumeration} of strings.
 (to-nat string/e "racket")
 ]}
 
-@defthing[bool/e two-way-enum?]{
+@defthing[bool/e (and/c finite-enum? two-way-enum? flat-enum?)]{
 
 An @tech{enumeration} of booleans.
 
@@ -1068,7 +1068,7 @@ An @tech{enumeration} of booleans.
 (enum->list bool/e)
 ]}
 
-@defthing[symbol/e two-way-enum?]{
+@defthing[symbol/e (and/c infinite-enum? two-way-enum? flat-enum?)]{
 
 An @tech{enumeration} of symbols.
 
@@ -1077,7 +1077,7 @@ An @tech{enumeration} of symbols.
 (to-nat symbol/e 'racket/base)
 ]}
 
-@defthing[integer/e two-way-enum?]{
+@defthing[integer/e (and/c infinite-enum? two-way-enum? flat-enum?)]{
 
 An @tech{enumeration} of the integers.
 
@@ -1085,7 +1085,7 @@ An @tech{enumeration} of the integers.
 (enum->list integer/e 10)
 ]}
 
-@defthing[flonum/e two-way-enum?]{
+@defthing[flonum/e (and/c infinite-enum? two-way-enum? flat-enum?)]{
 
 An @tech{enumeration} of @racket[flonum?]s.
 
@@ -1095,7 +1095,7 @@ An @tech{enumeration} of @racket[flonum?]s.
 (to-nat flonum/e -1.0)
 ]}
 
-@defthing[exact-rational/e one-way-enum?]{
+@defthing[exact-rational/e (and/c infinite-enum? one-way-enum? flat-enum?)]{
   An enumeration of rational numbers that
   duplicates entries (roughly, it enumerates
   all pairs of integers and natural numbers
@@ -1105,7 +1105,7 @@ An @tech{enumeration} of @racket[flonum?]s.
                    (enum->list exact-rational/e 13)]
   }
 
-@defthing[two-way-real/e two-way-enum?]{
+@defthing[two-way-real/e (and/c infinite-enum? two-way-enum? flat-enum?)]{
 
 An @tech{enumeration} of reals; it includes
    only @racket[integer/e] and @racket[flonum/e].
@@ -1115,7 +1115,7 @@ An @tech{enumeration} of reals; it includes
 ]}
 
 
-@defthing[real/e one-way-enum?]{
+@defthing[real/e (and/c infinite-enum? one-way-enum? flat-enum?)]{
 
 An @tech{enumeration} of reals; it includes
    @racket[exact-rational/e] and @racket[flonum/e].
@@ -1125,7 +1125,7 @@ An @tech{enumeration} of reals; it includes
 ]}
 
 
-@defthing[two-way-number/e two-way-enum?]{
+@defthing[two-way-number/e (and/c infinite-enum? two-way-enum? flat-enum?)]{
 
 An @tech{enumeration} of numbers; it includes
    @racket[two-way-real/e] and complex numbers
@@ -1135,7 +1135,7 @@ An @tech{enumeration} of numbers; it includes
 (enum->list two-way-number/e 10)
 ]}
 
-@defthing[number/e one-way-enum?]{
+@defthing[number/e (and/c infinite-enum? one-way-enum? flat-enum?)]{
 
 An @tech{enumeration} of numbers; it
    includes @racket[real/e] and complex
