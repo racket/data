@@ -30,20 +30,6 @@ todo:
  - document unsafe properly 
     => export the parameter that disables the fancy contract checks
        from data/enumerate/unsafe
- - set/e from Neil's email with the subject "Simple set/e enumerator"
- - change enum struct to hold a promise of the size (forced only
-   by enum-size) and a predicate "is this nat in range of the size?"
-   that should be used by the contracts. (enum-in-range?)
-      => if that predicate is #f, then the enumeration is infinite
- - set/e from Neil's email with the subject "Simple set/e enumerator"
-
-notes for eventual email:
- - finite vs infinite enumerations
- - invertible or not
- - contracts in enumerations (property: bijection)
- - take/e as an example for how flatness and bijection
-   come together to automate some of the contract specification
-
 
 |#
 
