@@ -27,6 +27,8 @@
    (-> enum? exact-nonnegative-integer?)]
   [infinite-sequence/e
    (-> finite-enum? enum?)]
+  [set/e
+   (-> enum? enum?)]
   [permutations/e
    (-> list? enum?)]
   [permutations-of-n/e

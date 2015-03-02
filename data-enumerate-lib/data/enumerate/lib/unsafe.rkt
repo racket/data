@@ -19,6 +19,7 @@
          flip-dep/e
          random-index
          infinite-sequence/e
+         set/e
          permutations/e
          permutations-of-n/e
          nat+/e

@@ -942,6 +942,15 @@ Returns an @tech{enumeration} of the permutations of @racket[l].
 (enum->list (permutations/e '(Brian Jenny Ted Ki)))
 ]}
 
+@defproc[(set/e [e enum?]) enum?]{
+
+Returns an @tech{enumeration} of finite sets of values from @racket[e].
+
+@examples[#:eval the-eval
+(enum->list (set/e (fin/e "Brian" "Jenny" "Ki")))
+(enum->list (set/e natural/e) 10)
+]}
+
 @defproc[(infinite-sequence/e [e finite-enum?])
          one-way-enum?]{
 

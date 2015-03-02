@@ -763,6 +763,23 @@
                       [i (in-range 10)])
              e))))
 
+(check-equal? (enum->list (set/e empty/e))
+              (list (set)))
+(check-equal? (enum->list (set/e (fin/e 4)))
+              (list (set) (set 4)))
+(check-equal? (list->set (enum->list (set/e (fin/e 'a 'b))))
+              (set (set) (set 'a) (set 'b) (set 'a 'b)))
+(let ()
+  (define nat-set/e (set/e natural/e))
+
+  (for ([i  (in-range 10000)])
+    (check-equal? (to-nat nat-set/e (from-nat nat-set/e i))
+                  i))
+  (for ([i  (in-range 10000)])
+    (define s (list->set (build-list (random 100) (λ (_) (random 100)))))
+    (check-equal? (from-nat nat-set/e (to-nat nat-set/e s))
+                  s)))
+
 (let ()
   (define e (permutations-of-n/e 3))
   (check-equal? (for/list ([x (in-range (enum-size e))])

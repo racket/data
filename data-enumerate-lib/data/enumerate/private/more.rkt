@@ -4,6 +4,7 @@
          racket/generator
          racket/bool
          racket/match
+         racket/set
          (only-in racket/list remove-duplicates partition)
          syntax/location
          math/base
@@ -30,6 +31,7 @@
          flip-dep/e
          random-index
          infinite-sequence/e
+         set/e
          permutations/e
          permutations-of-n/e
          nat+/e
@@ -131,6 +133,65 @@
             (for ([k K-seq])
               (yield (from-nat inner/e k)))))
          (pam/e seed->seq seed/e #:contract sequence?)]))
+
+#|
+Finite set enumeration: use the natural isomorphism between subsets A ⊆ X and X -> {0,1}; i.e. for
+all A ⊆ X, there exists an f : X -> {0,1} (and for all f : X -> {0,1} there exists an A ⊆ X) s.t.
+
+  x ∈ A <-> f(x) = 1
+
+An f : X -> {0,1} is called an "indicator function."
+
+If A is finite, then f(x) = 1 for at most finitely many x ∈ X. If X is enumerable, we can encode
+any such f as a natural number n ∈ [0,2^|X|). Further, every n ∈ [0,2^|X|) encodes an f that is
+isomorphic to a finite A ⊆ X, so the encoding is efficient.
+
+In plain English, we'll
+ * Decode by using the bits of n to determine whether each element of X is present.
+ * Encode by setting each bit of n to 1 iff its corresponding element of X is present.
+|#
+(define (set/e e)
+  (define needed-nats/e 
+    (cond [(infinite-enum? e) natural/e]
+          [else
+           (take/e natural/e (expt 2 (enum-size e)))]))
+  ;; The greatest number with 31 bits is n = 2^31 - 1, for which 2^n takes about 5 seconds
+  ;; to compute on my machine. Further, trying to compute 2^(2^32) bombs out with
+  ;; "Interactions disabled".
+  ;; I have no idea how to make this sensitive to memory limits, nor whether that's even
+  ;; desirable.
+  (define from-nat-fun (λ (i) (indicator->set e i)))
+  (define to-nat-fun   (λ (s) (set->indicator e s)))
+  (define set-contract (set/c (enum-contract e)))
+  (cond [(two-way-enum? e)
+         (map/e 
+          from-nat-fun
+          to-nat-fun          
+          needed-nats/e
+          #:contract set-contract)]
+        [else 
+         (pam/e
+          from-nat-fun
+          needed-nats/e
+          #:contract set-contract)]))
+
+(define (indicator->set e i)
+  ;; Limit n to (size e) to try to make up for the fact that set/e might claim to have size +inf.0
+  ;; when it actually has finite size
+  (define n
+    (min (integer-length i)
+         (if (finite-enum? e) (enum-size e) +inf.0)))
+  (for/fold ([acc  (set)]) ([d  (in-range n)])
+    (if (bitwise-bit-set? i d)
+        (set-add acc (from-nat e d))
+        acc)))
+
+(define (set->indicator e s)
+  ;; Another way to do this is loop over the enumeration and remove elements of s as they're
+  ;; encountered, stopping when s is empty. It's probably a lot slower, though.
+  (for/fold ([i 0]) ([m  (in-set s)])
+    ;; Set bit number (to-nat e m) to 1 in i
+    (bitwise-ior i (arithmetic-shift 1 (to-nat e m)))))
 
 (define-syntax (cons/de stx)
   (define dep-expression-finite #f)
