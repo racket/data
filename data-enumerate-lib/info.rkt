@@ -1,6 +1,7 @@
 #lang info
 (define collection 'multi)
-(define deps '("base" "data-lib" "math-lib"))
+(define deps '(("base" #:version "6.1.1.8")
+               "data-lib" "math-lib"))
 (define build-deps '("rackunit-lib"))
 
 (define pkg-desc "implementation (no documentation) of \"data/enumerate\"")
