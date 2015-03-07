@@ -84,20 +84,21 @@ todo:
       [(#f) display]
       [else (lambda (p port) (print p port mode))]))
   (display "#<" port)
-  (when (finite-enum? enum) (display "finite-" port))
+  (define the-size (enum-size enum))
+  (cond [(infinite-enum? enum) 
+         (display "infinite-" port)]
+        [(zero? the-size) 
+         (display "empty-" port)]
+        [(the-size . < . 100000000) ;; arbitrary cutoff to not print giant sizes
+         (display the-size port)
+         (display "-count-" port)]
+        [else
+         (display "finite-" port)])
   (when (one-way-enum? enum) (display "one-way-" port))
   (display "enum" port)
-  (define the-size (enum-size enum))
-  (when (and (finite-enum? enum)
-             (not (zero? the-size))
-             (the-size . < . 1000000000)) ;; arbitrary cutoff to not print giant sizes
-    (display ", size=" port)
-    (display the-size port))
   (define more-to-go?
     (cond
-      [(zero? the-size) 
-       (display " «∅»" port)
-       #f]
+      [(zero? the-size) #f]
       [else
        (let/ec failed
          (parameterize ([enum-printing (+ 1 (enum-printing))])
