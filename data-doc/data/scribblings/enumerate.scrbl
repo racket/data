@@ -202,7 +202,7 @@ lambda calculus.
 @section{Enumeration Properties}
 
 In addition to the functions that form the bijection, an
-enumeration also has a contract, a size, and three boolean
+enumeration also has a contract, a count, and three boolean
 properties associated with it: if it is finite
 or not, if it is a bijection to the natural numbers or
 merely maps from the natural numbers without going back, and
@@ -245,8 +245,8 @@ printed, then the enumeration is not finite and is not one-way.
   whose contracts are @racket[flat-contract?]s.
 }
 
-@defproc[(enum-size [e finite-enum?]) exact-nonnegative-integer?]{
-  Returns the size of an @tech{enumeration}.
+@defproc[(enum-count [e finite-enum?]) exact-nonnegative-integer?]{
+  Returns the number of elements of an @tech{enumeration}.
 }
 
 @defproc[(enum-contract [e finite-enum?]) exact-nonnegative-integer?]{
@@ -260,7 +260,7 @@ turning natural numbers back and forth to the values
 that an enumeration enumerates.
 
 @defproc[(from-nat [e enum?] [n (if (finite-enum? e)
-                                    (integer-in 0 (enum-size e))
+                                    (integer-in 0 (enum-count e))
                                     exact-nonnegative-integer?)])
          (enum-contract e)]{
   Decodes @racket[n] from @racket[e].
@@ -268,16 +268,16 @@ that an enumeration enumerates.
 
 @defproc[(to-nat [e two-way-enum?] [x (enum-contract e)])
          (if (finite-enum? e)
-             (integer-in 0 (enum-size e))
+             (integer-in 0 (enum-count e))
              exact-nonnegative-integer?)]{
   Encodes @racket[x] from @racket[e].
 }
 
 @defproc[(enum->list [e enum?] 
                      [n (if (finite-enum? e)
-                            (integer-in 0 (enum-size e))
+                            (integer-in 0 (enum-count e))
                             exact-nonnegative-integer?)
-                        (enum-size e)]) 
+                        (enum-count e)]) 
          (listof (enum-contract e))]{
   Returns a list of the first @racket[n] values in @racket[e].
 
@@ -474,25 +474,25 @@ arguments.
                   10)]
 }
 
-@defproc[(thunk/e [eth (-> (and/c (if (= size +inf.0)
+@defproc[(thunk/e [eth (-> (and/c (if (= count +inf.0)
                                       infinite-enum?
                                       (and/c finite-enum?
-                                             (let ([matching-size? (λ (e) (= (enum-size e) size))])
-                                               matching-size?)))
+                                             (let ([matching-count? (λ (e) (= (enum-count e) count))])
+                                               matching-count?)))
                                   (if is-two-way-enum?
                                       two-way-enum?
                                       one-way-enum?)
                                   (if is-flat-enum?
                                       flat-enum?
                                       (not/c flat-enum?))))]
-                  [#:size size (or/c +inf.0 exact-nonnegative-integer?) +inf.0]
+                  [#:count count (or/c +inf.0 exact-nonnegative-integer?) +inf.0]
                   [#:two-way-enum? is-two-way-enum? any/c #t]
                   [#:flat-enum? is-flat-enum? any/c #t])
          enum?]{
 
 A delayed @tech{enumeration} identical to the result of @racket[eth].
           
-The @racket[size], @racket[is-two-way-enum?], and @racket[is-flat-enum?]
+The @racket[count], @racket[is-two-way-enum?], and @racket[is-flat-enum?]
 arguments must be accurate predications of the properties of the result of 
 @racket[eth].
 
@@ -768,7 +768,7 @@ Like @racket[listof/e], but without the empty list.
 @defform[(delay/e enum-expression keyword-options)
          #:grammar ([keyword-options
                      (code:line)
-                     (code:line #:size size-expression keyword-options)
+                     (code:line #:count count-expression keyword-options)
                      (code:line #:two-way-enum? two-way-boolean-expression keyword-options)
                      (code:line #:flat-enum? flat-boolean-expression keyword-options)])]{
  Returns an @tech{enumeration} immediately, without
@@ -779,10 +779,10 @@ Like @racket[listof/e], but without the empty list.
  evaluated and its value cached. The value is then used as
  the enumeration.
            
-  If the @racket[size-expression] is not supplied or if it evaluates to @racket[+inf.0],
+  If the @racket[count-expression] is not supplied or if it evaluates to @racket[+inf.0],
   the resulting enumeration is a @tech{infinite enumeration}. Otherwise the
   expression must evaluate to an @racket[exact-nonnegative-integer?] and the resulting
-  enumeration is a @tech{finite enumeration} of the given size.
+  enumeration is a @tech{finite enumeration} of the given count.
   
   If @racket[two-way-boolean-expression] is supplied and it evaluates to anything
   other than @racket[#f], the resulting
@@ -805,7 +805,7 @@ Like @racket[listof/e], but without the empty list.
 
 @defproc[(take/e [e enum?]
                  [n (if (finite-enum? e)
-                        (integer-in 0 (enum-size e))
+                        (integer-in 0 (enum-count e))
                         exact-nonnegative-integer?)]
                  [#:contract contract
                              (λ (x)
@@ -824,11 +824,11 @@ be both a @tech{two way enumeration} and a @tech{flat enumeration}.
 
 @defproc[(slice/e [e enum?]
                   [lo (and/c (if (finite-enum? e)
-                                 (integer-in 0 (enum-size e))
+                                 (integer-in 0 (enum-count e))
                                  exact-nonnegative-integer?)
                              (<=/c hi))]
                   [hi (if (finite-enum? e)
-                          (integer-in 0 (enum-size e))
+                          (integer-in 0 (enum-count e))
                           exact-nonnegative-integer?)]
                   [#:contract contract
                               (and/c (enum-contract e)
@@ -873,7 +873,7 @@ Identical to @racket[e] but only includes the values between
 @defproc[(single/e [v any/c]
                    [#:equal? same? equal?])
          (and/c finite-enum? two-way-enum?)]{
-  Returns an enumeration of size one containing only @racket[v].
+  Returns an enumeration of count one containing only @racket[v].
                                  
   It uses @racket[same?] to build the contract in
   the enumeration, always passing @racket[v] as the first
@@ -959,7 +959,7 @@ Returns an @tech{enumeration} of infinite sequences of elements of
 
 The infinite sequence corresponding to the natural number @racket[_n]
 is based on dividing the bits of @racket[(* (+ 1 _n) pi)] into chunks
-of bits where the largest value is @racket[(enum-size e)]. Since
+of bits where the largest value is @racket[(enum-count e)]. Since
 @racket[(* (+ 1 _n) pi)] has infinite digits, there are infinitely
 many such chunks. Since @racket[*] is defined on all naturals, there
 are infinitely many such numbers. The generation of the sequence is
@@ -1031,7 +1031,7 @@ is initialized to @racket['()].
          exact-nonnegative-integer?]{
 
 Returns a random index into @racket[e]. This works for 
- finite and infinite enumerations, regardless of the size
+ finite and infinite enumerations, regardless of the count
  of the enumeration. For finite enumerations, it picks
  an index uniformly at random using @racket[random-natural]
  and for infinite enumerations it picks a natural number 

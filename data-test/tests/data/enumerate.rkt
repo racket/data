@@ -20,8 +20,8 @@
 
 (define (do-check-bijection e confidence)
   (define nums (build-list (if (finite-enum? e)
-                               (if (<= (enum-size e) confidence)
-                                   (enum-size e)
+                               (if (<= (enum-count e) confidence)
+                                   (enum-count e)
                                    confidence)
                                confidence)
                            identity))
@@ -93,14 +93,14 @@
  (check-eq? (to-nat integer/e -1) 2)
  (check-bijection? integer/e))                ; -1 -> 2, -3 -> 4
 
-(check-equal? (from-nat string/e (+ (enum-size char/e) 1))
+(check-equal? (from-nat string/e (+ (enum-count char/e) 1))
               (string (from-nat char/e 0) (from-nat char/e 0)))
-(check-equal? (from-nat string/e (enum-size char/e))
+(check-equal? (from-nat string/e (enum-count char/e))
               "")
 (check-equal? (from-nat string/e 0)
               (string (from-nat char/e 0)))
-(check-equal? (from-nat symbol/e (+ (enum-size char/e) 1))
-              (string->symbol (from-nat string/e (+ (enum-size char/e) 1))))
+(check-equal? (from-nat symbol/e (+ (enum-count char/e) 1))
+              (string->symbol (from-nat string/e (+ (enum-count char/e) 1))))
 
 (test-begin
  (define bool-or-num
@@ -143,7 +143,7 @@
      (or/e (cons evens/e even?)
            (cons odds/e odd?))))
 
- (check-equal? (enum-size bool-or-num) 6)
+ (check-equal? (enum-count bool-or-num) 6)
    
  (check-equal? (from-nat bool-or-num 0) #t)
  (check-equal? (from-nat bool-or-num 1) 0)
@@ -245,7 +245,7 @@
    (append/e (cons bool/e boolean?)
              (cons natural/e number?)))
  
- (check-equal? (enum-size bool-or-num) 6)
+ (check-equal? (enum-count bool-or-num) 6)
    
  (check-equal? (from-nat bool-or-num 0) #t)
  (check-equal? (from-nat bool-or-num 1) #f)
@@ -284,12 +284,12 @@
 ;; prod tests
 (test-begin
 
- (check-equal? (enum-size 1*b) 2)
+ (check-equal? (enum-count 1*b) 2)
  (check-equal? (from-nat 1*b 0) (cons 1 #t))
  (check-equal? (from-nat 1*b 1) (cons 1 #f))
  (check-bijection? 1*b)
  (check-bijection? b*1)
- (check-equal? (enum-size bool*bool) 4)
+ (check-equal? (enum-count bool*bool) 4)
  (check-bijection? bool*bool)
 
  (check-equal? (infinite-enum? bool*nats) #t)
@@ -556,7 +556,7 @@
            [tl (hd) (nat+/e hd)]))
 
 (test-begin
- (check-equal? (enum-size 3-up) 6)
+ (check-equal? (enum-count 3-up) 6)
  (check-equal? (from-nat 3-up 0) (cons 0 0))
  (check-equal? (from-nat 3-up 1) (cons 1 0))
  (check-equal? (from-nat 3-up 2) (cons 1 1))
@@ -645,7 +645,7 @@
               #t)
 
 (test-begin
- (check-equal? (enum-size 3-up-2) 6)
+ (check-equal? (enum-count 3-up-2) 6)
  (check-equal? (from-nat 3-up-2 0) (cons 0 0))
  (check-equal? (from-nat 3-up-2 1) (cons 1 0))
  (check-equal? (from-nat 3-up-2 2) (cons 1 1))
@@ -678,7 +678,7 @@
 ;; take/e test
 (define to-2 (up-to 2))
 (test-begin
- (check-equal? (enum-size to-2) 3)
+ (check-equal? (enum-count to-2) 3)
  (check-equal? (from-nat to-2 0) 0)
  (check-equal? (from-nat to-2 1) 1)
  (check-equal? (from-nat to-2 2) 2)
@@ -782,7 +782,7 @@
 
 (let ()
   (define e (permutations-of-n/e 3))
-  (check-equal? (for/list ([x (in-range (enum-size e))])
+  (check-equal? (for/list ([x (in-range (enum-count e))])
                   (from-nat e x))
                 '((0 1 2)
                   (0 2 1)
@@ -793,7 +793,7 @@
 
 (let ()
   (define abcs/e (permutations/e '(a b c)))
-  (check-equal? (for/list ([i (in-range (enum-size abcs/e))])
+  (check-equal? (for/list ([i (in-range (enum-count abcs/e))])
                   (from-nat abcs/e i))
                 '((a b c)
                   (a c b)
@@ -866,7 +866,7 @@
 
 (define (check-contract/proc line enum enum-code)
   (for ([x (in-range (if (finite-enum? enum)
-                         (min (enum-size enum) 100)
+                         (min (enum-count enum) 100)
                          100))])
     (contract-exercise
      (contract (enum-contract enum)

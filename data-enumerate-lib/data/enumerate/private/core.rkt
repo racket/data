@@ -18,7 +18,7 @@
 
 changes:
  - add contracts to enumeration values
- - allow only finite-enum? for enum-size
+ - allow only finite-enum? for enum-count
  - map/e gets a #:contract argument (other ones?)
  - added one-way enumerations (as opposed to bijective)
  - added flat-enum? predicate
@@ -35,7 +35,7 @@ todo:
 
 (provide 
  enum?
- enum-size
+ enum-count
  from-nat
  to-nat
  enum-contract
@@ -84,7 +84,7 @@ todo:
       [(#f) display]
       [else (lambda (p port) (print p port mode))]))
   (display "#<" port)
-  (define the-size (enum-size enum))
+  (define the-size (enum-count enum))
   (cond [(infinite-enum? enum) 
          (display "infinite-" port)]
         [(zero? the-size) 
@@ -151,8 +151,8 @@ todo:
 (define (two-way-enum? x) (and (enum? x) (enum-to x) #t))
 (define (one-way-enum? x) (and (enum? x) (not (enum-to x))))
 (define (flat-enum? e) (and (enum? e) (flat-contract? (enum-contract e))))
-(define (finite-enum? e) (and (enum? e) (not (infinite? (enum-size e)))))
-(define (infinite-enum? e) (and (enum? e) (infinite? (enum-size e))))
+(define (finite-enum? e) (and (enum? e) (not (infinite? (enum-count e)))))
+(define (infinite-enum? e) (and (enum? e) (infinite? (enum-count e))))
 
 (define (from-nat e n) ((enum-from e) n))
 (define (to-nat e a) ((enum-to e) a))
@@ -170,7 +170,7 @@ todo:
            (check-sequence-enum enum)
            (cond
              [(finite-enum? enum)
-              (define size (enum-size enum))
+              (define size (enum-count enum))
               (make-do-sequence
                (λ ()
                  (values 
@@ -203,7 +203,7 @@ todo:
                          (let ([e enum])
                            (values e
                                    (if (finite-enum? enum)
-                                       (enum-size enum)
+                                       (enum-count enum)
                                        +inf.0)))])
                        (check-sequence-enum e)
                        ([index 0])
@@ -214,7 +214,7 @@ todo:
       [_ #f])))
 
 ;; an enum a is a struct of < Nat or +Inf, Nat -> a, a -> Nat >
-(struct enum (size from to ctc)
+(struct enum (count from to ctc)
   #:methods gen:custom-write
   [(define write-proc enum-write-proc)]
   #:property prop:sequence in-enum/proc)
@@ -227,7 +227,7 @@ todo:
      (define (map1/e f inv-f e)
        (define e-from (enum-from e))
        (define e-to (enum-to e))
-       (-enum (enum-size e)
+       (-enum (enum-count e)
               (λ (x) 
                 (f (e-from x)))
               (λ (n)
@@ -245,7 +245,7 @@ todo:
 
 (define (pam/e #:contract ctc f e . es)
   (define (pam1/e f e)
-    (-enum (enum-size e)
+    (-enum (enum-count e)
            (λ (x) (f (from-nat e x)))
            #f
            ctc))
@@ -273,7 +273,7 @@ todo:
                   "expected an explicit #:contract argument" 
                   " or a flat contract on the enumerator argument"))])]))
   (define (except1/e x e)
-    (cond [(= (enum-size e) 0) e]
+    (cond [(= (enum-count e) 0) e]
           [else
            (define xi (to-nat e x))
            (define (from-nat2 n)
@@ -284,17 +284,17 @@ todo:
              (cond [(< yi xi) yi]
                    [(> yi xi) (sub1 yi)]
                    [else (error 'except/e "attempted to encode an excepted value")]))
-           (-enum (max 0 (sub1 (enum-size e))) from-nat2 to-nat2 any/c)]))
+           (-enum (max 0 (sub1 (enum-count e))) from-nat2 to-nat2 any/c)]))
   (define w/wrong-contract
     (foldr except1/e
            e
            excepts))
-  (-enum (enum-size w/wrong-contract)
+  (-enum (enum-count w/wrong-contract)
          (enum-from w/wrong-contract)
          (enum-to w/wrong-contract)
          contract))
 
-(define (enum->list e [n (enum-size e)])
+(define (enum->list e [n (enum-count e)])
   (for/list ([i (in-range n)])
     (from-nat e i)))
 
@@ -311,7 +311,7 @@ todo:
 (define natural/e (-enum +inf.0 values values exact-nonnegative-integer?))
 
 (define (empty/e? e)
-  (= 0 (enum-size e)))
+  (= 0 (enum-count e)))
 
 (define (exact-min . xs)
   (define (exact-min-2 x y)
@@ -349,9 +349,9 @@ todo:
       ['() '()]
       [_
        (define min-size
-         (apply exact-min (map (compose enum-size car) non-emptys)))
+         (apply exact-min (map (compose enum-count car) non-emptys)))
        (define (not-min-size? e)
-         (not (= (enum-size (car e)) min-size)))
+         (not (= (enum-count (car e)) min-size)))
        (define leftover
          (filter not-min-size? non-emptys))
        (define veis
@@ -421,7 +421,7 @@ todo:
           . + . 
           (apply *
                  ((expt cur-bound num-inexhausted) . - . (expt prev-bound num-inexhausted))
-                 (map (compose enum-size car) cur-exhausteds))))
+                 (map (compose enum-count car) cur-exhausteds))))
        (define cur-layer
          (list-layer max-index
                      cur-bound
@@ -510,7 +510,7 @@ todo:
                    [(enum? x) (cons x (enum-contract x))]
                    [else x])))
   (define (non-empty-e-p? e-p)
-    (not (= 0 (enum-size (car e-p)))))
+    (not (= 0 (enum-count (car e-p)))))
   (match (filter non-empty-e-p? e-ps)
     ['() empty/e]
     [`(,e-p) (car e-p)]
@@ -540,7 +540,7 @@ todo:
               (+ ptb
                  cur-e-index
                  ((vector-length ces) . * . (index . - . pib))))))
-     (-enum (apply + (map (compose enum-size car) non-empty-e-ps))
+     (-enum (apply + (map (compose enum-count car) non-empty-e-ps))
             dec
             enc
             (apply or/c (map (λ (x) (enum-contract (car x))) non-empty-e-ps)))]))
@@ -549,8 +549,8 @@ todo:
 (define (append/e e-p #:one-way-enum? [one-way-enum? #f] . e-ps)
   (define/match (disj-append2/e e-p1 e-p2)
     [((cons e1 1?) (cons e2 2?))
-     (define s1 (enum-size e1))
-     (define s2 (enum-size e2))
+     (define s1 (enum-count e1))
+     (define s2 (enum-count e2))
      (when (infinite? s1)
        (error 'disj-append/e "only the last enum argument to disj-append/e may be infinite"))
      (define (from-nat2 n)
@@ -599,8 +599,8 @@ todo:
                           "finite-enum?"
                           1
                           e1 e2))
-  (define s1 (enum-size e1))
-  (define s2 (enum-size e2))
+  (define s1 (enum-count e1))
+  (define s2 (enum-count e2))
   (define the-size (* s1 s2))
   (cond [(zero? the-size) empty/e]
         [else
@@ -658,18 +658,18 @@ todo:
         (cons/dc [hd (enum-contract e)] [tl (hd) (enum-contract (f hd))] #:flat)
         (cons/dc [hd (enum-contract e)] [tl (hd) (enum-contract (f hd))])))
   (cond
-    [(= 0 (enum-size e)) empty/e]
+    [(= 0 (enum-count e)) empty/e]
     [f-range-finite?
      (cons/de-dependent-ranges-all-finite e f the-ctc)]
     [(finite-enum? e)
      (-enum +inf.0
             (λ (n)
-              (define-values (q r) (quotient/remainder n (enum-size e)))
+              (define-values (q r) (quotient/remainder n (enum-count e)))
               (cons (from-nat e r)
                     (from-nat (f (from-nat e r)) q)))
             (and (two-way-enum? e)
                  (λ (ab)
-                   (+ (* (enum-size e) (to-nat (f (car ab)) (cdr ab)))
+                   (+ (* (enum-count e) (to-nat (f (car ab)) (cdr ab)))
                       (to-nat e (car ab)))))
             the-ctc)]
     [else ;; both infinite, same as cons/e
@@ -716,14 +716,14 @@ todo:
   ;; 'sizes' is a memo table that caches the size of the dependent enumerators
   ;; sizes[n] = # of terms with left side index <= n
   ;; sizes : gvector int
-  (define sizes (gvector (enum-size (f (from-nat e 0)))))
+  (define sizes (gvector (enum-count (f (from-nat e 0)))))
   (define (search-size sizes n)
     (when (zero? (gvector-count sizes))
-      (gvector-add! sizes (enum-size (f (from-nat e 0)))))
+      (gvector-add! sizes (enum-count (f (from-nat e 0)))))
     (define (loop cur)
       (let* ([lastSize (gvector-ref sizes (- cur 1))]
              [e2 (f (from-nat e cur))]
-             [s  (+ lastSize (enum-size e2))])
+             [s  (+ lastSize (enum-count e2))])
         (gvector-add! sizes s)
         (if (> s n)
             cur
@@ -735,14 +735,14 @@ todo:
     (let loop ([cur (gvector-count sizes)])
       (let* ([prevSize (gvector-ref sizes (- cur 1))]
              [curE (f (from-nat e cur))]
-             [s (+ prevSize (enum-size curE))])
+             [s (+ prevSize (enum-count curE))])
         (gvector-add! sizes s)
         (if (= cur n)
             s
             (loop (+ cur 1))))))
   
-  (define the-enum-size
-    (if (infinite? (enum-size e))
+  (define the-enum-count
+    (if (infinite? (enum-count e))
         +inf.0
         (foldl
          (λ (curSize acc)
@@ -750,9 +750,9 @@ todo:
              (gvector-add! sizes sum)
              sum))
          (gvector-ref sizes 0)
-         (map (compose enum-size f) (cdr (enum->list e (enum-size e)))))))
+         (map (compose enum-count f) (cdr (enum->list e (enum-count e)))))))
   
-  (-enum the-enum-size
+  (-enum the-enum-count
          (λ (n)
            (let* ([ind (or (find-size sizes n)
                            (search-size sizes n))]
@@ -770,7 +770,7 @@ todo:
                        [b (cdr ab)]
                        [ai (to-nat e a)]
                        [ei (f a)]
-                       [nextSize (enum-size ei)]
+                       [nextSize (enum-count ei)]
                        [sizeUpTo (if (= ai 0)
                                      0
                                      (or (gvector-ref sizes (- ai 1) #f)
@@ -822,11 +822,11 @@ todo:
 
 ;; thunk/e : Nat or +-Inf, ( -> enum a) -> enum a
 (define (thunk/e thunk
-                 #:size [size +inf.0]
+                 #:count [count +inf.0]
                  #:two-way-enum? [two-way? #t]
                  #:flat-enum? [flat-enum? #t])
   (define promise/e (delay (thunk)))
-  (-enum size
+  (-enum count
          (λ (n)
            (give-up-on-bijection-checking promise/e)
            (from-nat (force promise/e) n))
@@ -972,8 +972,8 @@ todo:
                            (cons #f acc))])]))))
 
 (define (inf-fin-cons/e e1 e2)
-  (define s1 (enum-size e1))
-  (define s2 (enum-size e2))
+  (define s1 (enum-count e1))
+  (define s2 (enum-count e2))
   (define fst-finite? (not (infinite? s1)))
   (define fin-size
     (cond [fst-finite? s1]

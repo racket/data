@@ -3,7 +3,7 @@
 (require "private/core.rkt")
 (provide 
  enum?
- enum-size
+ enum-count
  from-nat
  to-nat
  enum-contract

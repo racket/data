@@ -57,7 +57,7 @@
    (->i ([e enum?] 
          [s (e) 
             (if (finite-enum? e)
-                (integer-in 0 (- (enum-size e) 1))
+                (integer-in 0 (- (enum-count e) 1))
                 exact-nonnegative-integer?)])
         (#:contract [c contract?])
         #:pre (c e)
@@ -69,7 +69,7 @@
    (->i ([e enum?] [lo exact-nonnegative-integer?] [hi exact-nonnegative-integer?])
         (#:contract [c contract?])
         #:pre (lo hi) (<= lo hi)
-        #:pre (e hi) (or (infinite-enum? e) (hi . <= . (enum-size e)))
+        #:pre (e hi) (or (infinite-enum? e) (hi . <= . (enum-count e)))
         #:pre (c e)
         (implies (unsupplied-arg? c)
                  (and (two-way-enum? e)

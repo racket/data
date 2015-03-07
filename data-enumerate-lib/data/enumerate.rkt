@@ -20,18 +20,18 @@
         #:pre/name (e n) 
         "n in bounds of enumeration size"
         (or (infinite-enum? e)
-            (< n (enum-size e)))
+            (< n (enum-count e)))
         [res (e) (enum-contract e)])]
   [to-nat
    (->i ([e two-way-enum?] [v (e) (enum-contract e)])
         [result nat?])]
-  [enum-size (-> finite-enum? nat?)]
+  [enum-count (-> finite-enum? nat?)]
   [enum-contract (-> enum? contract?)]
   
   [enum->list
    (->i ([e enum?])
         ([s (e) (if (finite-enum? e)
-                    (integer-in 0 (enum-size e))
+                    (integer-in 0 (enum-count e))
                     exact-nonnegative-integer?)])
         #:pre (e s)
         (implies (unsupplied-arg? s) (finite-enum? e))
@@ -101,7 +101,7 @@
                (-> (and/c (if (or (unsupplied-arg? size) (= size +inf.0))
                               infinite-enum?
                               (and/c finite-enum?
-                                     (let ([matching-size? (λ (e) (= (enum-size e) size))])
+                                     (let ([matching-size? (λ (e) (= (enum-count e) size))])
                                        matching-size?)))
                           (if (or (unsupplied-arg? is-two-way-enum?) is-two-way-enum?)
                               two-way-enum?
@@ -109,7 +109,7 @@
                           (if (or (unsupplied-arg? is-flat-enum?) is-flat-enum?)
                               flat-enum?
                               (not/c flat-enum?))))])
-        (#:size 
+        (#:count
          [size extended-nat/c]
          #:two-way-enum?
          [is-two-way-enum? boolean?]
@@ -157,9 +157,9 @@
            (define starter-enum-index/one-based (+ starter-enum-index/zero-based 1))
            (define starter-enum (list-ref enums starter-enum-index/zero-based))
            (when (or (infinite-enum? starter-enum)
-                     (not (zero? (enum-size starter-enum))))
+                     (not (zero? (enum-count starter-enum))))
              (define index (random (if (finite-enum? starter-enum)
-                                       (min upper-limit-to-explore (enum-size starter-enum))
+                                       (min upper-limit-to-explore (enum-count starter-enum))
                                        upper-limit-to-explore)))
              (define value (from-nat starter-enum index))
              (define true-returning-indicies/one-based
@@ -225,7 +225,7 @@
 (define (appears-to-be-a-bijection? in out es)
   (cond
     [(for/or ([e (in-list es)])
-       (zero? (enum-size e)))
+       (zero? (enum-count e)))
      ;; can't check bijection on empty enumerations
      #t]
     [(for/or ([e (in-list es)])
@@ -241,7 +241,7 @@
              (for/list ([e (in-list es)])
                (random (if (infinite-enum? e)
                            1000
-                           (min 1000 (enum-size e))))))
+                           (min 1000 (enum-count e))))))
            (define elements
              (for/list ([i (in-list indicies)]
                         [e (in-list es)])

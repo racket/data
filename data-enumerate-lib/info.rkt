@@ -7,4 +7,4 @@
 (define pkg-desc "implementation (no documentation) of \"data/enumerate\"")
 
 (define pkg-authors '(maxsnew jay robby))
-(define version "1.1")
+(define version "1.2")
