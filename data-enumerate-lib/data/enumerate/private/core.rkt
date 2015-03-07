@@ -88,6 +88,11 @@ todo:
   (when (one-way-enum? enum) (display "one-way-" port))
   (display "enum" port)
   (define the-size (enum-size enum))
+  (when (and (finite-enum? enum)
+             (not (zero? the-size))
+             (the-size . < . 1000000000)) ;; arbitrary cutoff to not print giant sizes
+    (display ", size=" port)
+    (display the-size port))
   (define more-to-go?
     (cond
       [(zero? the-size) 

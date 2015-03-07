@@ -831,12 +831,13 @@
 (check-equal? (to-str natural/e #t) "#<enum: 0 1 2 3 4 5 6 7 8 9 10...>")
 (check-equal? (to-str (cons/e natural/e natural/e) #t) "#<enum: '(0 . 0) '(0 . 1) '(1 . 0)...>")
 (check-equal? (to-str (cons/e natural/e natural/e) #f) "#<enum: (0 . 0) (0 . 1) (1 . 0)...>")
-(check-equal? (to-str (fin/e 0) #t) "#<finite-enum: 0>")
+(check-equal? (to-str (fin/e 0) #t) "#<finite-enum, size=1: 0>")
 (check-equal? (to-str (pam/e values natural/e #:contract exact-nonnegative-integer?) #t)
               "#<one-way-enum: 0 1 2 3 4 5 6 7 8 9 10...>")
 (check-equal? (to-str (pam/e values (below/e 3) #:contract (integer-in 0 2)) #t)
-              "#<finite-one-way-enum: 0 1 2>")
-
+              "#<finite-one-way-enum, size=3: 0 1 2>")
+(check-equal? (to-str (below/e 1000000000) #t)
+              "#<finite-enum: 0 1 2 3 4 5 6 7 8 9 10...>")
 ;; just check that it doesn't crash when we get deep nesting
 ;; (checks that we end up in the case that just uses the string
 ;; in the implementation of the enumerator printer)
