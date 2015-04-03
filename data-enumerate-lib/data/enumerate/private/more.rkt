@@ -745,7 +745,12 @@ In plain English, we'll
   (map/e list->vector
          vector->list
          (apply list/e #:ordering ordering es)
-         #:contract (apply vector/c (map enum-contract es))))
+         #:contract
+         ;; this use of values defeats a (currently buggy)
+         ;; keyword optimization
+         ((values apply) vector/c
+                         (map enum-contract es)
+                         #:flat? (andmap flat-enum? es))))
 
 (define (single/e v #:equal? [same? equal?])
   (define (single/e-contract a) (same? v a))

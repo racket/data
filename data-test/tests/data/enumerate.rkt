@@ -332,6 +332,8 @@
                 #(0 1) #(1 0) #(1 1)
                 #(0 2) #(1 2) #(2 0) #(2 1) #(2 2)))
 
+(check-true (flat-enum? (vector/e natural/e)))
+
 ;; check that box-tuples/e is the same ordering as list/e in 'square mode
 (check-equal? (for/list ([x (in-range 100)])
                 (from-nat (unsafe:box-tuples/e 3) x))
