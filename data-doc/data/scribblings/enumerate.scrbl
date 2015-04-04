@@ -535,14 +535,15 @@ to naturals.
                        (and/c (if f-range-finite?
                                   finite-enum?
                                   infinite-enum?)
-                              (if (two-way-enum? e)
-                                  two-way-enum?
-                                  one-way-enum?)
+                              (if one-way?
+                                  one-way-enum?
+                                  two-way-enum?)
                               (if flat?
                                   flat-enum?
                                   (not/c flat-enum?))))]
                 [#:f-range-finite? f-range-finite? boolean? #f]
-                [#:flat? flat? boolean? #t])
+                [#:flat? flat? boolean? #t]
+                [#:one-way? one-way? boolean? (one-way-enum? e)])
          enum?]{
   Constructs an @tech{enumeration} of pairs like the first case of @racket[cons/de].
         
@@ -582,7 +583,8 @@ enumerations.
                     cons/de-option)]
           #:grammar ([cons/de-option (code:line)
                                      (code:line #:dep-expression-finite? expr cons/de-option)
-                                     (code:line #:flat? expr cons/de-option)])]{
+                                     (code:line #:flat? expr cons/de-option)
+                                     (code:line #:one-way? expr cons/de-option)])]{
   Constructs an @tech{enumeration} of pairs where the first component
                 of the pair is drawn from the @racket[car-enumeration-expr]'s
                 value and the second is drawn from the @racket[cdr-enumeration-expr]'s
@@ -602,6 +604,9 @@ enumerations.
   and if it evaluates to @racket[#f], then the enumerations must not be @tech{flat enumerations}.
   If the keyword is not present, then the dependent expressions are expected to always
   produce @tech{flat enumerations}.
+
+  If @racket[#:one-way?] is present and evaluates to a true value, then the
+  result enumeration is a @tech{one way enumeration}
   
   The dependent expressions are expected to always produce @tech{two way enumerations}
   if the non-dependent expression is a @tech{two way enumeration} and the dependent
@@ -621,14 +626,15 @@ enumerations.
                             (and/c (if f-range-finite?
                                        finite-enum?
                                        infinite-enum?)
-                                   (if (two-way-enum? e)
-                                       two-way-enum?
-                                       one-way-enum?)
+                                   (if one-way?
+                                       one-way-enum?
+                                       two-way-enum?)
                                    (if flat?
                                        flat-enum?
                                        (not/c flat-enum?))))]
                      [#:f-range-finite? f-range-finite? boolean? #f]
-                     [#:flat? flat? #t])
+                     [#:flat? flat? #t]
+                     [#:one-way? one-way? boolean? (one-way-enum? e)])
          enum?]{
   Constructs an @tech{enumeration} of pairs like the second case of @racket[cons/de].
         

@@ -196,6 +196,7 @@ In plain English, we'll
 (define-syntax (cons/de stx)
   (define dep-expression-finite #f)
   (define flat #f)
+  (define one-way #f)
   (define (parse-options options)
     (let loop ([options options])
       (syntax-case options ()
@@ -218,6 +219,15 @@ In plain English, we'll
                                  (list #'exp)))
            (set! flat #'exp)
            (loop #'options))]
+        [(#:one-way? exp . options)
+         (begin
+           (when one-way
+             (raise-syntax-error 'cons/de "expected only one use of #:one-way"
+                                 stx
+                                 one-way
+                                 (list #'exp)))
+           (set! one-way #'exp)
+           (loop #'options))]
         [(x . y)
          (let ()
            (when (keyword? (syntax-e #'x))
@@ -239,8 +249,8 @@ In plain English, we'll
                              #'hd
                              (list #'hd2)))
        (parse-options #'options)
-       #`(cons/de/proc e1 (λ (hd2) e2) #,dep-expression-finite #,(or flat #'#t) #f 
-                       #,the-srcloc #,other-party-name))]
+       #`(cons/de/proc e1 (λ (hd2) e2) #,dep-expression-finite #,(or flat #'#t)
+                       #,(or one-way #''default) #f #,the-srcloc #,other-party-name))]
     [(_ [hd (tl2) e1] [tl e2] . options)
      (begin
        (unless (free-identifier=? #'tl #'tl2)
@@ -249,10 +259,13 @@ In plain English, we'll
                              #'tl
                              (list #'tl2)))
        (parse-options #'options)
-       #`(cons/de/proc e2 (λ (tl2) e1) #,dep-expression-finite #,(or flat #'#t) #t 
-                       #,the-srcloc #,other-party-name))]))
+       #`(cons/de/proc e2 (λ (tl2) e1) #,dep-expression-finite #,(or flat #'#t)
+                       #,(or one-way #''default) #t #,the-srcloc #,other-party-name))]))
                        
-(define (cons/de/proc e _f f-range-finite? flat? flip? the-srcloc other-party-name)
+(define (cons/de/proc e _f f-range-finite? flat? _one-way? flip? the-srcloc other-party-name)
+  (define one-way? (if (equal? _one-way? 'default)
+                       (one-way-enum? e)
+                       _one-way?))
   (define f-range-ctc
     (and/c (if f-range-finite?
                finite-enum?
@@ -267,14 +280,17 @@ In plain English, we'll
               'data/enumerate 
               'cons/de/dependent-expression
               the-srcloc))
-  (define forward (core:dep/e-internal e f f-range-finite? flat?))
+  (define forward (core:dep/e-internal e f f-range-finite? flat? one-way?))
   (if flip?
       (flip-it forward e f flat?)
       forward))
 
 
-(define (flip-dep/e e f #:f-range-finite? [f-range-finite? #f] #:flat? [flat? #t])
-  (flip-it (core:dep/e-internal e f f-range-finite? flat?) e f flat?))
+(define (flip-dep/e e f
+                    #:f-range-finite? [f-range-finite? #f]
+                    #:flat? [flat? #t]
+                    #:one-way? [one-way? (one-way-enum? e)])
+  (flip-it (core:dep/e-internal e f f-range-finite? flat? one-way?) e f flat?))
 (define (flip-it to-flip e f flat?)
   (define (flip-pr ab) (cons (cdr ab) (car ab)))
   (map/e

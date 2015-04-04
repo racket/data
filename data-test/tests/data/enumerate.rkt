@@ -617,6 +617,36 @@
                 (0 . 2) (1 . 2) (1 . 3) (0 . 3)
                 (1 . 4) (2 . 3) (2 . 4) (2 . 5)
                 (0 . 4)))
+(check-equal? (enum->list (dep/e natural/e
+                                 (λ (hd)
+                                   (pam/e (λ (_) (+ hd 1))
+                                          (below/e 1)
+                                          #:contract
+                                          (λ (x) (equal? x (+ hd 1)))))
+                                 #:f-range-finite? #t
+                                 #:one-way? #t)
+                          3)
+              '((0 . 1) (1 . 2) (2 . 3)))
+(check-equal? (enum->list (flip-dep/e natural/e
+                                      (λ (hd)
+                                        (pam/e (λ (_) (+ hd 1))
+                                               (below/e 1)
+                                               #:contract
+                                               (λ (x) (equal? x (+ hd 1)))))
+                                      #:f-range-finite? #t
+                                      #:one-way? #t)
+                          3)
+              '((1 . 0) (2 . 1) (3 . 2)))
+(check-true (one-way-enum? (dep/e natural/e
+                                  (λ (hd)
+                                    (pam/e (λ (_) (+ hd 1))
+                                           (below/e 1)
+                                           #:contract
+                                           (λ (x) (equal? x (+ hd 1)))))
+                                  #:f-range-finite? #t
+                                  #:one-way? #t)))
+(check-true (one-way-enum? (cons/de [hd natural/e] [tl (hd) natural/e]
+                                    #:one-way? #t)))
 
 (define 3-up-2
   (cons/de

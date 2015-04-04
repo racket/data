@@ -649,10 +649,13 @@ todo:
               1))
        2)))
 
-(define (dep/e e f #:f-range-finite? [f-range-finite? #f] #:flat? [flat? #t])
-  (dep/e-internal e f f-range-finite? flat?))
+(define (dep/e e f
+               #:f-range-finite? [f-range-finite? #f]
+               #:flat? [flat? #t]
+               #:one-way? [one-way? (one-way-enum? e)])
+  (dep/e-internal e f f-range-finite? flat? one-way?))
 
-(define (dep/e-internal e f f-range-finite? flat?)
+(define (dep/e-internal e f f-range-finite? flat? one-way?)
   (define the-ctc
     (if flat?
         (cons/dc [hd (enum-contract e)] [tl (hd) (enum-contract (f hd))] #:flat)
@@ -660,14 +663,14 @@ todo:
   (cond
     [(= 0 (enum-count e)) empty/e]
     [f-range-finite?
-     (cons/de-dependent-ranges-all-finite e f the-ctc)]
+     (cons/de-dependent-ranges-all-finite e f the-ctc one-way?)]
     [(finite-enum? e)
      (-enum +inf.0
             (λ (n)
               (define-values (q r) (quotient/remainder n (enum-count e)))
               (cons (from-nat e r)
                     (from-nat (f (from-nat e r)) q)))
-            (and (two-way-enum? e)
+            (and (not one-way?)
                  (λ (ab)
                    (+ (* (enum-count e) (to-nat (f (car ab)) (cdr ab)))
                       (to-nat e (car ab)))))
@@ -681,7 +684,7 @@ todo:
               (define a (from-nat e (car 2nums)))
               (cons a
                     (from-nat (f a) (cadr 2nums))))
-            (and (two-way-enum? e)
+            (and (not one-way?)
                  (λ (xs) ;; bijection from nxn -> n, inverse of previous
                    ;; (n,m) -> (n+m)(n+m+1)/2 + n
                    (unless (pair? xs)
@@ -695,24 +698,31 @@ todo:
   (->i ([e (flat?) (if (or (unsupplied-arg? flat?) flat?)
                        flat-enum?
                        (not/c flat-enum?))]
-        [f (e f-range-finite? flat?)
+        [f (e f-range-finite? flat? one-way?)
            (-> (enum-contract e)
                (and/c (if (or (unsupplied-arg? f-range-finite?)
                               (not f-range-finite?))
                           infinite-enum?
                           finite-enum?)
-                      (if (two-way-enum? e)
-                          two-way-enum?
-                          one-way-enum?)
+                      (cond
+                        [(unsupplied-arg? one-way?)
+                         (if (one-way-enum? e)
+                             one-way-enum?
+                             two-way-enum?)]
+                        [else
+                         (if one-way?
+                             one-way-enum?
+                             two-way-enum?)])
                       (if (or (unsupplied-arg? flat?) flat?)
                           flat-enum?
                           (not/c flat-enum?))))])
        (#:f-range-finite? 
         [f-range-finite? boolean?]
-        #:flat? [flat? boolean?])
+        #:flat? [flat? boolean?]
+        #:one-way? [one-way? boolean?])
        [res enum?]))
 
-(define (cons/de-dependent-ranges-all-finite e f the-ctc)
+(define (cons/de-dependent-ranges-all-finite e f the-ctc one-way?)
   ;; 'sizes' is a memo table that caches the size of the dependent enumerators
   ;; sizes[n] = # of terms with left side index <= n
   ;; sizes : gvector int
@@ -764,7 +774,7 @@ todo:
                   [e2 (f x)]
                   [y (from-nat e2 m)])
              (cons x y)))
-         (and (two-way-enum? e)
+         (and (not one-way?)
               (λ (ab)
                 (let* ([a (car ab)]
                        [b (cdr ab)]
