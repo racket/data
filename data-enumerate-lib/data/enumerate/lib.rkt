@@ -97,9 +97,7 @@
   [fin/e
    (->i ()
         #:rest
-        [elements 
-         (listof (or/c symbol? boolean? char? keyword? null?
-                       string? bytes? number?))]
+        [elements (listof any/c)]
         #:pre/name (elements) 
         "no duplicate elements"
         (let ()

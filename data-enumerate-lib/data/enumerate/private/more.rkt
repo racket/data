@@ -579,35 +579,49 @@ In plain English, we'll
               #:flat-enum? is-flat-enum?))
   delay/e)
 
+(define two-way-arg?
+  (or/c symbol? boolean? char? keyword? null?
+        string? bytes? number?))
 
 (define (fin/e . args)
   (cond
     [(null? args) empty/e]
     [else
+     (define vec (list->vector args))
      (define (use-=? x) (and (number? x) (not (memv x '(+nan.0 +nan.f)))))
      (define-values (use-= use-equal?) (partition use-=? args))
-     (define rev-map (make-hash))
-     (define num-rev-map (list))
-     (for ([i (in-naturals)]
-           [x (in-list args)])
+     (cond
+       [(andmap two-way-arg? args)
+        (define rev-map (make-hash))
+        (define num-rev-map (list))
+        (for ([i (in-naturals)]
+              [x (in-list args)])
+          (cond
+            [(use-=? x)
+             (set! num-rev-map (cons (cons x i) num-rev-map))]
+            [else
+             (hash-set! rev-map x i)]))
+        (set! num-rev-map (reverse num-rev-map))
+        (map/e (λ (n) (vector-ref vec n))
+               (λ (x)
+                 (cond
+                   [(use-=? x)
+                    (for/first ([pr (in-list num-rev-map)]
+                                #:when (= x (car pr)))
+                      (cdr pr))]
+                   [else (hash-ref rev-map x)]))
+               (below/e (vector-length vec))
+               #:contract (apply or/c args))]
+    [else
+     (define (fin/e-argument? x)
        (cond
-         [(use-=? x)
-          (set! num-rev-map (cons (cons x i) num-rev-map))]
+         [(number? x)
+          (ormap (λ (y) (= x y)) use-=)]
          [else
-          (hash-set! rev-map x i)]))
-     (set! num-rev-map (reverse num-rev-map))
-     (define vec (list->vector args))
-     (map/e (λ (n) (vector-ref vec n))
-            (λ (x) 
-              (cond
-                [(use-=? x)
-                 (for/first ([pr (in-list num-rev-map)]
-                             #:when (= x (car pr)))
-                   (cdr pr))]
-                [else (hash-ref rev-map x)]))
-            (below/e (vector-length vec))
-            #:contract (apply or/c args))]))
-
+          (ormap (λ (y) (equal? x y)) use-equal?)]))
+     (pam/e #:contract fin/e-argument?
+            (λ (n) (vector-ref vec n))
+            (below/e (vector-length vec)))])]))
 
 
 ;; Base Type enumerators

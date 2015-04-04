@@ -852,9 +852,8 @@ Identical to @racket[e] but only includes the values between
 }
 
 
-@defproc[(fin/e [x (or/c symbol? boolean? char? keyword? null?
-                         string? bytes? number?)] ...) 
-         (and/c finite-enum? two-way-enum? flat-enum?)]{
+@defproc[(fin/e [x any/c] ...)
+         (and/c finite-enum? flat-enum?)]{
 
  Builds an @tech{enumeration} containing each @racket[x], in the order
  given.
@@ -862,13 +861,19 @@ Identical to @racket[e] but only includes the values between
  If there are multiple arguments, then they must all be
  distinct; numbers except for @racket[+nan.0] and @racket[+nan.f] are
  compared using @racket[=] and all others are compared using
- @racket[equal?]). 
+ @racket[equal?]).
  
  If some other
  equality function is appropriate, use @racket[map/e]
  with @racket[(below/e n)] as the first argument to explicitly specify
  how to differentiate the elements of the
  enumeration.
+
+ If all of the arguments match the contract
+ @racketblock[(or/c symbol? boolean? char? keyword? null?
+                    string? bytes? number?)]
+ then the result is a @tech{two way enumeration}, otherwise it
+ is a @tech{one way enumeration}.
 
  @examples[#:eval 
            the-eval
