@@ -38,6 +38,13 @@ For example: @racket['((-1 . 2) (4 . 10))] is a well-formed-set as is
 An integer set implements the @racket-tech{stream} and
 @racket-tech{sequence} generic interfaces.
 
+@examples[#:eval the-eval
+          (for/list ([i (make-integer-set '((2 . 3)
+                                            (5 . 6)
+                                            (10 . 15)))])
+            i)]
+          
+
 @defproc[(make-integer-set [wfs well-formed-set?]) integer-set?]{
 
 Creates an integer set from a well-formed set.}
@@ -59,9 +66,21 @@ Returns @racket[#t] if @racket[v] is an integer set, @racket[#f]
 otherwise.}
 
 @defproc[(well-formed-set? [v any/c]) boolean?]{
+ Recognizes @racket[(listof (cons/c exact-integer? exact-integer?))],
+ where the result of @racket[(flatten v)] is sorted by
+ @racket[<=], the elements of the pairs in the list
+ are distinct (and thus strictly increasing), and the
+ second element in a pair is at least one less than the
+ first element of the subsequent pair.
 
-Returns @racket[#t] if @racket[v] is a well-formed set, @racket[#f]
-otherwise.}
+ @examples[#:eval the-eval
+           (well-formed-set? '((-1 . 2) (4 . 10)))
+           (well-formed-set? '((1 . 1) (3 . 3)))
+           (well-formed-set? '((1 . 5) (6 . 7)))
+           (well-formed-set? '((1 . 5) (-3 . -1)))
+           (well-formed-set? '((5 . 1)))
+           (well-formed-set? '((1 . 5) (3 . 6)))]
+}
 
 @defproc*[([(make-range) integer-set?]
            [(make-range [elem exact-integer?]) integer-set?]
