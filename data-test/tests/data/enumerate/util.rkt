@@ -3,17 +3,10 @@
 (provide check-bijection? check-bijection/just-a-few?)
 
 (define (do-check-bijection e confidence)
-  (define nums (build-list (if (finite-enum? e)
-                               (if (<= (enum-count e) confidence)
-                                   (enum-count e)
-                                   confidence)
-                               confidence)
-                           values))
-  (andmap =
-          nums
-          (map (λ (n)
-                 (to-nat e (from-nat e n)))
-               nums)))
+  (for/and ([n (in-range (if (finite-enum? e)
+                             (min (enum-count e) confidence)
+                             confidence))])
+    (= n (to-nat e (from-nat e n)))))
 (define-simple-check (check-bijection? e)
   (do-check-bijection e 1000))
 (define-simple-check (check-bijection/just-a-few? e)
