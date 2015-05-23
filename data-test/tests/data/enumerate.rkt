@@ -1003,10 +1003,24 @@
             (random-index (below/e 5)))
 
 ;; test to be sure that predicates are coerced
-;; to contracts properly by or/c's contract
+;; to contracts properly by or/e's contract ...
 (check-not-exn
  (λ ()
    (or/e
     (map/e (λ (x) 'x) (λ (x) 0) (below/e 1) #:contract 'x)
     (map/e (λ (x) 'y) (λ (x) 0) (below/e 1) #:contract 'y))))
 
+;; ... and by or/e itself
+(check-not-exn
+ (λ ()
+   (define type/e
+     (delay/e
+      (or/e (single/e 'nat)
+            (list/e (single/e '->) type/e type/e))))
+   
+   (to-nat
+    (cons/de
+     [type type/e]
+     [e (type)
+        natural/e])
+    '(nat . 0))))

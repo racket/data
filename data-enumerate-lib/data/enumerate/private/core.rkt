@@ -507,7 +507,7 @@ todo:
 (define (or/e #:one-way-enum? [one-way-enum? #f] . e-or-e/ps)
   (define e-ps (for/list ([x (in-list e-or-e/ps)])
                  (cond
-                   [(enum? x) (cons x (enum-contract x))]
+                   [(enum? x) (cons x (flat-contract-predicate (enum-contract x)))]
                    [else x])))
   (define (non-empty-e-p? e-p)
     (not (= 0 (enum-count (car e-p)))))
