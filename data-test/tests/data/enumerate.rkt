@@ -7,8 +7,11 @@
          data/gvector
          data/enumerate
          data/enumerate/lib
+         "enumerate/util.rkt"
          (prefix-in unsafe: data/enumerate/private/more)
          (prefix-in unsafe: data/enumerate/private/core))
+
+
 
 (require (for-syntax racket/base))
 (define last (current-process-milliseconds))
@@ -17,23 +20,6 @@
   (set! last (current-process-milliseconds)))
 (define-syntax (show-here stx)
   #`(show-here/proc #,(syntax-line stx)))
-
-(define (do-check-bijection e confidence)
-  (define nums (build-list (if (finite-enum? e)
-                               (if (<= (enum-count e) confidence)
-                                   (enum-count e)
-                                   confidence)
-                               confidence)
-                           identity))
-  (andmap =
-          nums
-          (map (λ (n)
-                 (to-nat e (from-nat e n)))
-               nums)))
-(define-simple-check (check-bijection? e)
-  (do-check-bijection e 1000))
-(define-simple-check (check-bijection/just-a-few? e)
-  (do-check-bijection e 100))
 
 ;; fin/e tests
 (let ([e (fin/e 17)])
