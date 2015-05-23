@@ -149,7 +149,7 @@
          (if (pair? i) (car i) i)))
      (define preds
        (for/list ([i (in-list enum/pairs)])
-         (if (pair? i) (cdr i) (enum-contract i))))
+         (if (pair? i) (cdr i) (flat-contract-predicate (enum-contract i)))))
      (let/ec k
        (parameterize ([give-up-escape (λ () (k #t))])
          (for ([x (in-range 10)])

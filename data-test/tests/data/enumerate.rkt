@@ -1015,3 +1015,12 @@
 (check-pred (and/c exact-nonnegative-integer?
                    (<=/c 5))
             (random-index (below/e 5)))
+
+;; test to be sure that predicates are coerced
+;; to contracts properly by or/c's contract
+(check-not-exn
+ (λ ()
+   (or/e
+    (map/e (λ (x) 'x) (λ (x) 0) (below/e 1) #:contract 'x)
+    (map/e (λ (x) 'y) (λ (x) 0) (below/e 1) #:contract 'y))))
+
