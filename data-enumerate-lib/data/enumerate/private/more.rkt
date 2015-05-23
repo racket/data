@@ -780,8 +780,17 @@ In plain English, we'll
                 (map enum-contract es)
                 #:flat? (andmap flat-enum? es))))
 
-(define (single/e v #:equal? [same? equal?])
-  (define (single/e-contract a) (same? v a))
+(define (single/e v #:equal? [_same? #f])
+  (define same? (or _same? equal?))
+  (define single/e-contract
+    (cond
+      [(and (not _same?)
+            (or (symbol? v)
+                (boolean? v)
+                (fixnum? v)))
+       v]
+      [else
+       (λ (a) (same? v a))]))
   (map/e (λ (_) v)
          (λ (_) 0)
          (below/e 1)

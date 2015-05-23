@@ -845,13 +845,16 @@ todo:
                 (give-up-on-bijection-checking promise/e)
                 (to-nat (force promise/e) x)))
          (if flat-enum?
-             (recursive-contract
-              (enum-contract
-               (force promise/e))
-              #:flat)
-             (recursive-contract
-              (enum-contract
-               (force promise/e))))))
+             (let ([thunk/e-ctc
+                    (recursive-contract
+                     (enum-contract
+                      (force promise/e))
+                     #:flat)])
+               thunk/e-ctc)
+             (let ([thunk/e-ctc (recursive-contract
+                                 (enum-contract
+                                  (force promise/e)))])
+               thunk/e-ctc))))
 
 (define (cantor-untuple k)
   ;; Paul Tarau Deriving a Fast Inverse of the Generalized Cantor N-tupling Bijection
