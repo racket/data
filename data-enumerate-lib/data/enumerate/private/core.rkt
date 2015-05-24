@@ -726,7 +726,7 @@ todo:
   ;; 'sizes' is a memo table that caches the size of the dependent enumerators
   ;; sizes[n] = # of terms with left side index <= n
   ;; sizes : gvector int
-  (define sizes (gvector (enum-count (f (from-nat e 0)))))
+  (define sizes (gvector))
   (define (search-size sizes n)
     (when (zero? (gvector-count sizes))
       (gvector-add! sizes (enum-count (f (from-nat e 0)))))
@@ -752,18 +752,23 @@ todo:
             (loop (+ cur 1))))))
   
   (define the-enum-count
-    (if (infinite? (enum-count e))
-        +inf.0
-        (foldl
-         (λ (curSize acc)
-           (let ([sum (+ curSize acc)])
-             (gvector-add! sizes sum)
-             sum))
-         (gvector-ref sizes 0)
-         (map (compose enum-count f) (cdr (enum->list e (enum-count e)))))))
+    (cond
+      [(infinite? (enum-count e))
+       +inf.0]
+      [else
+       (gvector-add! sizes (enum-count (f (from-nat e 0))))
+       (foldl
+        (λ (curSize acc)
+          (let ([sum (+ curSize acc)])
+            (gvector-add! sizes sum)
+            sum))
+        (gvector-ref sizes 0)
+        (map (compose enum-count f) (cdr (enum->list e (enum-count e)))))]))
   
   (-enum the-enum-count
          (λ (n)
+           (when (zero? (gvector-count sizes))
+             (gvector-add! sizes (enum-count (f (from-nat e 0)))))
            (let* ([ind (or (find-size sizes n)
                            (search-size sizes n))]
                   [l (if (= ind 0)
@@ -776,6 +781,8 @@ todo:
              (cons x y)))
          (and (not one-way?)
               (λ (ab)
+                (when (zero? (gvector-count sizes))
+                  (gvector-add! sizes (enum-count (f (from-nat e 0)))))
                 (let* ([a (car ab)]
                        [b (cdr ab)]
                        [ai (to-nat e a)]

@@ -982,3 +982,17 @@
      [e (type)
         natural/e])
     '(nat . 0))))
+
+(let ()
+  (define funny-tree/e
+    (delay/e
+     (or/e
+      (single/e #f)
+      (cons/de
+       [left funny-tree/e]
+       [right (left)
+              (single/e 1)]
+       #:dep-expression-finite? #t))))
+  
+  (check-equal? (from-nat funny-tree/e 3)
+                '(((#f . 1) . 1) . 1)))
