@@ -316,9 +316,15 @@ An @tech{enumeration} of the natural numbers.
 (to-nat natural/e 5)
 ]}
 
-@defproc[(below/e [max exact-nonnegative-integer?]) (and/c finite-enum? two-way-enum? flat-enum?)]{
+@defproc[(below/e [max (or/c exact-nonnegative-integer? +inf.0)])
+         (and/c (if (= max +inf.0)
+                    finite-enum?
+                    infinite-enum?)
+                two-way-enum?
+                flat-enum?)]{
 
-An @tech{enumeration} of the first @racket[max] naturals.
+An @tech{enumeration} of the first @racket[max] naturals or, if
+@racket[max] is @racket[+inf.0], all of the naturals.
 
 @examples[#:eval the-eval
 (enum->list (below/e 10))
@@ -333,13 +339,18 @@ The empty @tech{enumeration}.
 ]}
 
 
-@defproc[(map/e [f (dynamic->* #:mandatory-domain-contracts (map enum-contract e)
-                               #:range-contracts (list c))]
-                [f-inv (dynamic->* #:mandatory-domain-contracts (list c)
-                                   #:range-contracts (map enum-contract e))]
-                [#:contract c contract?]
-                [e enum?] ...+)
-         enum?]{
+@defproc*[([(map/e [f (-> (enum-contract e) c)]
+                   [f-inv (-> c (enum-contract e))]
+                   [#:contract c contract?]
+                   [e enum?])
+            enum?]
+           [(map/e [f (dynamic->* #:mandatory-domain-contracts (map enum-contract e)
+                                  #:range-contracts (list c))]
+                   [f-inv (dynamic->* #:mandatory-domain-contracts (list c)
+                                      #:range-contracts (map enum-contract e))]
+                   [#:contract c contract?]
+                   [e enum?] ...+)
+            enum?])]{
  Builds an @tech{enumeration} of @racket[c] from @racket[e] by
  calling @racket[f] on each element of the enumeration
  and @racket[f-inv] of each value of @racket[c]. 
@@ -446,7 +457,7 @@ If the argument is an enumeration, then it must be a @tech{flat enumeration}
 and the contract is used as its predicate. 
 
 If any of the arguments are @tech{one way enumerations} (or @racket[one-way-enum?] is
-@racket[#f]), then the result is a @tech{one way enumeration} and any predicates
+not @racket[#f]), then the result is a @tech{one way enumeration} and any predicates
 in the arguments are ignored.
 
 @examples[#:eval the-eval

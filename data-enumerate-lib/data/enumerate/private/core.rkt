@@ -299,7 +299,9 @@ todo:
     (from-nat e i)))
 
 (define (below/e n)
-  (-enum n values values (integer-in 0 (- n 1))))
+  (if (= n +inf.0)
+      natural/e
+      (-enum n values values (integer-in 0 (- n 1)))))
 
 (define empty/e
   (-enum 0

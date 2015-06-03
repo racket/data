@@ -38,7 +38,7 @@
         [res (e) (listof (enum-contract e))])]
   
   [natural/e enum?]
-  [below/e (-> exact-nonnegative-integer? enum?)]  
+  [below/e (-> (or/c exact-nonnegative-integer? +inf.0) enum?)]
   [empty/e enum?]
 
 
