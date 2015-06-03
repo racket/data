@@ -75,7 +75,7 @@
         [enums (listof (or/c (cons/c enum? (-> any/c boolean?))
                              enum?))]
         #:pre/name (enums is-one-way-enum?)
-        "the enums must either have at least one one-way-enum?\n or must all either by flat-enum? or have predicates"
+        "the enums must either have at least one one-way-enum?\n or must all either be flat-enum? or have predicates"
         (or (and is-one-way-enum?
                  (not (unsupplied-arg? is-one-way-enum?)))
             (either-a-one-way-enum-or-all-have-predicates? enums))
@@ -89,7 +89,7 @@
         #:rest [rest (listof (or/c (cons/c enum? (-> any/c boolean?))
                                    enum?))]
         #:pre/name (first rest is-one-way-enum?)
-        "the enums must either have at least one one-way-enum?\n or must all either by flat-enum? or have predicates"
+        "the enums must either have at least one one-way-enum?\n or must all either be flat-enum? or have predicates"
         (or (and is-one-way-enum?
                  (not (unsupplied-arg? is-one-way-enum?)))
             (either-a-one-way-enum-or-all-have-predicates? (cons first rest)))
