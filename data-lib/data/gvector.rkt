@@ -1,7 +1,7 @@
 #lang racket/base
 ;; written by ryanc
 (require (for-syntax racket/base
-                     unstable/wrapc
+                     syntax/contract
                      syntax/for-body)
          racket/contract/base
          racket/dict
