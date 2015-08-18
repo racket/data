@@ -36,7 +36,8 @@
   (define updated-defaultp
     (delay (updater (if (procedure? default) (default) default))))
   (let ([s (interval-map-s im)])
-    (check-interval start end 'interval-map-update*!)
+    (check-interval start end 'interval-map-update*!
+                    "im" im "start" start "end" end "updater" updater)
     (split! s start)
     (split! s end)
     ;; Interval ix needs updating iff start <= key(ix) < end
@@ -64,7 +65,8 @@
                                        (force updated-defaultp))))])))))
 
 (define (interval-map-cons*! im start end obj [default null])
-  (check-interval start end 'interval-map-cons*!)
+  (check-interval start end 'interval-map-cons*!
+                  "im" im "start" start "end" end "obj" obj)
   (interval-map-update*! im start end (lambda (old) (cons obj old)) default))
 
 (define ((error-for who))
@@ -72,13 +74,15 @@
 
 ;; (POST x) = (if (start <= x < end) value (PRE x))
 (define (interval-map-set! im start end value)
-  (check-interval start end 'interval-map-set!)
+  (check-interval start end 'interval-map-set!
+                  "im" im "start" start "end" end "value" value)
   (interval-map-remove! im start end)
   (interval-map-update*! im start end (lambda (old) value) #f))
 
 (define (interval-map-remove! im start end)
   (let ([s (interval-map-s im)])
-    (check-interval start end 'interval-map-remove!)
+    (check-interval start end 'interval-map-remove!
+                    "im" im "start" start "end" end)
     (let ([start (norm s start 0)]
           [end (norm s end 1)])
       (when (and start end) ;; ie, s not empty
@@ -87,13 +91,15 @@
         (splay-tree-remove-range! s start end)))))
 
 (define (interval-map-contract! im from to)
-  (check-interval from to 'interval-map-contract!)
+  (check-interval from to 'interval-map-contract!
+                  "im" im "from" from "to" to)
   (interval-map-remove! im from to)
   (let* ([s (interval-map-s im)])
     (splay-tree-contract! s from to)))
 
 (define (interval-map-expand! im from to)
-  (check-interval from to 'interval-map-expand!)
+  (check-interval from to 'interval-map-expand!
+                  "im" im "from" from "to" to)
   (let* ([s (interval-map-s im)])
     (split! s from)
     (splay-tree-expand! s from to)))
@@ -131,9 +137,15 @@
                     ;; x not in ix
                     (void)]))])))
 
-(define (check-interval start end who)
+(define (check-interval start end who . args)
   (unless (< start end)
-    (error who "bad interval: start ~e not less than end ~e" start end)))
+    (apply
+     raise-arguments-error
+     who
+     (if (member "from" args)
+         "start is not strictly less than end"
+         "from is not strictly less than to")
+     args)))
 
 ;; Iteration
 
