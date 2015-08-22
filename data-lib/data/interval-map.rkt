@@ -143,8 +143,8 @@
      raise-arguments-error
      who
      (if (member "from" args)
-         "start is not strictly less than end"
-         "from is not strictly less than to")
+         "from is not strictly less than to"
+         "start is not strictly less than end")
      args)))
 
 ;; Iteration
