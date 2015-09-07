@@ -1541,24 +1541,3 @@ todo:
      (define smallest (expt layer k))
      (define layer/e (bounded-list/e k layer))
      (from-nat layer/e (n . - . smallest))))
-
-(require plot)
-(define (plot-layered e layer-fn num-layers #:3d? [3d? #f] #:file [file #f])
-  (define liner (if 3d? lines3d lines))
-  (define plotter
-    (cond [3d? plot3d]
-          [file (λ (t) (plot-file t file))]
-          [else plot]))
-  (define pts
-    (for/list ([i (in-range (add1 num-layers))])
-      (define color
-        (if (even? i) "chartreuse" "orangered"))
-      (liner #:color color
-              (for/list ([j (in-range (layer-fn i) (layer-fn (add1 i)))])
-                (from-nat e j)))))
-  (plotter pts))
-
-(define (v2/e e1 n1 e2 n2)
-  (pam/e (λ (xy) (list (car xy) (cdr xy)))
-         (binary-biased-cons/e e1 n1 e2 n2)
-         #:contract any/c))
