@@ -1,12 +1,16 @@
 #lang racket/base
 (require rackunit
          racket/function
+         racket/list
+         racket/match
          racket/set
          racket/contract
          racket/generator
          data/gvector
          data/enumerate
          data/enumerate/lib
+         (only-in math/number-theory
+                  integer-root)
          "enumerate/util.rkt"
          (prefix-in unsafe: data/enumerate/private/more)
          (prefix-in unsafe: data/enumerate/private/core))
@@ -1016,3 +1020,29 @@
          [_ (in-enum e)])
      (void))))
 (define (timer list/e) (time-it list/e 5 count))
+(define (monotonic l)
+  (let/ec k
+    (match l
+      ['() #t]
+      [(cons x l)
+       (let loop ([x x] [l l] [i 0])
+         (match l
+           ['() #t]
+           [(cons y l)
+            (when (not (x . <= . y))
+              (k (list x y i)))
+            (loop y l (add1 i))]))])))
+(test-begin
+ (for ([i (in-range 10)])
+   (define e (apply list/e (for/list ([i (in-range 10)]) natural/e)))
+   (check-equal? (monotonic (map (λ (x) (apply max x))
+                                 (enum->list e 1000)))
+                 #t))
+ (for* ([i (in-range 1 10)]
+        [j (in-range 1 10)])
+   (define e (unsafe:binary-biased-cons/e natural/e i natural/e j))
+   (check-equal? (monotonic (map (λ (x) (max (integer-root (car x) i)
+                                             (integer-root (cdr x) j)))
+                                 (enum->list e 1000)))
+                 #t)))
+
