@@ -10,5 +10,6 @@
 (define build-deps '("data-enumerate-lib"
                      "racket-index"
                      "data-lib"
-                     "rackunit-lib"))
+                     "rackunit-lib"
+                     "math-lib"))
 (define update-implies '("data-lib"))
