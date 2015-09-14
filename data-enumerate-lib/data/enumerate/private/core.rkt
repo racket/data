@@ -235,7 +235,7 @@ todo:
   [(define write-proc enum-write-proc)]
   #:property prop:sequence in-enum/proc)
 
-(define (map/e #:contract [ctc any/c] f inv-f e . es)
+(define (map/e #:contract ctc f inv-f e . es)
   (cond
     [(or (one-way-enum? e) (ormap one-way-enum? es))
      (apply pam/e #:contract ctc f e es)]
@@ -1452,7 +1452,7 @@ todo:
              es)))
   (define k (length es))
   (cond [(= k 0) singleton-empty-list/e]
-        [(= k 1) (map/e list car (car es))]
+        [(= k 1) (map/e list car (car es) #:contract (enum-contract (car es)))]
         [else
          (define factors (prime-factorize k))
          (let loop ([factors factors]
