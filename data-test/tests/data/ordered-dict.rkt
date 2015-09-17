@@ -18,7 +18,17 @@
 (define VAL-UB  100000)
 (define (rand) (+ (random (- VAL-UB VAL-LB)) VAL-LB))
 
-(define TEST? #f)
+(define TEST? #t)
+(define LOUD? #f)
+(define IDK? #f)
+
+(define-syntax-rule (time* label body ...)
+  (let ([f (lambda () body ...)]) (if LOUD? (timef label f) (f))))
+
+(define (timef label f)
+  (let-values ([(vs cpu real gc) (time-apply f null)])
+    (printf "  ~a: cpu ~s, real ~s, gc ~s\n" label cpu real gc)
+    (apply values vs)))
 
 (define-syntax-rule (rand-test dicts ordered? idk?
                                (-ref
@@ -37,42 +47,47 @@
       (unless (equal? x y)
         (error 'check-equal? "not equal:\n~e\n~e" x y)))
 
+    (time* "set!"
     (for ([c (in-range KEY-CT)])
       (let* ([k (rand)]
              [v (rand)])
         (hash-set! hash k v)
         (for ([d dicts])
-          (-set! d k v))))
+          (-set! d k v)))))
 
     (for ([d dicts])
       (check-equal? (hash-count hash)
                     (-count d)))
 
     (when #f
+      (time* "seq ref"
       ;; Sequential access
       (for ([i (in-range VAL-LB VAL-UB)])
         (for ([d dicts])
           (let* ([vh (hash-ref hash i 'not-there)]
                  [vd (-ref d i 'not-there)])
-            (check-equal? vh vd)))))
+            (check-equal? vh vd))))))
 
     ;; Random removal
+    (time* "remove"
     (for ([i (in-range REM-CT)])
       (let ([k (rand)])
         (for ([d dicts])
           (hash-remove! hash k)
           (-remove! d k)
-          (check-equal? (hash-count hash) (-count d)))))
+          (check-equal? (hash-count hash) (-count d))))))
 
     ;; Lookup
+    (time* "rnd ref"
     (for ([c (in-range SEARCH-CT)])
       (let ([i (rand)])
         (for ([d dicts])
           (let* ([vh (hash-ref hash i 'not-there)]
                  [vd (-ref d i 'not-there)])
-            (check-equal? vh vd)))))
+            (check-equal? vh vd))))))
 
     (when ordered?
+      (time* "ordered"
       (for ([c (in-range SEARCH-CT)])
         (let* ([k0 (rand)])
           (for ([d dicts])
@@ -94,12 +109,13 @@
               (when l>= (check >= l>= k0))
               (when g< (check < g< k0))
               (when g<= (check <= g<= k0))
-              (when idk?
+              (when (and IDK? idk? (zero? (modulo c 15)))
                 (for ([k (in-dict-keys d)])
                   (when (and l> (and (> k k0) (< k l>))) (error "l>"))
                   (when (and l>= (and (>= k k0) (< k l>=))) (error "l>="))
                   (when (and g< (and (< k k0) (> k g<))) (error "g<"))
-                  (when (and g<= (and (<= k k0) (> k g<=))) (error "g<=")))))))))))
+                  (when (and g<= (and (<= k k0) (> k g<=))) (error "g<="))))))))))
+    ))
 
 ;; Test dict interface
 
@@ -116,19 +132,24 @@
               dict-iterate-greatest/<?
               dict-iterate-greatest/<=?)))
 
+(define-syntax-rule (tc name body ...)
+  (test-case name (printf "Test ~s\n" name) (timef "total" (lambda () body ...))))
+
 (when TEST?
-  (test-case "skip-list, datum-order, dict interface"
-    (dict-test (list (make-skip-list)) #t #t))
-  (test-case "skip-list, < = order, dict interface"
-    (dict-test (list (make-skip-list (order 'my-order any/c = <))) #t #t))
-  (test-case "adjustable-skip-list, dict interface"
-    (dict-test (list (make-adjustable-skip-list)) #t #t))
-  (test-case "splay-tree, datum-order, dict interface"
-    (dict-test (list (make-splay-tree)) #t #t))
-  (test-case "splay-tree, < = order, dict interface"
-    (dict-test (list (make-splay-tree (order 'mine any/c = <))) #t #t))
-  (test-case "adjustable-splay-tree, dict interface"
-    (dict-test (list (make-adjustable-splay-tree)) #t #t)))
+  (when #t (printf "== dict interface\n"))
+  (tc "skip-list, datum-order, dict interface"
+      (dict-test (list (make-skip-list)) #t #t))
+  (tc "skip-list, < = order, dict interface"
+      (dict-test (list (make-skip-list (order 'my-order any/c = <))) #t #t))
+  (tc "adjustable-skip-list, dict interface"
+      (dict-test (list (make-adjustable-skip-list)) #t #t))
+  (tc "splay-tree, datum-order, dict interface"
+      (dict-test (list (make-splay-tree)) #t #t))
+  (tc "splay-tree, < = order, dict interface"
+      (dict-test (list (make-splay-tree (order 'mine any/c = <))) #t #t))
+  (tc "adjustable-splay-tree, dict interface"
+      (dict-test (list (make-adjustable-splay-tree)) #t #t))
+  (when #t (printf "\n")))
 
 (provide dict-test)
 
@@ -148,12 +169,14 @@
               splay-tree-iterate-greatest/<=?)))
 
 (when TEST?
-  (test-case "splay-tree, datum-order, custom interface"
-    (splay-test (list (make-splay-tree)) #t #t))
-  (test-case "splay-tree, < = order, custom interface"
-    (splay-test (list (make-splay-tree (order 'mine any/c = <))) #t #t))
-  (test-case "adjustable-splay-tree, custom interface"
-    (splay-test (list (make-adjustable-splay-tree)) #t #t)))
+  (when #t (printf "== splay-tree interface\n"))
+  (tc "splay-tree, datum-order, custom interface"
+      (splay-test (list (make-splay-tree)) #t #t))
+  (tc "splay-tree, < = order, custom interface"
+      (splay-test (list (make-splay-tree (order 'mine any/c = <))) #t #t))
+  (tc "adjustable-splay-tree, custom interface"
+      (splay-test (list (make-adjustable-splay-tree)) #t #t))
+  (when #t (printf "\n")))
 
 (provide splay-test)
 
@@ -173,19 +196,21 @@
               skip-list-iterate-greatest/<=?)))
 
 (when TEST?
-  (test-case "skip-list, datum-order, custom interface"
-    (skip-test (list (make-skip-list)) #t #t))
-  (test-case "skip-list, < = order, custom interface"
-    (skip-test (list (make-skip-list (order 'mine any/c = <))) #t #t))
-  (test-case "adjustable-skip-list, custom interface"
-    (skip-test (list (make-adjustable-skip-list)) #t #t)))
+  (when #t (printf "== skip-list interface\n"))
+  (tc "skip-list, datum-order, custom interface"
+      (skip-test (list (make-skip-list)) #t #t))
+  (tc "skip-list, < = order, custom interface"
+      (skip-test (list (make-skip-list (order 'mine any/c = <))) #t #t))
+  (tc "adjustable-skip-list, custom interface"
+      (skip-test (list (make-adjustable-skip-list)) #t #t))
+  (when #t (printf "\n")))
 
 (provide skip-test)
 
 ;; Test hash interface
 ;; for speed comparison only
 
-(define (hash-test dicts ordered?)
+(define (hash-test dicts ordered? _idk?)
   (when ordered?
     (error 'hash-tests "ordered not supported"))
   (rand-test dicts #f #f
@@ -213,7 +238,7 @@
                 (time-apply
                  (lambda ()
                    (for ([i (in-range 5)])
-                     (testf (list (mkd)) ordered?)))
+                     (testf (list (mkd)) ordered? ordered?)))
                  null)])
     (printf "~a : ~s\n" name real)))
 
@@ -227,29 +252,29 @@
 (define (performance)
   (when #t
   (display "Using ordered-dict interface, w/ search\n")
-  (p "splay-tree" dict-test mksplay #t)
-  (p "adj splay " dict-test mkasplay #t)
   (p "skip-list " dict-test mkskip #t)
   (p "adj skip  " dict-test mkaskip #t)
-  (p "splay w/ c" dict-test mkcsplay #t)
   (p "skip w/ c " dict-test mkcskip #t)
+  (p "splay-tree" dict-test mksplay #t)
+  (p "adj splay " dict-test mkasplay #t)
+  (p "splay w/ c" dict-test mkcsplay #t)
   (newline)
   (display "Using custom interfaces, w/ search\n")
-  (p "splay-tree" splay-test mksplay #t)
-  (p "adj splay " splay-test mkasplay #t)
   (p "skip-list " skip-test mkskip #t)
   (p "adj skip  " skip-test mkaskip #t)
-  (p "splay w/ c" splay-test mkcsplay #t)
   (p "skip w/ c " skip-test mkcskip #t)
+  (p "splay-tree" splay-test mksplay #t)
+  (p "adj splay " splay-test mkasplay #t)
+  (p "splay w/ c" splay-test mkcsplay #t)
   (newline)
   )
   (display "Using custom interfaces, w/o search\n")
-  (p "splay-tree" splay-test mksplay #f)
-  (p "adj splay " splay-test mkasplay #f)
   (p "skip-list " skip-test mkskip #f)
   (p "adj skip  " skip-test mkaskip #f)
-  (p "splay w/ c" splay-test mkcsplay #f)
   (p "skip w/ c " skip-test mkcskip #f)
+  (p "splay-tree" splay-test mksplay #f)
+  (p "adj splay " splay-test mkasplay #f)
+  (p "splay w/ c" splay-test mkcsplay #f)
   (p "hash      " hash-test make-hash #f)
   (newline))
 
@@ -300,5 +325,6 @@ Conclusions:
 
  - generic interface is somewhat costly
  - even more costly combined with instance contracts
+ - in-dict-keys is slow for splay trees
 
 |#
