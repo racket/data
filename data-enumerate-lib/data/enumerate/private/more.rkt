@@ -785,13 +785,24 @@ In plain English, we'll
   (define single/e-contract
     (cond
       [(and (not _same?)
-            (or (symbol? v)
-                (boolean? v)
-                (fixnum? v)))
-       v]
+            (contractable? v))
+       (to-contract v)]
       [else
        (λ (a) (same? v a))]))
   (map/e (λ (_) v)
          (λ (_) 0)
          (below/e 1)
          #:contract single/e-contract))
+
+(define (contractable? v)
+  (cond
+    [(contract? v) #t]
+    [(pair? v) (and (contractable? (car v))
+                    (contractable? (cdr v)))]
+    [else #f]))
+
+(define (to-contract v)
+  (cond
+    [(pair? v) (cons/c (to-contract (car v))
+                       (to-contract (cdr v)))]
+    [else v]))
