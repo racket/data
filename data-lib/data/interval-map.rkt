@@ -219,11 +219,16 @@
         #:property prop:dict dict-methods)
 
 (define (make-interval-map #:key-contract [key-contract any/c]
-                           #:value-contract [value-contract any/c])
-  (cond [(and (eq? key-contract any/c) (eq? value-contract any/c))
-         (interval-map (make-adjustable-skip-list))]
-        [else
-         (interval-map* (make-adjustable-skip-list) key-contract value-contract)]))
+                           #:value-contract [value-contract any/c]
+                           [contents null])
+  (define im
+    (cond [(and (eq? key-contract any/c) (eq? value-contract any/c))
+           (interval-map (make-adjustable-skip-list))]
+          [else
+           (interval-map* (make-adjustable-skip-list) key-contract value-contract)]))
+  (for ([entry (in-list contents)])
+    (interval-map-set! im (car (car entry)) (cdr (car entry)) (cdr entry)))
+  im)
 
 ;; ============================================================
 
@@ -240,7 +245,8 @@
 (provide/contract
  [make-interval-map
   (->* ()
-       (#:key-contract contract? #:value-contract contract?)
+       ((listof (cons/c (cons/c exact-integer? exact-integer?) any/c))
+        #:key-contract contract? #:value-contract contract?)
        interval-map?)]
  [interval-map?
   (-> any/c boolean?)]

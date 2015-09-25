@@ -41,11 +41,15 @@ end positions of the mapping's intervals.
 
 Operations on interval-maps are not thread-safe.
 
-@defproc[(make-interval-map [#:key-contract key-contract contract? any/c]
+@defproc[(make-interval-map [contents
+                             (listof (cons/c (cons/c exact-integer? exact-integer?) any/c))
+                             null]
+                            [#:key-contract key-contract contract? any/c]
                             [#:value-contract value-contract contract? any/c])
          interval-map?]{
 
-Makes a new empty interval-map.
+Makes a new interval-map initialized with @racket[_contents], which has the form
+@racketblock[(list (cons (cons _start _end) _value) ...)]
 }
 
 @defproc[(interval-map? [v any/c])
