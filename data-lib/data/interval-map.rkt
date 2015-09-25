@@ -15,6 +15,11 @@
 ;; can be the same as the start of the next, since half-open).
 
 (define (interval-map-ref im key [default not-given])
+  (define (not-found)
+    (cond [(eq? default not-given)
+           (error 'interval-map-ref "no mapping found\n  key: ~e" key)]
+          [(procedure? default) (default)]
+          [else default]))
   (let* ([s (interval-map-s im)]
          [istart (skip-list-iterate-greatest/<=? s key)])
     (cond [istart
@@ -22,12 +27,8 @@
                  [istartvalue (skip-list-iterate-value s istart)])
              (if (< (- key istartkey) (car istartvalue))
                  (cdr istartvalue)
-                 (if (procedure? default) (default) default)))]
-          [else
-           (cond [(eq? default not-given)
-                  (error 'interval-map-ref "no mapping found\n  key: ~e" key)]
-                 [(procedure? default) (default)]
-                 [else default])])))
+                 (not-found)))]
+          [else (not-found)])))
 
 ;; (POST x) =
 ;;   (if (start <= x < end)
