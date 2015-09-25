@@ -86,8 +86,8 @@
   (let ([s (interval-map-s im)])
     (check-interval start end 'interval-map-remove!
                     "im" im "start" start "end" end)
-    (let ([start (norm s start 0)]
-          [end (norm s end 1)])
+    (let ([start (norm s start)]
+          [end (norm s end)])
       (when (and start end) ;; ie, s not empty
         (split! s start)
         (split! s end)
@@ -98,7 +98,9 @@
                   "im" im "from" from "to" to)
   (interval-map-remove! im from to)
   (let* ([s (interval-map-s im)])
-    (skip-list-contract! s from to)))
+    (skip-list-contract! s from to)
+    (when #t
+      (coalesce! s from))))
 
 (define (interval-map-expand! im from to)
   (check-interval from to 'interval-map-expand!
@@ -107,7 +109,7 @@
     (split! s from)
     (skip-list-expand! s from to)))
 
-(define (norm s pos adjust)
+(define (norm s pos)
   (cond [(= pos -inf.0)
          (let ([iter (skip-list-iterate-least s)])
            (and iter (skip-list-iterate-key s iter)))]
@@ -116,6 +118,21 @@
            ;; add 1 to *include* max (recall, half-open intervals)
            (and iter (+ 1 (skip-list-iterate-key s iter))))]
         [else pos]))
+
+(define (coalesce! s x)
+  ;; Coalesce [a, x) -> v; [x, c) -> v into [a, c) -> v
+  (define ia (skip-list-iterate-greatest/<? s x))
+  (define ib (and ia (skip-list-iterate-next s ia)))
+  (when (and ia ib)
+    (define a (skip-list-iterate-key s ia))
+    (define b (skip-list-iterate-key s ib))
+    (define va (skip-list-iterate-value s ia))
+    (define vb (skip-list-iterate-value s ib))
+    (when (and (= x (+ a (car va)))
+               (= x b)
+               (eq? (cdr va) (cdr vb)))
+      (skip-list-remove! s x)
+      (skip-list-set! s a (cons (+ (car va) (car vb)) (cdr va))))))
 
 ;; split! 
 ;; Ensures that if an interval contains x, it starts at x
