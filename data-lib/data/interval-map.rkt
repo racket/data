@@ -3,6 +3,7 @@
 (require racket/contract/base
          racket/promise
          racket/dict
+         racket/struct
          data/skip-list)
 
 (define not-given (gensym 'not-given))
@@ -213,7 +214,11 @@
 ;; follow the dict interface!
 
 (struct interval-map (s)
-        #:property prop:dict dict-methods)
+        #:property prop:dict dict-methods
+        #:property prop:custom-write
+        (make-constructor-style-printer
+         (lambda (im) 'make-interval-map)
+         (lambda (im) (list (dict-map im cons)))))
 
 (struct interval-map* interval-map (key-c value-c)
         #:property prop:dict dict-methods)
