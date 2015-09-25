@@ -123,7 +123,7 @@ If @racket[start] is not less than @racket[end], an exception is raised.
          void?]{
 
 Expands @racket[interval-map]'s domain by introducing a gap
-[@racket[start], @racket[end]) and increasing intervals initially after
+[@racket[start], @racket[end]) and increasing intervals starting at or after
 @racket[start] by @racket[(- end start)].
 
 If @racket[start] is not less than @racket[end], an exception is raised.
