@@ -280,8 +280,18 @@ todo:
        (define orig-ctc (enum-contract e))
        (cond
          [(flat-contract? orig-ctc)
-          (define (an-excepted-value? x) (member x excepts))
-          (and/c (not/c an-excepted-value?)
+          (define an-excepted-value/c
+            (cond
+              [(and (<= (length excepts) 10)
+                    (andmap contract? excepts))
+               (apply or/c excepts)]
+              [else
+               (define ht (make-hash))
+               (for ([e (in-list excepts)])
+                 (hash-set! ht e #t))
+               (define (an-excepted-value? x) (hash-ref ht #f))
+               an-excepted-value?]))
+          (and/c (not/c an-excepted-value/c)
                  orig-ctc)]
          [else
           (error 'expect/e
