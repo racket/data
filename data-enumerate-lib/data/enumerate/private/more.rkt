@@ -752,8 +752,11 @@ In plain English, we'll
   (and (number? x)
        (equal? 0 (real-part x))))
 
+(define (not-equal-to-0? x) (not (equal? x 0)))
 (define two-way-number/e
-  (or/e (except/e two-way-real/e 0)
+  (or/e (except/e two-way-real/e 0
+                  #:contract
+                  (and/c not-equal-to-0? (enum-contract two-way-real/e)))
         (map/e (λ (x) (make-rectangular 0 x)) 
                imag-part
                two-way-real/e 
