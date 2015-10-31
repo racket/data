@@ -782,18 +782,18 @@ Like @racket[listof/e], but without the empty list.
             (enum->list (listof-n/e natural/e 3) 10)]
 }
 
-@defform[(delay/e enum-expression keyword-options)
+@defform[(delay/e enum-expression ... keyword-options)
          #:grammar ([keyword-options
                      (code:line)
                      (code:line #:count count-expression keyword-options)
                      (code:line #:two-way-enum? two-way-boolean-expression keyword-options)
                      (code:line #:flat-enum? flat-boolean-expression keyword-options)])]{
  Returns an @tech{enumeration} immediately, without
- evaluating @racket[enum-expression]. When the result
+ evaluating the @racket[enum-expression]s. When the result
  enumeration is inspected (directly or indirectly) via 
  @racket[from-nat], @racket[to-nat], or 
- @racket[enum-contract], the @racket[enum-expression] is
- evaluated and its value cached. The value is then used as
+ @racket[enum-contract], the @racket[enum-expression]s are
+ evaluated and the value of the last one is cached. The value is then used as
  the enumeration.
            
   If the @racket[count-expression] is not supplied or if it evaluates to @racket[+inf.0],

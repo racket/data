@@ -530,12 +530,42 @@ In plain English, we'll
 
 (define-syntax (delay/e stx)
   (syntax-case stx ()
-    [(_ expr . kwd-args)
+    [(_ expr kwd-args-and-exprs ...)
      (let ()
        (when (keyword? (syntax-e #'expr))
          (raise-syntax-error 'delay/e 
-                             "expected an expression argument first, not a keyword"
+                             "expected at least one expression argument first, not a keyword"
                              stx #'expr))
+       (define-values (exprs kwds-and-args)
+         (let loop ([more (syntax->list #'(kwd-args-and-exprs ...))]
+                    [exprs '()]
+                    [kwds-and-args '()]
+                    [kwd-mode? #f])
+           (cond
+             [(null? more) (values (reverse exprs) (reverse kwds-and-args))]
+             [else
+              (define fst (car more))
+              (cond
+                [(or kwd-mode? (keyword? (syntax-e fst)))
+                 (unless (and (keyword? (syntax-e fst))
+                              (member (syntax-e fst) '(#:count #:two-way-enum? #:flat-enum?)))
+                   (raise-syntax-error
+                    'delay/e
+                    "expected one of the keywords #:count, #:two-way-enum?, or #:flat-enum?"
+                    stx
+                    fst))
+                 (when (null? (cdr more))
+                   (raise-syntax-error
+                    'delay/e
+                    (format "exected an argument to follow keyword ~a"
+                            (syntax-e fst))
+                    stx))
+                 (loop (cddr more)
+                       exprs
+                       (list* (cadr more) (car more) kwds-and-args)
+                       #t)]
+                [else
+                 (loop (cdr more) (cons fst exprs) kwds-and-args #f)])])))
        (define other-party-name (syntax-local-lift-expression #'(quote-module-name)))
        (define the-srcloc
          #`(srcloc '#,(syntax-source stx)
@@ -543,7 +573,7 @@ In plain English, we'll
                    #,(syntax-column stx)
                    #,(syntax-position stx)
                    #,(syntax-span stx)))
-       #`((delay/e/proc #,other-party-name #,the-srcloc (λ () expr)) . kwd-args))]))
+       #`((delay/e/proc #,other-party-name #,the-srcloc (λ () expr #,@exprs)) #,@kwds-and-args))]))
 
 (define (delay/e/proc other-party-name the-srcloc thunk)
   ;; do this curried thing to get better error reporting for keyword arity errors
