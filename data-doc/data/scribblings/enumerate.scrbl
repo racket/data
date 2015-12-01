@@ -116,7 +116,7 @@ values.
 Some of the combinators in the library are guaranteed to build
 enumeration functions that are bijections. But since @racket[map/e]
 accepts arbitrary functions and @racket[or/e] accepts enumerations with
-arbitrary contracts, they may projection enumerations that are not be bijections.
+arbitrary contracts, they may project enumerations that are not be bijections.
 To help avoid errors, the contracts on @racket[map/e] and @racket[or/e] does some
 random checking to see if the result would be a bijection. 
 Here's an example that, with high probability, signals a contract violation.
