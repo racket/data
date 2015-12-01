@@ -111,7 +111,7 @@ values.
                     #:contract (cons/c exact-nonnegative-integer?
                                        exact-nonnegative-integer?))))
           (for/list ([i (in-range 10)])
-            (from-nat ordered-pair/e i))]
+            (from-nat other-ordered-pair/e i))]
 
 Some of the combinators in the library are guaranteed to build
 enumeration functions that are bijections. But since @racket[map/e]
