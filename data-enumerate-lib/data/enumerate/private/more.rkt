@@ -420,14 +420,14 @@ In plain English, we'll
       make-contract])
    #:name `(reverse/c ,(contract-name ctc))
    #:first-order list?
-   #:projection
-   (let ([proj (contract-projection ctc)])
+   #:late-neg-projection
+   (let ([proj (contract-late-neg-projection ctc)])
      (λ (b)
        (define proj+b (proj b))
-       (λ (v)
+       (λ (v neg-party)
          (if (list? v)
-             (reverse (proj+b (reverse v)))
-             (proj+b v)))))
+             (reverse (proj+b (reverse v) neg-party))
+             (proj+b v neg-party)))))
    #:stronger (λ (this that) #f)
    #:list-contract? #t))
 
