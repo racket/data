@@ -1,4 +1,4 @@
 #lang info
 
 (define scribblings
-  '(("scribblings/data.scrbl" (multi-page) (library))))
+  '(("scribblings/data.scrbl" (multi-page) ("Data Structures"))))
