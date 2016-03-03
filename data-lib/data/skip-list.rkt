@@ -308,6 +308,34 @@ reference
 
 ;; ============================================================
 
+#|
+(module+ no-contracts
+  (provide make-skip-list
+           make-adjustable-skip-list
+           skip-list?
+           adjustable-skip-list?
+           skip-list-ref
+           skip-list-set!
+           skip-list-remove!
+           skip-list-count
+           skip-list-remove-range!
+           skip-list-contract!
+           skip-list-expand!
+           skip-list-iterate-first
+           skip-list-iterate-next
+           skip-list-iterate-key
+           skip-list-iterate-value
+           skip-list-iterate-greatest/<=?
+           skip-list-iterate-greatest/<?
+           skip-list-iterate-least/>=?
+           skip-list-iterate-least/>?
+           skip-list-iterate-least
+           skip-list-iterate-greatest
+           skip-list-iter?
+           skip-list-iter-valid?
+           skip-list->list))
+|#
+
 (provide/contract
  [make-skip-list
   (->* ()

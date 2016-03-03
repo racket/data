@@ -3,6 +3,7 @@
          racket/contract
          racket/dict
          data/skip-list
+         ;; (prefix-in nc: (submod data/skip-list no-contracts))
          data/splay-tree
          data/order)
 
@@ -207,6 +208,31 @@
 
 (provide skip-test)
 
+#|
+(define (nc:skip-test dicts ordered? [idk? #f])
+  (rand-test dicts ordered? idk?
+             (nc:skip-list-ref
+              nc:skip-list-set!
+              nc:skip-list-remove!
+              nc:skip-list-count
+              dict-has-key?
+              nc:skip-list-iterate-key
+              nc:skip-list-iterate-least/>?
+              nc:skip-list-iterate-least/>=?
+              nc:skip-list-iterate-greatest/<?
+              nc:skip-list-iterate-greatest/<=?)))
+
+(when TEST?
+  (when #t (printf "== skip-list interface w/o contracts\n"))
+  (tc "skip-list, datum-order, custom interface"
+      (nc:skip-test (list (nc:make-skip-list)) #t #t))
+  (tc "skip-list, < = order, custom interface"
+      (nc:skip-test (list (nc:make-skip-list (order 'mine any/c = <))) #t #t))
+  (tc "adjustable-skip-list, custom interface"
+      (nc:skip-test (list (nc:make-adjustable-skip-list)) #t #t))
+  (when #t (printf "\n")))
+|#
+
 ;; Test hash interface
 ;; for speed comparison only
 
@@ -266,6 +292,8 @@
   (p "splay-tree" splay-test mksplay #t)
   (p "adj splay " splay-test mkasplay #t)
   (p "splay w/ c" splay-test mkcsplay #t)
+  ;; (p "nc skip   " nc:skip-test mkskip #t)
+  ;; (p "nc adjskip" nc:skip-test mkaskip #t)
   (newline)
   )
   (display "Using custom interfaces, w/o search\n")
@@ -275,6 +303,8 @@
   (p "splay-tree" splay-test mksplay #f)
   (p "adj splay " splay-test mkasplay #f)
   (p "splay w/ c" splay-test mkcsplay #f)
+  ;; (p "nc skip   " nc:skip-test mkskip #f)
+  ;; (p "nc adjskip" nc:skip-test mkaskip #f)
   (p "hash      " hash-test make-hash #f)
   (newline))
 
