@@ -803,8 +803,8 @@ Like @racket[listof/e], but without the empty list.
   
   If @racket[two-way-boolean-expression] is supplied and it evaluates to anything
   other than @racket[#f], the resulting
-  enumeration must be a @tech{one way enumeration}; otherwise it must be a
-  @tech{two way enumeration}.
+  enumeration must be a @tech{two way enumeration}; otherwise it must be a
+  @tech{one way enumeration}.
   
   If @racket[flat-boolean-expression] is supplied and it evaluates to anything 
   other than @racket[#f], the resulting
