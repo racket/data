@@ -1012,6 +1012,14 @@
   (check-equal? (from-nat funny-tree/e 3)
                 '(((#f . 1) . 1) . 1)))
 
+(check-equal?
+ (from-nat
+  (cons/de [x integer/e]
+           [y (x) (pam/e values integer/e #:contract integer?)]
+           #:one-way? #t)
+  0)
+ (cons 0 0))
+
 (define count 1000000)
 (define (time-it list/e n count)
   (define e (apply list/e (for/list ([i (in-range n)]) natural/e)))
@@ -1045,4 +1053,3 @@
                                              (integer-root (cdr x) j)))
                                  (enum->list e 1000)))
                  #t)))
-

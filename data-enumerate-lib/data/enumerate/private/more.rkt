@@ -269,10 +269,18 @@ In plain English, we'll
   (define f-range-ctc
     (and/c (if f-range-finite?
                finite-enum?
-               infinite-enum?)
-           (if (two-way-enum? e)
-               two-way-enum?
-               one-way-enum?)))
+               (suggest/c infinite-enum?
+                          "suggestion"
+                          "maybe supply `#:dep-expression-finite? #t' to cons/de?"))
+           (if one-way?
+               one-way-enum?
+               (if (two-way-enum? e)
+                   (suggest/c two-way-enum?
+                              "suggestion"
+                              "maybe supply `#:one-way #t' to cons/de?")
+                   (suggest/c one-way-enum?
+                              "suggestion"
+                              "maybe supply `#:one-way #f' to cons/de?")))))
   (define (f v)
     (contract f-range-ctc
               (_f v) 
@@ -583,15 +591,21 @@ In plain English, we'll
     
     (define ctc
       (and/c (if (= count +inf.0)
-                 infinite-enum?
+                 (suggest/c infinite-enum?
+                            "suggestion"
+                            "maybe supply `#:count' to delay/e?")
                  (and/c finite-enum?
                         (let ([matching-count? (λ (e) (= (enum-count e) count))])
                           matching-count?)))
              (if is-two-way-enum?
-                 two-way-enum?
+                 (suggest/c two-way-enum?
+                            "suggestion"
+                            "maybe supply `#:two-way-enum? #f' to delay/e?")
                  one-way-enum?)
              (if is-flat-enum?
-                 flat-enum?
+                 (suggest/c flat-enum?
+                            "suggestion"
+                            "maybe supply `#:flat-enum? #f' to delay/e?")
                  (not/c flat-enum?))))
     (unless (or (exact-nonnegative-integer? count)
                 (and (number? count) (= count +inf.0)))
