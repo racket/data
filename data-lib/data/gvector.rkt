@@ -5,7 +5,8 @@
                      syntax/for-body)
          racket/contract/base
          racket/dict
-         racket/vector)
+         racket/vector
+         racket/struct)
 
 (define DEFAULT-CAPACITY 10)
 
@@ -258,6 +259,11 @@
          (+ h (hc (vector-ref v i))))))
    (define hash-proc  hash-code)
    (define hash2-proc hash-code)]
+  #:methods gen:custom-write
+  [(define write-proc
+     (make-constructor-style-printer
+      (lambda (obj) 'gvector)
+      (lambda (obj) (gvector->list obj))))]
   #:property prop:sequence in-gvector)
 
 (provide/contract
