@@ -57,6 +57,26 @@
              (set-gvector-vec! gv nv)
              (set-gvector-n! gv (+ n item-count)))])))
 
+;; SLOW!
+(define (gvector-insert! gv index item)
+  (define n (gvector-n gv))
+  (define v (gvector-vec gv))
+  (check-index 'gvector-insert! index n #f)
+  (cond [(<= (add1 n) (vector-length v))
+         (vector-copy! v 0 v 0 index)
+         (vector-copy! v (add1 index) v index n)
+         (vector-set! v index item)
+         (set-gvector-n! gv (+ n 1))]
+        [else
+         (define nn (let loop ([nn (max DEFAULT-CAPACITY (vector-length v))])
+                      (if (<= (add1 n) nn) nn (loop (* 2 nn)))))
+         (define nv (make-vector nn #f))
+         (vector-copy! nv 0 v 0 index)
+         (vector-copy! nv (add1 index) v index n)
+         (vector-set! nv index item)
+         (set-gvector-vec! gv nv)
+         (set-gvector-n! gv (+ n 1))]))
+
 ;; Shrink when vector length is > SHRINK-ON-FACTOR * #elements
 (define SHRINK-ON-FACTOR 3)
 ;; ... unless it would shrink to less than SHRINK-MIN
@@ -118,6 +138,18 @@
 
 (define (gvector->list gv)
   (vector->list (gvector->vector gv)))
+
+;; constructs a gvector
+(define (vector->gvector v)
+  (define lv (vector-length v))
+  (define gv (make-gvector #:capacity lv))
+  (define nv (gvector-vec gv))
+  (vector-copy! nv 0 v)
+  (set-gvector-n! gv lv)
+  gv)
+
+(define (list->gvector v)
+  (vector->gvector (list->vector v)))
 
 ;; Iteration methods
 
@@ -241,6 +273,8 @@
   (-> gvector? exact-nonnegative-integer? any/c any)]
  [gvector-add!
   (->* (gvector?) () #:rest any/c any)]
+ [gvector-insert!
+  (-> gvector? exact-nonnegative-integer? any/c any)]
  [gvector-remove!
   (-> gvector? exact-nonnegative-integer? any)]
  [gvector-remove-last!
@@ -250,7 +284,11 @@
  [gvector->vector
   (-> gvector? vector?)]
  [gvector->list
-  (-> gvector? list?)])
+  (-> gvector? list?)]
+ [vector->gvector
+  (-> vector? gvector?)]
+ [list->gvector
+  (-> list? gvector?)])
 
 (provide (rename-out [in-gvector* in-gvector])
          for/gvector
