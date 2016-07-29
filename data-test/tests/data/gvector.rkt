@@ -7,6 +7,14 @@
              (gvector->vector (gvector 1 2 3))
              '#(1 2 3))
 
+(test-equal? "vector->gvector"
+             (gvector->vector (vector->gvector #(1 2 3)))
+             #(1 2 3))
+
+(test-equal? "list->gvector"
+             (gvector->vector (vector->gvector #(1 2 3)))
+             #(1 2 3))
+
 (test-equal? "gvector-add! (one)"
              (gvector->vector
               (let ([gv (make-gvector)])
@@ -28,6 +36,21 @@
                (apply gvector-add! g (build-list 11 values))
                (gvector->vector g))
              (for/vector ([i 11]) i))
+
+(test-equal? "gvector-insert! (one)"
+             (let ()
+               (define g (gvector 1 2 3 4 5 6 7 8 9 10))
+               (gvector-insert! g 5 10)
+               (gvector->vector g))
+             #(1 2 3 4 5 10 6 7 8 9 10))
+
+(test-equal? "gvector-insert (lots)"
+             (let ()
+               (define g (gvector 1 2 3 4))
+               (for ([i (in-range 11)])
+                 (gvector-insert! g 2 i))
+               (gvector->vector g))
+             #(1 2 0 1 2 3 4 5 6 7 8 9 10 3 4))
 
 (test-equal? "gvector-ref"
              (let ([gv (gvector 1 2 3)])
