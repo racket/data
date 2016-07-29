@@ -63,6 +63,16 @@ invoked if it is a procedure, returned otherwise.
 Adds each @racket[value] to the end of the gvector @racket[gv].
 }
 
+@defproc[(gvector-insert! [gv gvector]
+                          [index (and/c exact-nonnegative-integer?
+                                        (</c (+ 1 (gvector-count gv))))]
+                          [value any/c])
+         void?]{
+Adds the @racket[value] to the gvector @racket[gv] at index @racket[index],
+shifting all remaining elements by one element. Takes time proportional
+to @racket[(- (gvector-count gv) index)].
+}
+
 @defproc[(gvector-set! [gv gvector?]
                        [index (and/c exact-nonnegative-integer? 
                                      (</c (+ 1 (gvector-count gv))))]
@@ -104,11 +114,23 @@ Returns a vector of length @racket[(gvector-count gv)] containing the
 elements of @racket[gv] in order.
 }
 
+@defproc[(vector->gvector [v vector?])
+         gvector?]{
+Returns a gvector of length @racket[(vector-length v)] containing the
+elements of @racket[v] in order.
+}
+
 @defproc[(gvector->list [gv gvector?])
          list?]{
 
 Returns a list of length @racket[(gvector-count gv)] containing the
 elements of @racket[gv] in order.
+}
+
+@defproc[(list->gvector [l list?])
+         gvector?]
+Returns a gvector of length @racket[(length l)] containint the
+elements of @racket[l] in order.
 }
 
 @defproc[(in-gvector [gv gvector?])
