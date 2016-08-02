@@ -48,7 +48,7 @@
              (let ()
                (define g (gvector 1 2 3 4))
                (for ([i (in-range 11)])
-                 (gvector-insert! g 2 i))
+                 (gvector-insert! g (+ 2 i) i))
                (gvector->vector g))
              #(1 2 0 1 2 3 4 5 6 7 8 9 10 3 4))
 
