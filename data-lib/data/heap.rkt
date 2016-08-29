@@ -250,7 +250,9 @@
 ;; --------
 
 (provide/contract
- [make-heap (-> (-> any/c any/c any/c) heap?)]
+ [make-heap (-> (and/c (procedure-arity-includes/c 2)
+                       (unconstrained-domain-> any/c))
+                heap?)]
  [heap? (-> any/c boolean?)]
  [heap-count (-> heap? exact-nonnegative-integer?)]
  [heap-add! (->* (heap?) () #:rest list? void?)]
