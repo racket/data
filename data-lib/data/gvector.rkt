@@ -22,113 +22,107 @@
     gvector))
 
 (define (check-index who index n set-to-add?)
-  (unless (< index n)
-    (error who "index out of range ~a~a: ~s"
-           (let ([max-index (if set-to-add? (- n 2) (- n 1))])
-             (cond [(< max-index 0) "(empty)"]
-                   [else (format "[0,~s]" max-index)]))
-           (if set-to-add?
-               (format " or ~s to add" (- n 1))
-               "")
-           index)))
+  (unless (< index (if set-to-add? (add1 n) n))
+    (error who "index out of range\n  index: ~s\n  range: ~a~a"
+           index
+           (if (zero? n) "(empty)" (format "[0,~s]" (sub1 n)))
+           (if set-to-add? (format " or ~s to extend" n) ""))))
 
-(define (check-nonempty who n)
-  (unless (> n 0)
-    (error who "empty")))
-
-
-(define ((bad-index-error who index))
-  (raise-mismatch-error who "index out of range" index))
+;; ensure-free-space! : GVector Nat -> Void
+(define (ensure-free-space! gv needed-free-space)
+  (define vec (gvector-vec gv))
+  (define n (gvector-n gv))
+  (define cap (vector-length vec))
+  (define needed-cap (+ n needed-free-space))
+  (unless (<= needed-cap cap)
+    (define new-cap
+      (let loop ([new-cap (max DEFAULT-CAPACITY cap)])
+        (if (<= needed-cap new-cap) new-cap (loop (* 2 new-cap)))))
+    (define new-vec (make-vector new-cap #f))
+    (vector-copy! new-vec 0 vec)
+    (set-gvector-vec! gv new-vec)))
 
 (define (gvector-add! gv . items)
-  (let ([n (gvector-n gv)]
-        [v (gvector-vec gv)]
-        [item-count (length items)])
-    (cond [(<= (+ n item-count) (vector-length v))
-           (for ([index (in-naturals n)] [item (in-list items)])
-             (vector-set! v index item))
-           (set-gvector-n! gv (+ n item-count))]
-          [else
-           (let* ([nn (let loop ([nn (max DEFAULT-CAPACITY (vector-length v))])
-                        (if (<= (+ n item-count) nn) nn (loop (* 2 nn))))]
-                  [nv (make-vector nn #f)])
-             (vector-copy! nv 0 v)
-             (for ([index (in-naturals n)] [item (in-list items)])
-               (vector-set! nv index item))
-             (set-gvector-vec! gv nv)
-             (set-gvector-n! gv (+ n item-count)))])))
+  (define item-count (length items))
+  (ensure-free-space! gv item-count)
+  (define n (gvector-n gv))
+  (define v (gvector-vec gv))
+  (for ([index (in-naturals n)] [item (in-list items)])
+    (vector-set! v index item))
+  (set-gvector-n! gv (+ n item-count)))
 
 ;; SLOW!
 (define (gvector-insert! gv index item)
+  ;; This does (n - index) redundant copies on resize, but that
+  ;; happens rarely and I prefer the simpler code.
   (define n (gvector-n gv))
+  (check-index 'gvector-insert! index n #t)
+  (ensure-free-space! gv 1)
   (define v (gvector-vec gv))
-  (check-index 'gvector-insert! index n #f)
-  (cond [(<= (add1 n) (vector-length v))
-         (vector-copy! v 0 v 0 index)
-         (vector-copy! v (add1 index) v index n)
-         (vector-set! v index item)
-         (set-gvector-n! gv (+ n 1))]
-        [else
-         (define nn (let loop ([nn (max DEFAULT-CAPACITY (vector-length v))])
-                      (if (<= (add1 n) nn) nn (loop (* 2 nn)))))
-         (define nv (make-vector nn #f))
-         (vector-copy! nv 0 v 0 index)
-         (vector-copy! nv (add1 index) v index n)
-         (vector-set! nv index item)
-         (set-gvector-vec! gv nv)
-         (set-gvector-n! gv (+ n 1))]))
+  (vector-copy! v (add1 index) v index n)
+  (vector-set! v index item)
+  (set-gvector-n! gv (add1 n)))
 
 ;; Shrink when vector length is > SHRINK-ON-FACTOR * #elements
-(define SHRINK-ON-FACTOR 3)
+(define SHRINK-ON-FACTOR 4)
 ;; ... unless it would shrink to less than SHRINK-MIN
 (define SHRINK-MIN 10)
 
 ;; Shrink by SHRINK-BY-FACTOR
 (define SHRINK-BY-FACTOR 2)
 
+(define (trim! gv)
+  (define n (gvector-n gv))
+  (define v (gvector-vec gv))
+  (define cap (vector-length v))
+  (define new-cap
+    (let loop ([new-cap cap])
+      (cond [(and (>= new-cap (* SHRINK-ON-FACTOR n))
+                  (>= (quotient new-cap SHRINK-BY-FACTOR) SHRINK-MIN))
+             (loop (quotient new-cap SHRINK-BY-FACTOR))]
+            [else new-cap])))
+  (when (< new-cap cap)
+    (define new-v (make-vector new-cap #f))
+    (vector-copy! new-v 0 v 0 n)
+    (set-gvector-vec! gv new-v)))
+
 ;; SLOW!
 (define (gvector-remove! gv index)
-  (let ([n (gvector-n gv)]
-        [v (gvector-vec gv)])
-    (check-index 'gvector-remove! index n #f)
-    (cond [(and (>= (vector-length v) (* SHRINK-ON-FACTOR n))
-                (>= (quotient (vector-length v) SHRINK-BY-FACTOR) SHRINK-MIN))
-           (let ([nv (make-vector (max SHRINK-MIN (quotient (vector-length v) SHRINK-BY-FACTOR)) #f)])
-             (vector-copy! nv 0 v 0 index)
-             (vector-copy! nv index v (add1 index) n)
-             (set-gvector-n! gv (sub1 n))
-             (set-gvector-vec! gv nv))]
-          [else
-           (set-gvector-n! gv (sub1 n))
-           (vector-copy! v index v (add1 index) n)
-           (vector-set! v (sub1 n) #f)])))
+  (define n (gvector-n gv))
+  (define v (gvector-vec gv))
+  (check-index 'gvector-remove! index n #f)
+  (vector-copy! v index v (add1 index) n)
+  (vector-set! v (sub1 n) #f)
+  (set-gvector-n! gv (sub1 n))
+  (trim! gv))
 
 (define (gvector-remove-last! gv)
   (let ([n (gvector-n gv)]
         [v (gvector-vec gv)])
-    (check-nonempty 'gvector-remove-last! n)
+    (unless (> n 0) (error 'gvector-remove-last! "empty"))
     (define last-val (vector-ref v (sub1 n)))
     (gvector-remove! gv (sub1 n))
     last-val))
 
-
 (define (gvector-count gv)
   (gvector-n gv))
 
-(define (gvector-ref gv index
-                     [default (bad-index-error 'gvector-ref index)])
+(define none (gensym 'none))
+
+(define (gvector-ref gv index [default none])
   (unless (exact-nonnegative-integer? index)
     (raise-type-error 'gvector-ref "exact nonnegative integer" index))
   (if (< index (gvector-n gv))
       (vector-ref (gvector-vec gv) index)
-      (if (procedure? default)
-          (default)
-          default)))
+      (cond [(eq? default none)
+             (check-index 'gvector-ref index (gvector-n gv) #f)]
+            [(procedure? default) (default)]
+            [else default])))
 
 ;; gvector-set! with index = |gv| is interpreted as gvector-add!
 (define (gvector-set! gv index item)
   (let ([n (gvector-n gv)])
-    (check-index 'gvector-set! index (add1 n) #t)
+    (check-index 'gvector-set! index n #t)
     (if (= index n)
         (gvector-add! gv item)
         (vector-set! (gvector-vec gv) index item))))
