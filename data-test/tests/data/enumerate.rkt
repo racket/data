@@ -736,10 +736,13 @@
 ;; except/e test
 
 (define not-3 (except/e natural/e 3))
+(define not-lots-of-stuff
+  (apply except/e natural/e (build-list 100 values)))
 (test-begin
  (check-equal? (from-nat not-3 0) 0)
  (check-equal? (from-nat not-3 3) 4)
- (check-bijection? not-3))
+ (check-bijection? not-3)
+ (check-bijection? not-lots-of-stuff))
 
 ;; fold-enum tests
 (define complicated
