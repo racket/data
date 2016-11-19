@@ -1080,10 +1080,8 @@ todo:
                 (to-nat (force promise/e) x)))
          (if flat-enum?
              (let ([thunk/e-ctc
-                    (recursive-contract
-                     (enum-contract
-                      (force promise/e))
-                     #:flat)])
+                    (λ (val)
+                      ((enum-contract (force promise/e)) val))])
                thunk/e-ctc)
              (let ([thunk/e-ctc (recursive-contract
                                  (enum-contract
