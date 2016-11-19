@@ -1,6 +1,6 @@
 #lang info
 (define collection 'multi)
-(define deps '(("base" #:version "6.4.0.14")
+(define deps '(("base" #:version "6.7.0.3")
                "data-lib" "math-lib"))
 (define build-deps '("rackunit-lib"))
 
