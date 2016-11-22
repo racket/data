@@ -1016,16 +1016,19 @@ as you go deeper into the sequence.
 
 @defproc[(hash-traverse/e [f (-> any/c enum?)]
                           [xs (hash/c any/c any/c)]
-                          [#:get-contract get-contract (-> any/c contract?)])
+                          [#:get-contract get-contract (-> any/c contract?)]
+                          [#:contract contract contract?])
          enum?]{
 
 Constructs an @tech{enumeration} that simultaneously enumerates each
 of the enumerations returned by @racket[f] applied to each value of
 @racket[xs].
 
-The @racket[get-contract] argument is applied to the keys in the
+If supplied, the @racket[get-contract] argument is applied to the keys in the
 hash and is expected to return the contract for the corresponding
-enumeration.
+enumeration. If the @racket[contract] argument is supplied, it is used
+directly as the contract for all of enumerations. One of the two arguments
+must be supplied.
 
 @examples[#:eval the-eval
 (define hash-traverse-1/e

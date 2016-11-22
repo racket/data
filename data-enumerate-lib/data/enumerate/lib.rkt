@@ -76,9 +76,10 @@
                       (flat-contract? (enum-contract e))))
         [res enum?])]
   [hash-traverse/e
-   (-> (-> any/c enum?) 
-       hash?
-       #:get-contract (-> any/c contract?)
+   (->* ((-> any/c enum?) 
+         hash?)
+        (#:get-contract (-> any/c contract?)
+         #:contract contract?)
        enum?)]
   [cons/e
    (->* (enum? enum?)

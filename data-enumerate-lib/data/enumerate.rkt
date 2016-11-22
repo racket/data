@@ -41,14 +41,21 @@
   [below/e (-> (or/c exact-nonnegative-integer? +inf.0) enum?)]
   [empty/e enum?]
 
-
   [map/e
-   (->i ([in (e es c) 
-             (dynamic->* #:mandatory-domain-contracts (map enum-contract (cons e es))
-                         #:range-contracts (list c))]
-         [out (e es c) 
-              (dynamic->* #:mandatory-domain-contracts (list c)
-                          #:range-contracts (map enum-contract (cons e es)))]
+   (->i ([in (e es c)
+             (cond
+               [(null? es)
+                (-> (enum-contract e) c)]
+               [else
+                (dynamic->* #:mandatory-domain-contracts (map enum-contract (cons e es))
+                            #:range-contracts (list c))])]
+         [out (e es c)
+              (cond
+                [(null? es)
+                 (-> c (enum-contract e))]
+                [else
+                 (dynamic->* #:mandatory-domain-contracts (list c)
+                             #:range-contracts (map enum-contract (cons e es)))])]
          [e enum?] 
          #:contract [c contract?])
         #:rest [es (listof enum?)]
@@ -56,8 +63,12 @@
         (appears-to-be-a-bijection? in out (cons e es))
         [result enum?])]
   [pam/e (->i ([in (e es c)
-                   (dynamic->* #:mandatory-domain-contracts (map enum-contract (cons e es))
-                               #:range-contracts (list c))]
+                   (cond
+                     [(null? es)
+                      (-> (enum-contract e) c)]
+                     [else
+                      (dynamic->* #:mandatory-domain-contracts (map enum-contract (cons e es))
+                                  #:range-contracts (list c))])]
                [e enum?]
                #:contract [c contract?])
               #:rest [es (listof enum?)]

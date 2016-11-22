@@ -501,9 +501,14 @@ In plain English, we'll
    #:contract contract))
 
 
+(define default-value (gensym 'hash-traverse/e-default-value))
 ;; Hash Traversal
 ;; hash-traverse/e : (a -> enum b), (hash[k] -o> a) -> enum (hash[k] -o> b)
-(define (hash-traverse/e f ht #:get-contract get-contract)
+(define (hash-traverse/e f ht #:get-contract [get-contract default-value] #:contract [contract default-value])
+  (when (and (equal? get-contract default-value)
+             (equal? contract default-value))
+    (error 'hash-traverse/e
+           "expected an explicit argument for either #:get-contract or #:contract, but both were defaults"))
   ;; as-list : listof (cons k a)
   (define as-list (hash->list ht))
   ;; on-cdr : (cons k a) -> enum (cons k b)
@@ -523,8 +528,12 @@ In plain English, we'll
          #:contract (and/c
                      hash?
                      hash-that-maps-correct-keys?
-                     (hash/dc [k any/c]
-                              [v (k) (get-contract k)]))))
+                     (cond
+                       [(equal? contract default-value)
+                        (hash/dc [k any/c]
+                                 [v (k) (get-contract k)])]
+                       [else
+                        (hash/c any/c contract)]))))
 
 
 
