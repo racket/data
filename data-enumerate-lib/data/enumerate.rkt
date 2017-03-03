@@ -1,6 +1,7 @@
 #lang racket/base
 (require "enumerate/private/core.rkt"
          racket/contract
+         racket/math
          racket/list
          racket/bool)
 
@@ -16,7 +17,7 @@
   
   [from-nat 
    (->i ([e enum?]
-         [n nat?])
+         [n natural?])
         #:pre/name (e n) 
         "n in bounds of enumeration size"
         (or (infinite-enum? e)
@@ -24,21 +25,21 @@
         [res (e) (enum-contract e)])]
   [to-nat
    (->i ([e two-way-enum?] [v (e) (enum-contract e)])
-        [result nat?])]
-  [enum-count (-> finite-enum? nat?)]
+        [result natural?])]
+  [enum-count (-> finite-enum? natural?)]
   [enum-contract (-> enum? contract?)]
   
   [enum->list
    (->i ([e enum?])
         ([s (e) (if (finite-enum? e)
                     (integer-in 0 (enum-count e))
-                    exact-nonnegative-integer?)])
+                    natural?)])
         #:pre (e s)
         (implies (unsupplied-arg? s) (finite-enum? e))
         [res (e) (listof (enum-contract e))])]
   
   [natural/e enum?]
-  [below/e (-> (or/c exact-nonnegative-integer? +inf.0) enum?)]
+  [below/e (-> (or/c natural? +inf.0) enum?)]
   [empty/e enum?]
 
   [map/e
@@ -132,7 +133,7 @@
         (#:ordering (or/c 'diagonal 'square)) 
         #:rest (listof enum?)
         enum?)]
-  [bounded-list/e (-> nat? nat? enum?)]
+  [bounded-list/e (-> natural? natural? enum?)]
   [dep/e dep/e-contract]))
 
 (define (either-a-one-way-enum-or-all-have-predicates? r)
@@ -230,8 +231,7 @@
         (and (pair? e/p)
              (one-way-enum? (car e/p))))))
 
-(define nat? exact-nonnegative-integer?)
-(define extended-nat/c (or/c nat? +inf.0))
+(define extended-nat/c (or/c natural? +inf.0))
 
 (define (appears-to-be-a-bijection? in out es)
   (cond

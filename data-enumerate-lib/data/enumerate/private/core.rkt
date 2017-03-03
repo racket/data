@@ -336,7 +336,7 @@ todo:
            (error 'to-nat "no elements in the enumerator"))
          none/c))
 
-(define natural/e (-enum +inf.0 values values exact-nonnegative-integer?))
+(define natural/e (-enum +inf.0 values values natural?))
 
 (define (empty/e? e)
   (= 0 (enum-count e)))
@@ -1500,7 +1500,7 @@ todo:
 
 (define (box-tuples/e k)
   (-enum +inf.0 (box-untuple k) (box-tuple k) 
-         (apply list/c (build-list k (λ (_) exact-nonnegative-integer?)))))
+         (apply list/c (build-list k (λ (_) natural?)))))
 
 ;; Enumeration of lists of length `len` of nats <= bound, 
 ;; containing bound at least once

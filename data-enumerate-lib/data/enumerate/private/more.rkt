@@ -616,10 +616,10 @@ In plain English, we'll
                             "suggestion"
                             "maybe supply `#:flat-enum? #f' to delay/e?")
                  (not/c flat-enum?))))
-    (unless (or (exact-nonnegative-integer? count)
+    (unless (or (natural? count)
                 (and (number? count) (= count +inf.0)))
       (raise-argument-error 'delay/e 
-                            (format "~s" '(or/c exact-nonnegative-integer? +inf.0))
+                            (format "~s" '(or/c natural? +inf.0))
                             count))
     (thunk/e (λ () (contract ctc
                              (thunk)

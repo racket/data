@@ -2,6 +2,7 @@
 (require racket/bool
          racket/list
          racket/contract
+         racket/math
          "../enumerate.rkt"
          "private/more.rkt"
          (prefix-in unsafe: "private/core.rkt"))
@@ -24,7 +25,7 @@
  (contract-out
   [flip-dep/e unsafe:dep/e-contract]
   [random-index
-   (-> enum? exact-nonnegative-integer?)]
+   (-> enum? natural?)]
   [infinite-sequence/e
    (-> finite-enum? enum?)]
   [set/e
@@ -32,8 +33,8 @@
   [permutations/e
    (-> list? enum?)]
   [permutations-of-n/e
-   (-> exact-nonnegative-integer? enum?)]
-  [nat+/e (-> exact-nonnegative-integer? enum?)]
+   (-> natural? enum?)]
+  [nat+/e (-> natural? enum?)]
   [fold-enum
    (->i ([f (f-range-finite?)
             (if (or (unsupplied-arg? f-range-finite?)
@@ -52,13 +53,13 @@
   [listof/e listof/e-contract]
   [non-empty-listof/e listof/e-contract]
   
-  [listof-n/e (-> enum? exact-nonnegative-integer? enum?)]
+  [listof-n/e (-> enum? natural? enum?)]
   [take/e
    (->i ([e enum?] 
          [s (e) 
             (if (finite-enum? e)
                 (integer-in 0 (- (enum-count e) 1))
-                exact-nonnegative-integer?)])
+                natural?)])
         (#:contract [c contract?])
         #:pre (c e)
         (implies (unsupplied-arg? c)
@@ -66,7 +67,7 @@
                       (flat-contract? (enum-contract e))))
         [result enum?])]
   [slice/e
-   (->i ([e enum?] [lo exact-nonnegative-integer?] [hi exact-nonnegative-integer?])
+   (->i ([e enum?] [lo natural?] [hi natural?])
         (#:contract [c contract?])
         #:pre (lo hi) (<= lo hi)
         #:pre (e hi) (or (infinite-enum? e) (hi . <= . (enum-count e)))

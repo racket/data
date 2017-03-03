@@ -18,7 +18,7 @@
 
 @(define the-eval (make-base-eval))
 @(the-eval '(require data/enumerate data/enumerate/lib
-                     racket/set racket/string
+                     racket/set racket/string racket/math
                      racket/contract racket/match
                      pict pict/tree-layout))
 @(define-syntax-rule (ex e ...) (examples #:eval the-eval e ...))
@@ -107,8 +107,8 @@ values.
              (map/e swap-components
                     swap-components
                     ordered-pair/e
-                    #:contract (cons/c exact-nonnegative-integer?
-                                       exact-nonnegative-integer?))))
+                    #:contract (cons/c natural?
+                                       natural?))))
           (for/list ([i (in-range 10)])
             (from-nat other-ordered-pair/e i))]
 
@@ -124,7 +124,7 @@ Here's an example that, with high probability, signals a contract violation.
              (map/e (λ (x) (floor (/ x 100)))
                     (λ (x) (* x 100))
                     natural/e
-                    #:contract exact-nonnegative-integer?)]
+                    #:contract natural?)]
 The contract on @racket[or/e] has a similar kind of checking that attempts to
 find overlaps between the elements of the enumerations in its arguments.
 
@@ -256,11 +256,11 @@ printed, then the enumeration is not finite and is not one-way.
   whose contracts are @racket[flat-contract?]s.
 }
 
-@defproc[(enum-count [e finite-enum?]) exact-nonnegative-integer?]{
+@defproc[(enum-count [e finite-enum?]) natural?]{
   Returns the number of elements of an @tech{enumeration}.
 }
 
-@defproc[(enum-contract [e finite-enum?]) exact-nonnegative-integer?]{
+@defproc[(enum-contract [e finite-enum?]) natural?]{
   Returns the @racket[contract?] that @racket[e] enumerates.
 }
 
@@ -273,7 +273,7 @@ that an enumeration enumerates.
 
 @defproc[(from-nat [e enum?] [n (if (finite-enum? e)
                                     (integer-in 0 (enum-count e))
-                                    exact-nonnegative-integer?)])
+                                    natural?)])
          (enum-contract e)]{
   Decodes @racket[n] from @racket[e].
 }
@@ -281,14 +281,14 @@ that an enumeration enumerates.
 @defproc[(to-nat [e two-way-enum?] [x (enum-contract e)])
          (if (finite-enum? e)
              (integer-in 0 (enum-count e))
-             exact-nonnegative-integer?)]{
+             natural?)]{
   Encodes @racket[x] from @racket[e].
 }
 
 @defproc[(enum->list [e enum?] 
                      [n (if (finite-enum? e)
                             (integer-in 0 (enum-count e))
-                            exact-nonnegative-integer?)
+                            natural?)
                         (enum-count e)]) 
          (listof (enum-contract e))]{
   Returns a list of the first @racket[n] values in @racket[e].
@@ -329,7 +329,7 @@ An @tech{enumeration} of the natural numbers.
 (to-nat natural/e 5)
 ]}
 
-@defproc[(below/e [max (or/c exact-nonnegative-integer? +inf.0)])
+@defproc[(below/e [max (or/c natural? +inf.0)])
          (and/c (if (= max +inf.0)
                     finite-enum?
                     infinite-enum?)
@@ -385,15 +385,14 @@ The empty @tech{enumeration}.
              (map/e (λ (x) (* x 2))
                     (λ (x) (/ x 2))
                     natural/e
-                    #:contract (and/c exact-nonnegative-integer?
+                    #:contract (and/c natural?
                                       even?)))
            (enum->list evens/e 10)
            (define odds/e
              (map/e add1
                     sub1
                     evens/e
-                    #:contract (and/c exact-nonnegative-integer?
-                                      odd?)))
+                    #:contract (and/c natural? odd?)))
            (enum->list odds/e 10)
            (define ordered-pair/e
              (map/e (λ (x y) (cons x (+ x y)))
@@ -403,8 +402,7 @@ The empty @tech{enumeration}.
                       (values x (- y x)))
                     natural/e
                     natural/e
-                    #:contract (and/c (cons/c exact-nonnegative-integer?
-                                              exact-nonnegative-integer?)
+                    #:contract (and/c (cons/c natural? natural?)
                                       (λ (xy) (<= (car xy) (cdr xy))))))
            (enum->list ordered-pair/e 10)
            ]
@@ -509,7 +507,7 @@ arguments.
                                   (if is-flat-enum?
                                       flat-enum?
                                       (not/c flat-enum?))))]
-                  [#:count count (or/c +inf.0 exact-nonnegative-integer?) +inf.0]
+                  [#:count count (or/c +inf.0 natural?) +inf.0]
                   [#:two-way-enum? is-two-way-enum? any/c #t]
                   [#:flat-enum? is-flat-enum? any/c #t])
          enum?]{
@@ -579,7 +577,7 @@ to naturals.
             (enum->list dep/e-ordered-pair/e 10)]
 }
 
-@defproc[(bounded-list/e [k exact-nonnegative-integer?] [n exact-nonnegative-integer?]) (and/c finite-enum? two-way-enum? flat-enum?)]{
+@defproc[(bounded-list/e [k natural?] [n natural?]) (and/c finite-enum? two-way-enum? flat-enum?)]{
 
 An @tech{enumeration} of tuples of naturals with @racket[max] @racket[n] of length @racket[k].
 
@@ -790,7 +788,7 @@ Like @racket[listof/e], but without the empty list.
 @defproc[(listof-n/e [e (if simple-recursive?
                             enum?
                             infinite-enum?)]
-                     [n exact-nonnegative-integer?])
+                     [n natural?])
          enum?]{
                 
   @examples[#:eval 
@@ -814,7 +812,7 @@ Like @racket[listof/e], but without the empty list.
            
   If the @racket[count-expression] is not supplied or if it evaluates to @racket[+inf.0],
   the resulting enumeration is a @tech{infinite enumeration}. Otherwise the
-  expression must evaluate to an @racket[exact-nonnegative-integer?] and the resulting
+  expression must evaluate to an @racket[natural?] and the resulting
   enumeration is a @tech{finite enumeration} of the given count.
   
   If @racket[two-way-boolean-expression] is supplied and it evaluates to anything
@@ -839,7 +837,7 @@ Like @racket[listof/e], but without the empty list.
 @defproc[(take/e [e enum?]
                  [n (if (finite-enum? e)
                         (integer-in 0 (enum-count e))
-                        exact-nonnegative-integer?)]
+                        natural?)]
                  [#:contract contract
                              (λ (x)
                                (and ((enum-contract e) x)
@@ -858,11 +856,11 @@ be both a @tech{two way enumeration} and a @tech{flat enumeration}.
 @defproc[(slice/e [e enum?]
                   [lo (and/c (if (finite-enum? e)
                                  (integer-in 0 (enum-count e))
-                                 exact-nonnegative-integer?)
+                                 natural?)
                              (<=/c hi))]
                   [hi (if (finite-enum? e)
                           (integer-in 0 (enum-count e))
-                          exact-nonnegative-integer?)]
+                          natural?)]
                   [#:contract contract
                               (and/c (enum-contract e)
                                      (λ (x)
@@ -937,7 +935,7 @@ An @tech{enumeration} of the exact integers between @racket[lo] and @racket[hi].
 (enum->list (range/e -inf.0 +inf.0) 10)
 ]}
 
-@defproc[(nat+/e [lo exact-nonnegative-integer?]) (and/c infinite-enum? two-way-enum? flat-enum?)]{
+@defproc[(nat+/e [lo natural?]) (and/c infinite-enum? two-way-enum? flat-enum?)]{
 
 An @tech{enumeration} of natural numbers larger than @racket[lo].
 
@@ -961,7 +959,7 @@ The @racket[ordering] argument is the same as the one to @racket[list/e].
                              5)]
 }
 
-@defproc[(permutations-of-n/e [n exact-nonnegative-integer?])
+@defproc[(permutations-of-n/e [n natural?])
          (and/c finite-enum? two-way-enum? flat-enum?)]{
 
 Returns an @tech{enumeration} of the permutations of the natural
@@ -1068,8 +1066,7 @@ is initialized to @racket['()].
 @section[#:tag "sec:enum-util"]{Enumeration Utility}
 @declare-exporting[data/enumerate/lib]
 
-@defproc[(random-index [e enum?])
-         exact-nonnegative-integer?]{
+@defproc[(random-index [e enum?]) natural?]{
 
 Returns a random index into @racket[e]. This works for 
  finite and infinite enumerations, regardless of the count
