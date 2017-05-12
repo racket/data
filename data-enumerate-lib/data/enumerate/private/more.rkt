@@ -277,10 +277,10 @@ In plain English, we'll
                (if (two-way-enum? e)
                    (suggest/c two-way-enum?
                               "suggestion"
-                              "maybe supply `#:one-way #t' to cons/de?")
+                              "maybe supply `#:one-way? #t' to cons/de?")
                    (suggest/c one-way-enum?
                               "suggestion"
-                              "maybe supply `#:one-way #f' to cons/de?")))))
+                              "maybe supply `#:one-way? #f' to cons/de?")))))
   (define (f v)
     (contract f-range-ctc
               (_f v) 
