@@ -1082,12 +1082,16 @@ todo:
              (let ([thunk/e-ctc
                     (recursive-contract
                      (enum-contract
-                      (force promise/e))
+                      (begin
+                        (give-up-on-bijection-checking promise/e)
+                        (force promise/e)))
                      #:flat #:extra-delay)])
                thunk/e-ctc)
              (let ([thunk/e-ctc (recursive-contract
-                                 (enum-contract
-                                  (force promise/e)))])
+                                 (begin
+                                   (give-up-on-bijection-checking promise/e)
+                                   (enum-contract
+                                    (force promise/e))))])
                thunk/e-ctc))))
 
 (define (cantor-untuple k)
