@@ -21,12 +21,12 @@
              gv))])
     gvector))
 
-(define (check-index who index n set-to-add?)
-  (unless (< index (if set-to-add? (add1 n) n))
-    (error who "index out of range\n  index: ~s\n  range: ~a~a"
-           index
-           (if (zero? n) "(empty)" (format "[0,~s]" (sub1 n)))
-           (if set-to-add? (format " or ~s to extend" n) ""))))
+(define (check-index who gv index set-to-add?)
+  ;; if set-to-add?, the valid indexes include one past the current end
+  (define n (gvector-n gv))
+  (define hi (if set-to-add? (add1 n) n))
+  (unless (< index hi)
+    (raise-range-error who "gvector" "" index gv 0 (sub1 hi))))
 
 ;; ensure-free-space! : GVector Nat -> Void
 (define (ensure-free-space! gv needed-free-space)
@@ -64,7 +64,7 @@
   ;; This does (n - index) redundant copies on resize, but that
   ;; happens rarely and I prefer the simpler code.
   (define n (gvector-n gv))
-  (check-index 'gvector-insert! index n #t)
+  (check-index 'gvector-insert! gv index #t)
   (ensure-free-space! gv 1)
   (define v (gvector-vec gv))
   (vector-copy! v (add1 index) v index n)
@@ -98,7 +98,7 @@
 (define (gvector-remove! gv index)
   (define n (gvector-n gv))
   (define v (gvector-vec gv))
-  (check-index 'gvector-remove! index n #f)
+  (check-index 'gvector-remove! gv index #f)
   (vector-copy! v index v (add1 index) n)
   (vector-set! v (sub1 n) #f)
   (set-gvector-n! gv (sub1 n))
@@ -123,14 +123,14 @@
   (if (< index (gvector-n gv))
       (vector-ref (gvector-vec gv) index)
       (cond [(eq? default none)
-             (check-index 'gvector-ref index (gvector-n gv) #f)]
+             (check-index 'gvector-ref gv index #f)]
             [(procedure? default) (default)]
             [else default])))
 
 ;; gvector-set! with index = |gv| is interpreted as gvector-add!
 (define (gvector-set! gv index item)
   (let ([n (gvector-n gv)])
-    (check-index 'gvector-set! index n #t)
+    (check-index 'gvector-set! gv index #t)
     (if (= index n)
         (gvector-add! gv item)
         (vector-set! (gvector-vec gv) index item))))
@@ -162,17 +162,17 @@
   (and (positive? (gvector-n gv)) 0))
 
 (define (gvector-iterate-next gv iter)
-  (check-index 'gvector-iterate-next iter (gvector-n gv) #f)
+  (check-index 'gvector-iterate-next gv iter #f)
   (let ([n (gvector-n gv)])
     (and (< (add1 iter) n)
          (add1 iter))))
 
 (define (gvector-iterate-key gv iter)
-  (check-index 'gvector-iterate-key iter (gvector-n gv) #f)
+  (check-index 'gvector-iterate-key gv iter #f)
   iter)
 
 (define (gvector-iterate-value gv iter)
-  (check-index 'gvector-iterate-value iter (gvector-n gv) #f)
+  (check-index 'gvector-iterate-value gv iter #f)
   (gvector-ref gv iter))
 
 (define (in-gvector gv)
