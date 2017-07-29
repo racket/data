@@ -42,14 +42,22 @@
     (vector-copy! new-vec 0 vec)
     (set-gvector-vec! gv new-vec)))
 
-(define (gvector-add! gv . items)
-  (define item-count (length items))
-  (ensure-free-space! gv item-count)
-  (define n (gvector-n gv))
-  (define v (gvector-vec gv))
-  (for ([index (in-naturals n)] [item (in-list items)])
-    (vector-set! v index item))
-  (set-gvector-n! gv (+ n item-count)))
+(define gvector-add!
+  (case-lambda
+    [(gv item)
+     (ensure-free-space! gv 1)
+     (define n (gvector-n gv))
+     (define v (gvector-vec gv))
+     (vector-set! v n item)
+     (set-gvector-n! gv (add1 n))]
+    [(gv . items)
+     (define item-count (length items))
+     (ensure-free-space! gv item-count)
+     (define n (gvector-n gv))
+     (define v (gvector-vec gv))
+     (for ([index (in-naturals n)] [item (in-list items)])
+       (vector-set! v index item))
+     (set-gvector-n! gv (+ n item-count))]))
 
 ;; SLOW!
 (define (gvector-insert! gv index item)
