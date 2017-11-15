@@ -4,6 +4,7 @@
          racket/promise
          racket/dict
          racket/struct
+         racket/match
          data/skip-list)
 
 (define not-given (gensym 'not-given))
@@ -30,6 +31,24 @@
                  (cdr istartvalue)
                  (not-found)))]
           [else (not-found)])))
+
+(define (interval-map-ref/bounds im key [default not-given])
+  (define (not-found)
+    (cond [(eq? default not-given)
+           (error 'inverval-map-ref/bounds "no mapping found\n  key: ~e" key)]
+          [(procedure? default) (values #f #f (default))]
+          [else (values #f #f default)]))
+  (define s (interval-map-s im))
+  (define istart (skip-list-iterate-greatest/<=? s key))
+  (cond [istart
+         (define range-start (skip-list-iterate-key s istart))
+         (match-define (cons range-length value)
+           (skip-list-iterate-value s istart))
+         (define range-end (+ range-start range-length))
+         (if (< key range-end)
+             (values range-start range-end value)
+             (not-found))]
+        [else (not-found)]))
 
 ;; (POST x) =
 ;;   (if (start <= x < end)
@@ -257,6 +276,12 @@
   (-> any/c boolean?)]
  [interval-map-ref
   (->i ([im interval-map?] [k (im) (key-c im)]) ([d any/c]) any)]
+ [interval-map-ref/bounds
+  (->i ([im interval-map?] [k (im) (key-c im)])
+       ([d any/c])
+       (values [s (im) (or/c #f (key-c im))]
+               [e (im) (or/c #f (key-c im))]
+               [v any/c]))]
  [interval-map-set!
   (->i ([im interval-map?]
         [start (im) (key-c im)]
