@@ -78,6 +78,17 @@ Return the value associated with @racket[position] in
 applied if it is a procedure, or returned otherwise.
 }
 
+@defproc[(interval-map-ref/bounds [interval-map interval-map?]
+                                  [position exact-integer?]
+                                  [default any/c (lambda () (error ....))])
+         (values (or/c #f exact-integer?)
+                 (or/c #f exact-integer?)
+                 any/c)]{
+Like @racket[interval-map-ref], but also returns the bounds of the interval
+associated with @racket[position]. If no mapping is found, then
+@racket[#f] is returned for the start and end positions.
+}
+
 @defproc[(interval-map-set! [interval-map interval-map?]
                             [start exact-integer?]
                             [end exact-integer?]
