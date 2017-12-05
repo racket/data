@@ -35,7 +35,7 @@
 (define (interval-map-ref/bounds im key [default not-given])
   (define (not-found)
     (cond [(eq? default not-given)
-           (error 'inverval-map-ref/bounds "no mapping found\n  key: ~e" key)]
+           (error 'interval-map-ref/bounds "no mapping found\n  key: ~e" key)]
           [(procedure? default) (values #f #f (default))]
           [else (values #f #f default)]))
   (define s (interval-map-s im))
