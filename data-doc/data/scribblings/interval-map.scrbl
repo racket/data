@@ -78,6 +78,7 @@ Return the value associated with @racket[position] in
 applied if it is a procedure, or returned otherwise.
 }
 
+@history[#:added "1.1"]
 @defproc[(interval-map-ref/bounds [interval-map interval-map?]
                                   [position exact-integer?]
                                   [default any/c (lambda () (error ....))])

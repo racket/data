@@ -6,3 +6,5 @@
 (define pkg-desc "implementation (no documentation) part of \"data\"")
 
 (define pkg-authors '(ryanc))
+
+(define version "1.1")
