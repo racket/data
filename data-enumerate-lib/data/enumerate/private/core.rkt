@@ -767,10 +767,16 @@ todo:
         [(cons flroot (r . - . flroot))]))
 
 (define (binary-boxy-to x y)
-  (cond [(x . >= . y)
+  (cond [(x . < . y)
          ((y . * . y) . + . x)]
         [else
          (+ (x . * . x) x y)]))
+
+(module+ test
+  (for* ([x (in-range 30)]
+         [y (in-range 30)])
+    (check-equal? (cons x y)
+                  (binary-boxy-from (binary-boxy-to x y)))))
 
 ;; Like or/e, but sequences the enumerations instead of interleaving
 (define (append/e e-p #:one-way-enum? [one-way-enum? #f] . e-ps)
