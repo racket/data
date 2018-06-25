@@ -86,8 +86,10 @@ applied if it is a procedure, or returned otherwise.
                  (or/c #f exact-integer?)
                  any/c)]{
 Like @racket[interval-map-ref], but also returns the bounds of the interval
-associated with @racket[position]. If no mapping is found, then
-@racket[#f] is returned for the start and end positions.
+associated with @racket[position]. If no mapping is found and @racket[default] 
+is a procedure, it is applied. If no mapping is found and @racket[default] 
+is not a procedure,  @racket[#f] is returned for the start and end positions 
+and @racket[default] is returned as the value.
 }
 
 @defproc[(interval-map-set! [interval-map interval-map?]
