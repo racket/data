@@ -3,7 +3,8 @@
           (for-label data/gvector
                      racket/contract
                      racket/dict
-                     racket/base))
+                     racket/base
+                     racket/serialize))
 
 @title[#:tag "gvector"]{Growable Vectors}
 
@@ -27,6 +28,9 @@ Two gvectors are @racket[equal?] if they contain the same number of
 elements and if the contain equal elements at each index.
 
 Operations on gvectors are not thread-safe.
+
+Additionally, gvectors are serializable with the
+@racketmodname[racket/serialize] collection.
 
 @defproc[(make-gvector [#:capacity capacity exact-positive-integer? 10])
          gvector?]{
