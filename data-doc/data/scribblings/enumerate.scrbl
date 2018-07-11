@@ -455,7 +455,7 @@ and the @racket[x]s.
 An @tech{enumeration} of all of the elements of the enumerations in
 the @racket[e-p] arguments. 
 
-If the enumerations have overlapping elements, then pass @racket[#f] as
+If the enumerations have overlapping elements, then pass @racket[#t] as
 @racket[one-way-enum?] so the result is a @tech{one way enumeration}.
 
 In more detail, if all of the arguments have or are @tech{two way enumerations} 
