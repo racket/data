@@ -3,6 +3,7 @@
 (require (for-syntax racket/base
                      syntax/contract
                      syntax/for-body)
+         racket/serialize
          racket/contract/base
          racket/dict
          racket/vector
@@ -266,7 +267,14 @@
      (make-constructor-style-printer
       (lambda (obj) 'gvector)
       (lambda (obj) (gvector->list obj))))]
-  #:property prop:sequence in-gvector)
+  #:property prop:sequence in-gvector
+  #:property prop:serializable
+  (make-serialize-info
+   (λ (this)
+     (vector (gvector->vector this)))
+   (cons 'deserialize-gvector (module-path-index-join '(submod data/gvector deserialize) #f))
+   #t
+   (or (current-load-relative-directory) (current-directory))))
 
 (provide/contract
  [gvector?
@@ -301,3 +309,17 @@
 (provide (rename-out [in-gvector* in-gvector])
          for/gvector
          for*/gvector)
+
+(module+ deserialize
+  (provide deserialize-gvector)
+  (define deserialize-gvector
+    (make-deserialize-info
+     (λ (vec)
+       (vector->gvector vec))
+     (λ ()
+       (define gvec (make-gvector))
+       (values
+        gvec
+        (λ (other)
+          (for ([i (in-gvector other)])
+            (gvector-add! gvec i))))))))

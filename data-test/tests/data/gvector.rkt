@@ -1,7 +1,8 @@
 #lang racket/base
 (require data/gvector
          racket/dict
-         rackunit)
+         rackunit
+         racket/serialize)
 
 (test-equal? "gvector"
              (gvector->vector (gvector 1 2 3))
@@ -191,3 +192,27 @@
     (for ([i 100])
       (gvector-remove-last! g))
     (check-equal? g (gvector))))
+
+(test-equal? "gvector serialize"
+            (gvector->vector (deserialize (serialize (gvector 1 2 3))))
+            #(1 2 3))
+
+(test-case "serialize non-atomic data"
+  (let ()
+    (define x (box #f))
+    (define y (box #f))
+    (define the-vec (deserialize (serialize (gvector x x y))))
+    (check-eq? (gvector-ref the-vec 0)
+               (gvector-ref the-vec 1))
+    (check-not-eq? (gvector-ref the-vec 0)
+                   (gvector-ref the-vec 2))))
+
+(test-case "serialize-cycles"
+  (let ()
+    (define vec (make-gvector))
+    (define other-vec (make-gvector))
+    (gvector-add! vec vec)
+    (gvector-add! vec other-vec)
+    (deserialize (serialize vec))
+    (check-eq? vec (gvector-ref vec 0))
+    (check-not-eq? vec (gvector-ref vec 1))))
