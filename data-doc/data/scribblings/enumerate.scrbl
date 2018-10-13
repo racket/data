@@ -2,6 +2,7 @@
 @(require scribble/eval
           data/enumerate/lib
           plot/pict
+          "cite.rkt"
           (for-label data/enumerate
                      data/enumerate/lib
                      pict
@@ -260,7 +261,7 @@ printed, then the enumeration is not finite and is not one-way.
   Returns the number of elements of an @tech{enumeration}.
 }
 
-@defproc[(enum-contract [e finite-enum?]) natural?]{
+@defproc[(enum-contract [e enum?]) contract?]{
   Returns the @racket[contract?] that @racket[e] enumerates.
 }
 
@@ -434,7 +435,7 @@ The empty @tech{enumeration}.
          two-way-enum?]{
 
 Returns a @tech{two way enumeration} identical to @racket[e] except that all
-@racket[x] are removed from the enumeration.
+@racket[x] are removed from the enumeration. See also @racket[but-not/e].
 
 If @racket[c] is @racket[#f], then it is not treated as a contract, instead
 the resulting contract is synthesized from contract on @racket[e]
@@ -942,6 +943,38 @@ An @tech{enumeration} of natural numbers larger than @racket[lo].
 @examples[#:eval the-eval
 (enum->list (nat+/e 42) 5)
 ]}
+
+@defproc[(but-not/e [big two-way-enum?]
+                    [small (and/c two-way-enum? flat-enum? finite-enum?)])
+         two-way-enum?]{
+ Returns a @tech{two way enumeration} like @racket[big] except
+ that the elements of @racket[small] are removed. See also
+ @racket[except/e]. This operation is the one from @citet[whats-the-difference]'s
+ paper on subtracting bijections.
+
+ @examples[#:eval the-eval
+           (enum->list (but-not/e (below/e 10) (below/e 5)))]
+
+ Generally, @racket[but-not/e] produces an enumeration that
+ performs better than the result of @racket[(apply except/e big (enum->list small))]
+ when the range of @racket[small] is a large set. When it
+ is small, using @racket[except/e] performs better.
+
+ The two enumerations  may also be in different orders.
+
+ @examples[#:eval the-eval
+           (define (evens-below/e n)
+             (map/e (λ (x) (* x 2))
+                    (λ (x) (/ x 2))
+                    (below/e (/ n 2))
+                    #:contract (and/c natural? even? (<=/c n))))
+           (enum->list
+            (but-not/e (below/e 20)
+                       (evens-below/e 20)))
+           (enum->list
+            (apply except/e (below/e 20)
+                   (enum->list (evens-below/e 20))))]
+}
 
 @defproc[(vector/e [#:ordering ordering (or/c 'diagonal 'square) 'square]
                    [e enum?] ...) 

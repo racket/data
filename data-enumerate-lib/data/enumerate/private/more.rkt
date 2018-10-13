@@ -47,6 +47,7 @@
          vector/e
          single/e
          fin/e
+         but-not/e
          
          ;; for testing
          BPP-digits
@@ -862,3 +863,26 @@ In plain English, we'll
     [(pair? v) (cons/c (to-contract (car v))
                        (to-contract (cdr v)))]
     [else v]))
+
+(define (but-not/e eA eB)
+  (define B? (enum-contract eB))
+  (map/e
+   #:contract (and/c (enum-contract eA) (not/c B?))
+   (λ (n)
+     (define (loop n)
+       (define a (from-nat eA n))
+       (cond
+         [(not (B? a)) a]
+         [else (loop (to-nat eB a))]))
+     (loop n))
+   (λ (a)
+     (define (loop a)
+       (define i (to-nat eA a))
+       (cond
+         [(>= i (enum-count eB)) i]
+         [else (loop (from-nat eB i))]))
+     (loop a))
+   (range/e (enum-count eB)
+            (if (finite-enum? eA)
+                (sub1 (enum-count eA))
+                +inf.0))))

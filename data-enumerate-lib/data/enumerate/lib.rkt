@@ -108,7 +108,13 @@
                   (length nums))
                (= (length (remove-duplicates non-nums))
                   (length non-nums))))
-        [result enum?])]))
+        [result enum?])]
+
+
+  [but-not/e
+   (-> two-way-enum?
+       (and/c finite-enum? flat-enum? two-way-enum?)
+       two-way-enum?)]))
 
 (define listof/e-contract
   (->i ([e (simple-recursive?) 

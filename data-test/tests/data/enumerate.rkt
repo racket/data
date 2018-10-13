@@ -1056,3 +1056,15 @@
                                              (integer-root (cdr x) j)))
                                  (enum->list e 1000)))
                  #t)))
+
+;; but-not/e tests
+(check-equal? (enum->list (but-not/e (below/e 10) (below/e 5)))
+              '(5 6 7 8 9))
+(check-bijection? (but-not/e (below/e 10) (below/e 5)))
+(check-true (finite-enum? (but-not/e (below/e 10) (below/e 5))))
+(check-false (finite-enum? (but-not/e natural/e (below/e 5))))
+(check-true (two-way-enum? (but-not/e (below/e 10) (below/e 5))))
+(check-true (flat-enum? (but-not/e (below/e 10) (below/e 5))))
+(check-equal? (enum-count (but-not/e (below/e 100) (below/e 44))) (- 100 44))
+
+(check-contract (but-not/e (below/e 100) (below/e 10)))

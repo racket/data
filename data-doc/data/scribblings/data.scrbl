@@ -2,7 +2,8 @@
 @(require scribble/base
           scribble/manual
           (for-syntax racket/base racket/path)
-          (for-label scribble/base))
+          (for-label scribble/base)
+          "cite.rkt")
 
 @title[#:tag "data"]{Data: Data Structures}
 
@@ -26,3 +27,5 @@ This manual documents data structure libraries available in the
 @include-section["bit-vector.scrbl"]
 @include-section["union-find.scrbl"]
 @include-section["enumerate.scrbl"]
+
+@generate-bibliography[]
