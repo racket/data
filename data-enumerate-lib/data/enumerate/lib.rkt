@@ -110,11 +110,26 @@
                   (length non-nums))))
         [result enum?])]
 
-
   [but-not/e
-   (-> two-way-enum?
-       (and/c finite-enum? flat-enum? two-way-enum?)
-       two-way-enum?)]))
+   (->i ([big (and/c flat-enum? two-way-enum?)]
+         [small (and/c finite-enum? flat-enum? two-way-enum?)])
+        #:pre/desc (big small) (appears-to-be-a-subset? small big)
+        [result two-way-enum?])]))
+
+(define (appears-to-be-a-subset? small big)
+  (let/ec k
+    (cond
+      [(zero? (enum-count small)) #t]
+      [else
+       (define ctc (enum-contract big))
+       (for ([_ (in-range 10)]) ;; check 10 elements of `small`
+         (define index (random (min 1000 (enum-count small))))
+         (define ele (from-nat small index))
+         (unless (ctc ele)
+           (k (list (format "index ~a in `small` produces:" index)
+                    (format "    ~e" ele)
+                    " but that is not enumerated by `big`"))))
+       #t])))
 
 (define listof/e-contract
   (->i ([e (simple-recursive?) 

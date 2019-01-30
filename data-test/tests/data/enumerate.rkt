@@ -1066,5 +1066,16 @@
 (check-true (two-way-enum? (but-not/e (below/e 10) (below/e 5))))
 (check-true (flat-enum? (but-not/e (below/e 10) (below/e 5))))
 (check-equal? (enum-count (but-not/e (below/e 100) (below/e 44))) (- 100 44))
+(check-exn
+ (λ (x) (and (exn:fail? x) (regexp-match #rx"^but-not/e:" (exn-message x))))
+ (λ ()
+   (define (even-mod-10? x) (= 0 (modulo x 10)))
+   (define tens/e
+     (map/e (λ (x) (* x 10))
+            (λ (x) (/ x 10))
+            natural/e
+            #:contract (and/c exact-nonnegative-integer? even-mod-10?)))
+
+   (but-not/e tens/e (range/e 11 18))))
 
 (check-contract (but-not/e (below/e 100) (below/e 10)))
