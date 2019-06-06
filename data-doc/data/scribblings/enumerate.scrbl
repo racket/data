@@ -885,9 +885,10 @@ Identical to @racket[e] but only includes the values between
  given.
 
  If there are multiple arguments, then they must all be
- distinct; numbers except for @racket[+nan.0] and @racket[+nan.f] are
- compared using @racket[=] and all others are compared using
- @racket[equal?]).
+ distinct; numbers except for @racket[+nan.0] and
+ @racket[+nan.f] are compared using @racket[=] and all other
+ values (including @racket[+nan.0] and @racket[+nan.f]) are
+ compared using @racket[equal?].
  
  If some other
  equality function is appropriate, use @racket[map/e]

@@ -57,7 +57,7 @@
    (check-bijection? e)
    (check-true ((enum-contract e) (from-nat e 0)))))
 
-(check-bijection? (fin/e "x" 11 "y" 12 #"x" 'w +nan.0 +nan.f +inf.0 '#:kwd))
+(check-bijection? (fin/e "x" 11 "y" 12 #"x" 'w +nan.0 '() +inf.0 '#:kwd))
 
 (let ([e (fin/e (λ (x) x) '(1 2 3))])
   (check-equal? ((from-nat e 0) 1) 1)
