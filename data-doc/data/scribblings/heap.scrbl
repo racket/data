@@ -17,10 +17,21 @@ Binary heaps are a simple implementation of priority queues.
 
 Operations on binary heaps are not thread-safe.
 
-@defproc[(make-heap [<=? (-> any/c any/c any/c)])
+For a heap with n elements, the memory usage is Θ(n),
+@racket[heap-min], @racket[heap?] and @racket[heap-count] take constant time,
+@racket[heap-add!], @racket[heap-remove-min!] and @racket[heap-remove-index!]
+take O(log(n)) time.
+Both @racket[heap-remove!] and @racket[heap-copy] take O(n) time,
+and @racket[heap->vector] takes O(n log(n)) time and O(n) space.
+
+@defproc[(make-heap [<=? (-> any/c any/c any/c)]
+                    [#:on-update-index on-update-index
+                     (-> any/c (or/c #f exact-nonnegative-integer?) any/c)
+                     #f])
          heap?]{
 
 Makes a new empty heap using @racket[<=?] to order elements.
+See @racket[heap-remove-index!] for how to use @racket[on-update-index].
 
 @examples[#:eval the-eval
   (define a-heap-of-strings (make-heap string<=?))
@@ -112,16 +123,44 @@ empty, an exception is raised.
 @defproc[(heap-remove! [h heap?] [v any/c] [#:same? same? (-> any/c any/c any/c) equal?]) void?]{
 Removes @racket[v] from the heap @racket[h] if it exists. 
 @examples[#:eval the-eval
-  (define a-heap (make-heap string<=? string=?))
+  (define a-heap (make-heap string<=?))
   (heap-add! a-heap "a" "b" "c")
   (heap-remove! a-heap "b")
   (for/list ([a (in-heap a-heap)]) a)]
 }
 
-@defproc[(vector->heap [<=? (-> any/c any/c any/c)] [items vector?]) heap?]{
+@defproc[(heap-remove-index! [h heap?] [n exact-nonnegative-integer?]) void?]{
+Removes the element at index @racket[n] from the heap @racket[h]. The index
+is can be obtained and updated via the @racket[#:on-update-index] of
+@racket[make-heap]. When used in conjunction with @racket[#:on-update-index],
+@racket[heap-remove-index!] takes O(log(n)) time for a heap on n elements,
+whereas @racket[heap-remove!] takes O(n) time.
+@examples[#:eval the-eval
+  (struct element (str [heap-idx #:mutable]) #:transparent)
+  (define (element<=? e1 e2)
+    (string<=? (element-str e1) (element-str e2)))
+  (define a-heap (make-heap element<=?
+                            #:on-update-index set-element-heap-idx!))
+  (define-values (a b c)
+    (values
+     (element "a" #f)
+     (element "b" #f)
+     (element "c" #f)))
+  (heap-add! a-heap a b c) @code:comment{heap now contains a b c}
+  (heap-remove-index! a-heap (element-heap-idx b)) @code:comment{b is removed}
+  ]
+}
+
+@defproc[(vector->heap [<=? (-> any/c any/c any/c)]
+                       [items vector?]
+                       [#:on-update-index on-update-index
+                        (-> any/c (or/c #f exact-nonnegative-integer?) any/c)
+                        #f])
+         heap?]{
 
 Builds a heap with the elements from @racket[items]. The vector is not
 modified.
+See @racket[heap-remove-index!] for how to use @racket[on-update-index].
 @examples[#:eval the-eval
   (struct item (val frequency))
   (define (item<=? x y)

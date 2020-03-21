@@ -237,3 +237,59 @@
 
 (for ([x (in-range 10000)])
   (random-test))
+
+(let ()
+  ;; Custom struct defined on the user side.
+  ;; idx will be updated automatically by the heap,
+  ;; and MUST be initialized to #f (which means the element is
+  ;; initially not in the heap).
+  (struct node (val [idx #:mutable])
+    #:transparent)
+  ;; Custom constructor to use `map` below.
+  (define (make-node val)
+    (node val #f))
+
+  ;; The heap, with a custom comparator,
+  ;; and augmented with a callback that is triggered each time
+  ;; an index is updated.
+  (define h (make-heap (λ (n1 n2) (<= (node-val n1) (node-val n2)))
+                       #:on-update-index set-node-idx!))
+
+  (define (h->list)
+    (map node-val (vector->list (heap->vector h))))
+
+  ;; Custom user helper function that removes a node
+  ;; based on the eq? comparison (not equal?), by
+  ;; fetching its index and removing the element in the heap
+  ;; located at this index.
+  (define (heap-remove-node! h nd)
+    (define idx (node-idx nd))
+    (when idx
+      (heap-remove-index! h idx)))
+    
+  (define n0 (make-node 3.5))
+  (heap-add! h n0)
+  (check-equal? (h->list) '(3.5))
+  (heap-remove-node! h n0)
+  (check-equal? (h->list) '())
+  (check-false (node-idx n0))
+  (heap-remove-node! h n0)
+  (check-equal? (h->list) '())
+  (heap-add! h n0)
+  (heap-add-all! h (map make-node '(5 3 4 8 1 2 6 4)))
+  (check-equal? (h->list) '(1 2 3 3.5 4 4 5 6 8))
+  (heap-remove-min! h)
+  (heap-remove-node! h n0)
+  (check-equal? (h->list) '(2 3 4 4 5 6 8))
+  (define n1 (make-node 5))
+  (heap-add! h n1)
+  (check-equal? (h->list) '(2 3 4 4 5 5 6 8))
+  (heap-remove-node! h n1)
+  (check-equal? (h->list) '(2 3 4 4 5 6 8))
+  (heap-add! h n0)
+  (check-not-false (node-idx n0))
+  (for ([n (heap-count h)])
+    (heap-remove-min! h))
+  (check-equal? (h->list) '())
+  (check-false (node-idx n0))
+  )
