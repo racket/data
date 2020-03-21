@@ -309,22 +309,3 @@
                  (loop (vt-leftchild i) this)
                  (loop (vt-rightchild i) this))]
            [else #t]))])))
-
-(module+ test
-  (require rackunit)
-  ;; TODO: for a pull request, move this to the test file,
-  ;; and update the docs.
-  ;; Check for all diffs.
-
-  ;; I propose an augmentation of the current heap API to allow
-  ;; for O(log(n)) time removal (instead of O(n)) with a little
-  ;; effort from the user side, but keeping everything backward
-  ;; compatible and equally fast when this feature is not used.
-
-  ;; To that end, I chose to use a callback.
-  ;; (The other option was for the heap to handle heap-nodes, but
-  ;; then heap-min would return a node instead of a value, which
-  ;; would break the API.)
-  
-  ;; Example usage
-  )
