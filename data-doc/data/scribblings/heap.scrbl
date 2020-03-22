@@ -42,7 +42,7 @@ See @racket[heap-remove-index!] for how to use @racket[on-update-index].
     (<= (node-val x) (node-val y)))
   (define a-heap-of-nodes (make-heap node<=?))
   a-heap-of-nodes]
-}
+@history[#:changed "7.6.0.17" @elem{Added the @racket[#:on-update-index] optional argument.}]}
 
 @defproc[(heap? [x any/c]) boolean?]{
 
@@ -149,7 +149,7 @@ whereas @racket[heap-remove!] takes O(n) time.
   (heap-add! a-heap a b c) @code:comment{heap now contains a b c}
   (heap-remove-index! a-heap (element-heap-idx b)) @code:comment{b is removed}
   ]
-}
+@history[#:added "7.6.0.17"]}
 
 @defproc[(vector->heap [<=? (-> any/c any/c any/c)]
                        [items vector?]
@@ -169,7 +169,7 @@ See @racket[heap-remove-index!] for how to use @racket[on-update-index].
     (vector (item #\a 17) (item #\b 12) (item #\c 19)))
   (define a-heap (vector->heap item<=? some-sample-items))
 ]
-}
+@history[#:changed "7.6.0.17" @elem{Added the @racket[#:on-update-index] optional argument.}]}
 
 @defproc[(heap->vector [h heap?]) vector?]{
 
