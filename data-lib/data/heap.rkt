@@ -1,7 +1,8 @@
 #lang racket/base
 (require racket/contract/base
          racket/vector
-         racket/match)
+         racket/match
+         (for-syntax racket/base))
 
 (define MIN-SIZE 4)
 
@@ -23,36 +24,55 @@
 (define (vt-leftchild? n) (odd? n))
 (define (vt-rightchild? n) (even? n))
 
+(struct iheap-node (value [index #:mutable]))
+
+(define-syntax-rule (debug-syntax stx)
+  (begin 'stx (newline) stx))
 
 ;; Operations
 
 (define (heapify-up <=? vec n)
-  (unless (vt-root? n)
-    (let* ([parent (vt-parent n)]
-           [n-key (vector-ref vec n)]
-           [parent-key (vector-ref vec parent)])
-      (unless (<=? parent-key n-key)
-        (vector-set! vec parent n-key)
-        (vector-set! vec n parent-key)
-        (heapify-up <=? vec parent)))))
+  (define n-key (vector-ref vec n))
+  (define new-n
+    (let loop ([n n])
+      (cond
+        [(vt-root? n) n]
+        [else
+         (let* ([parent (vt-parent n)]
+                [parent-key (vector-ref vec parent)])
+           (cond
+             [(<=? parent-key n-key)
+              n]
+             [else
+              (vector-set! vec n parent-key)
+              (loop parent)]))])))
+  (unless (= n new-n)
+    (vector-set! vec new-n n-key)))
 
 (define (heapify-down <=? vec n size)
-  (let ([left (vt-leftchild n)]
-        [right (vt-rightchild n)]
-        [n-key (vector-ref vec n)])
-    (when (< left size)
-      (let ([left-key (vector-ref vec left)])
-        (let-values ([(child child-key)
-                      (if (< right size)
-                          (let ([right-key (vector-ref vec right)])
-                            (if (<=? left-key right-key)
-                                (values left left-key)
-                                (values right right-key)))
-                          (values left left-key))])
-          (unless (<=? n-key child-key)
-            (vector-set! vec n child-key)
-            (vector-set! vec child n-key)
-            (heapify-down <=? vec child size)))))))
+  (define n-key (vector-ref vec n))
+  (define new-n
+    (let loop ([n n])
+      (let ([left (vt-leftchild n)]
+            [right (vt-rightchild n)])
+        (cond
+          [(< left size)
+           (let ([left-key (vector-ref vec left)])
+             (let-values ([(child child-key)
+                           (if (< right size)
+                             (let ([right-key (vector-ref vec right)])
+                               (if (<=? left-key right-key)
+                                 (values left left-key)
+                                 (values right right-key)))
+                             (values left left-key))])
+               (cond
+                 [(<=? n-key child-key) n]
+                 [else
+                  (vector-set! vec n child-key)
+                  (loop child)])))]
+          [else n]))))
+  (unless (= n new-n)
+    (vector-set! vec new-n n-key)))
 
 (define (subheap? <=? vec n size)
   (let ([left (vt-leftchild n)]
@@ -86,7 +106,8 @@
 (define (list->heap <=? lst)
   (vector->heap <=? (list->vector lst)))
 
-(define (vector->heap <=? vec0 [start 0] [end (vector-length vec0)])
+(define (vector->heap <=? vec0
+                      [start 0] [end (vector-length vec0)])
   (define size (- end start))
   (define len (let loop ([len MIN-SIZE]) (if (<= size len) len (loop (* 2 len)))))
   (define vec (make-vector len #f))
@@ -122,7 +143,8 @@
                          vec)
                        vec)])
          (vector-copy! vec size keys 0 keys-size)
-         (for ([n (in-range size new-size)])
+         (for ([n (in-range size new-size)]
+               [item (in-vector vec size)])
            (heapify-up <=? vec n))
          (set-heap-count! h new-size))])))
 
@@ -134,11 +156,9 @@
      (vector-ref vec 0)]))
 
 (define (heap-remove-min! h)
-  (match h
-    [(heap vec size <=?)
-     (when (zero? size)
-       (error 'heap-remove-min! "empty heap"))
-     (heap-remove-index! h 0)]))
+  (when (zero? (heap-count h))
+    (error 'heap-remove-min! "empty heap"))
+  (heap-remove-index! h 0))
 
 (define (heap-remove-index! h index)
   (match h
@@ -150,7 +170,9 @@
            (error 'heap-remove-index!
                   "index out of bounds [0,~s]: ~s" (sub1 size) index)))
      (define sub1-size (sub1 size))
-     (vector-set! vec index (vector-ref vec sub1-size))
+     (define last-item (vector-ref vec sub1-size))
+     (define removed-item (vector-ref vec index))
+     (vector-set! vec index last-item)
      (vector-set! vec sub1-size #f)
      (cond
        [(= sub1-size index)
@@ -197,10 +219,14 @@
                          (or (search left left-key) (search-right))
                          (search-right))))])))]))
 
+;; Returns whether the removal was successful, that is,
+;; whether v was indeed in the heap.
 (define (heap-remove! h v #:same? [same? equal?])
-  (match (heap-get-index h v same?)
-    [#f (void)]
-    [n (heap-remove-index! h n)]))
+  (define idx (heap-get-index h v same?))
+  (and idx
+       (begin
+         (heap-remove-index! h idx)
+         #t)))
 
 (define (in-heap h)
   (in-heap/consume! (heap-copy h)))
@@ -250,18 +276,19 @@
 ;; --------
 
 (provide/contract
- [make-heap (-> (and/c (procedure-arity-includes/c 2)
-                       (unconstrained-domain-> any/c))
-                heap?)]
+ [make-heap (->* ((and/c (procedure-arity-includes/c 2)
+                         (unconstrained-domain-> any/c)))
+                 heap?)]
  [heap? (-> any/c boolean?)]
  [heap-count (-> heap? exact-nonnegative-integer?)]
  [heap-add! (->* (heap?) () #:rest list? void?)]
  [heap-add-all! (-> heap? (or/c list? vector? heap?) void?)]
  [heap-min (-> heap? any/c)]
  [heap-remove-min! (-> heap? void?)]
- [heap-remove! (->* (heap? any/c) [#:same? (-> any/c any/c any/c)] void?)]
-
- [vector->heap (-> (-> any/c any/c any/c) vector? heap?)]
+ [heap-remove! (->* (heap? any/c) [#:same? (-> any/c any/c any/c)] boolean?)]
+ [heap-remove-index! (-> heap? exact-nonnegative-integer? void?)]
+ [vector->heap (->* ((-> any/c any/c any/c) vector?)
+                    heap?)]
  [heap->vector (-> heap? vector?)]
  [heap-copy (-> heap? heap?)]
 
