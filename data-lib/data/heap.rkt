@@ -1,9 +1,7 @@
 #lang racket/base
 (require racket/contract/base
          racket/vector
-         racket/match
-         racket/math
-         (for-syntax racket/base))
+         racket/match)
 
 (define MIN-SIZE 4)
 
@@ -24,11 +22,6 @@
 (define (vt-root? n) (zero? n))
 (define (vt-leftchild? n) (odd? n))
 (define (vt-rightchild? n) (even? n))
-
-(struct iheap-node (value [index #:mutable]))
-
-(define-syntax-rule (debug-syntax stx)
-  (begin 'stx (newline) stx))
 
 ;; Operations
 
@@ -90,8 +83,7 @@
 
 ;; Shrink to the fittest vector of size 2^n ≥ new-size-min
 (define (shrink-vector v1 new-size-min)
-  (define new-size (max MIN-SIZE
-                        (fittest-block-size new-size-min)))
+  (define new-size (fittest-block-size new-size-min))
   (let ([v2 (make-vector new-size #f)])
     (vector-copy! v2 0 v1 0 new-size)
     v2))
@@ -104,8 +96,7 @@
 (define (list->heap <=? lst)
   (vector->heap <=? (list->vector lst)))
 
-(define (vector->heap <=? vec0
-                      [start 0] [end (vector-length vec0)])
+(define (vector->heap <=? vec0 [start 0] [end (vector-length vec0)])
   (define size (- end start))
   (define vec (make-vector (fittest-block-size size) #f))
   ;; size <= length(vec)
@@ -140,8 +131,7 @@
                          vec)
                        vec)])
          (vector-copy! vec size keys 0 keys-size)
-         (for ([n (in-range size new-size)]
-               [item (in-vector vec size)])
+         (for ([n (in-range size new-size)])
            (heapify-up <=? vec n))
          (set-heap-count! h new-size))])))
 
@@ -167,9 +157,7 @@
            (error 'heap-remove-index!
                   "index out of bounds [0,~s]: ~s" (sub1 size) index)))
      (define sub1-size (sub1 size))
-     (define last-item (vector-ref vec sub1-size))
-     (define removed-item (vector-ref vec index))
-     (vector-set! vec index last-item)
+     (vector-set! vec index (vector-ref vec sub1-size))
      (vector-set! vec sub1-size #f)
      (cond
        [(= sub1-size index)
@@ -273,9 +261,9 @@
 ;; --------
 
 (provide/contract
- [make-heap (->* ((and/c (procedure-arity-includes/c 2)
-                         (unconstrained-domain-> any/c)))
-                 heap?)]
+ [make-heap (-> (and/c (procedure-arity-includes/c 2)
+                       (unconstrained-domain-> any/c))
+                heap?)]
  [heap? (-> any/c boolean?)]
  [heap-count (-> heap? exact-nonnegative-integer?)]
  [heap-add! (->* (heap?) () #:rest list? void?)]
@@ -283,9 +271,8 @@
  [heap-min (-> heap? any/c)]
  [heap-remove-min! (-> heap? void?)]
  [heap-remove! (->* (heap? any/c) [#:same? (-> any/c any/c any/c)] boolean?)]
- [heap-remove-index! (-> heap? exact-nonnegative-integer? void?)]
- [vector->heap (->* ((-> any/c any/c any/c) vector?)
-                    heap?)]
+
+ [vector->heap (-> (-> any/c any/c any/c) vector? heap?)]
  [heap->vector (-> heap? vector?)]
  [heap-copy (-> heap? heap?)]
 
