@@ -3,6 +3,11 @@
          data/heap
          (submod data/heap test-util))
 
+;; Check growth rate of the vectors
+(for ([n (in-range 10000)])
+  (check <= n (fittest-block-size n))
+  (check <= (fittest-block-size n) (max MIN-SIZE (* 2 n))))
+
 (define (mkheap) (vector->heap <= (vector 6 2 4 10 8)))
 
 (test-equal? "heap->vector"
