@@ -2,6 +2,7 @@
 (require racket/contract/base
          racket/vector
          racket/match
+         racket/math
          (for-syntax racket/base))
 
 (define MIN-SIZE 4)
@@ -74,28 +75,25 @@
   (unless (= n new-n)
     (vector-set! vec new-n n-key)))
 
-(define (subheap? <=? vec n size)
-  (let ([left (vt-leftchild n)]
-        [right (vt-rightchild n)])
-    (and (if (< left size)
-             (<=? (vector-ref vec n) (vector-ref vec left))
-             #t)
-         (if (< right size)
-             (<=? (vector-ref vec n) (vector-ref vec right))
-             #t))))
+(define (fittest-block-size n)
+  (max MIN-SIZE
+       (expt 2 (integer-length (- n 1))
+             #;(exact-ceiling (log (max 1 n) 2)))))
 
+;; Grow the vector to the fittest 2^n ≥ new-size-min
 (define (grow-vector v1 new-size-min)
-  (let ([new-size (let loop ([size (vector-length v1)])
-                    (if (>= size new-size-min)
-                        size
-                        (loop (* size 2))))])
+  (let ([new-size (max (vector-length v1)
+                       (fittest-block-size new-size-min))])
     (let ([v2 (make-vector new-size #f)])
       (vector-copy! v2 0 v1 0)
       v2)))
 
-(define (shrink-vector v1)
-  (let ([v2 (make-vector (quotient (vector-length v1) 2) #f)])
-    (vector-copy! v2 0 v1 0 (vector-length v2))
+;; Shrink to the fittest vector of size 2^n ≥ new-size-min
+(define (shrink-vector v1 new-size-min)
+  (define new-size (max MIN-SIZE
+                        (fittest-block-size new-size-min)))
+  (let ([v2 (make-vector new-size #f)])
+    (vector-copy! v2 0 v1 0 new-size)
     v2))
 
 ;; Heaps
@@ -109,8 +107,7 @@
 (define (vector->heap <=? vec0
                       [start 0] [end (vector-length vec0)])
   (define size (- end start))
-  (define len (let loop ([len MIN-SIZE]) (if (<= size len) len (loop (* 2 len)))))
-  (define vec (make-vector len #f))
+  (define vec (make-vector (fittest-block-size size) #f))
   ;; size <= length(vec)
   (vector-copy! vec 0 vec0 start end)
   (for ([n (in-range (sub1 size) -1 -1)])
@@ -192,7 +189,7 @@
            ;; otherwise we need to heapify up
            (heapify-up <=? vec index)])])
      (when (< MIN-SIZE size (quotient (vector-length vec) 4))
-       (set-heap-vec! h (shrink-vector vec)))
+       (set-heap-vec! h (shrink-vector vec size)))
      (set-heap-count! h sub1-size)]))
 
 (define (heap-get-index h v same?)
@@ -298,7 +295,9 @@
 (provide heap-sort!)
 
 (module+ test-util
-  (provide valid-heap?)
+  (provide valid-heap?
+           fittest-block-size
+           MIN-SIZE)
   (define (valid-heap? a-heap)
     (match a-heap
       [(heap vec size <=?)
