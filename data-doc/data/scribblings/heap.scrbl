@@ -109,14 +109,14 @@ empty, an exception is raised.
   (heap-min a-heap)]
 }
 
-@defproc[(heap-remove! [h heap?] [v any/c] [#:same? same? (-> any/c any/c any/c) equal?]) void?]{
+@defproc[(heap-remove! [h heap?] [v any/c] [#:same? same? (-> any/c any/c any/c) equal?]) boolean?]{
 Removes @racket[v] from the heap @racket[h] if it exists. 
 @examples[#:eval the-eval
   (define a-heap (make-heap string<=? string=?))
   (heap-add! a-heap "a" "b" "c")
   (heap-remove! a-heap "b")
   (for/list ([a (in-heap a-heap)]) a)]
-}
+@history[#:changed "7.6.0.18" @elem{Returns a @racket[boolean?] instead of @racket[void?]}]}
 
 @defproc[(vector->heap [<=? (-> any/c any/c any/c)] [items vector?]) heap?]{
 
