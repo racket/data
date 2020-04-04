@@ -25,6 +25,9 @@
 
 ;; Operations
 
+;; Instead of exchanging the parent and the child at each iteration,
+;; only the child is updated, whereas the parent needs to be update
+;; only once, after the loop.
 (define (heapify-up <=? vec n)
   (define n-key (vector-ref vec n))
   (define new-n
@@ -32,39 +35,43 @@
       (cond
         [(vt-root? n) n]
         [else
-         (let* ([parent (vt-parent n)]
-                [parent-key (vector-ref vec parent)])
-           (cond
-             [(<=? parent-key n-key)
-              n]
-             [else
-              (vector-set! vec n parent-key)
-              (loop parent)]))])))
+         (define parent (vt-parent n))
+         (define parent-key (vector-ref vec parent))
+         (cond
+           [(<=? parent-key n-key)
+            n]
+           [else
+            (vector-set! vec n parent-key)
+            #;(vector-set! vec parent key) ; this can wait until after the loop
+            (loop parent)])])))
   (unless (= n new-n)
+    ; All parent updates are collapsed into this one:
     (vector-set! vec new-n n-key)))
 
+;; See comment for heapify-up
 (define (heapify-down <=? vec n size)
   (define n-key (vector-ref vec n))
   (define new-n
     (let loop ([n n])
-      (let ([left (vt-leftchild n)]
-            [right (vt-rightchild n)])
-        (cond
-          [(< left size)
-           (let ([left-key (vector-ref vec left)])
-             (let-values ([(child child-key)
-                           (if (< right size)
-                             (let ([right-key (vector-ref vec right)])
-                               (if (<=? left-key right-key)
-                                 (values left left-key)
-                                 (values right right-key)))
-                             (values left left-key))])
-               (cond
-                 [(<=? n-key child-key) n]
-                 [else
-                  (vector-set! vec n child-key)
-                  (loop child)])))]
-          [else n]))))
+      (define left (vt-leftchild n))
+      (define right (vt-rightchild n))
+      (cond
+        [(< left size)
+         (define left-key (vector-ref vec left))
+         (define-values (child child-key)
+           (if (< right size)
+             (let ([right-key (vector-ref vec right)])
+               (if (<=? left-key right-key)
+                 (values left left-key)
+                 (values right right-key)))
+             (values left left-key)))
+         (cond
+           [(<=? n-key child-key) n]
+           [else
+            (vector-set! vec n child-key)
+            #;(vector-set! vec child n-key) ; this can wait until after the loop
+            (loop child)])]
+        [else n])))
   (unless (= n new-n)
     (vector-set! vec new-n n-key)))
 
@@ -75,18 +82,19 @@
 
 ;; Grow the vector to the fittest 2^n ≥ new-size-min
 (define (grow-vector v1 new-size-min)
-  (let ([new-size (max (vector-length v1)
-                       (fittest-block-size new-size-min))])
-    (let ([v2 (make-vector new-size #f)])
-      (vector-copy! v2 0 v1 0)
-      v2)))
+  (define new-size
+    (max (vector-length v1)
+         (fittest-block-size new-size-min)))
+  (define v2 (make-vector new-size #f))
+  (vector-copy! v2 0 v1 0)
+  v2)
 
 ;; Shrink to the fittest vector of size 2^n ≥ new-size-min
 (define (shrink-vector v1 new-size-min)
   (define new-size (fittest-block-size new-size-min))
-  (let ([v2 (make-vector new-size #f)])
-    (vector-copy! v2 0 v1 0 new-size)
-    v2))
+  (define v2 (make-vector new-size #f))
+  (vector-copy! v2 0 v1 0 new-size)
+  v2)
 
 ;; Heaps
 
