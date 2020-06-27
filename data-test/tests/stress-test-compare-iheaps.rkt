@@ -1,26 +1,30 @@
 #lang racket
 
 (require data/iheap
-         data/iheap2)
+         data/iheap2
+         data/iheap3)
 
-;;;; Using two priority queues with indexed heaps.
+;;;; Using three priority queues with indexed heaps.
 
 ;;;; iheap:  exposes opaque nodes.
 ;;;; iheap2: exposes indices.
+;;;; iheap3: uses hash table (delayed initialization)
 
 (define-syntax-rule (time+memory body ...)
   (begin
     (collect-garbage)
     (collect-garbage)
     (define pre (current-memory-use))
-    (time body ...)
-    (define post (current-memory-use))
-    (printf "memory use: ~a\n" (- post pre))))
+    (begin0 (time body ...)
+      (let ([post (current-memory-use)])
+        (printf "memory use: ~a\n" (- post pre))))))
 
 
 (for ([N (in-list '(1000 100000 1000000 10000000))])
   (printf "\nN=~a\n" N)
   (define lst (build-list N (λ (i) (random (expt 2 31)))))
+  (define sorted (sort lst <))
+
   ;;; Indexed heaps with internal nodes.
   ;;; The user must keep the *nodes* returned by iheap-add-all!
   ;;; in the same structure containing the user's values.
@@ -53,6 +57,8 @@
          (iheap-remove-min! h1)
          (iheap-remove! h2 (element-h2-node a))
          (element-val a)))))
+  (unless (equal? lres1 sorted)
+    (error "iheap produced wrong result" lres1))
 
 
   ;;; Indexed heaps with getter and setter so the user keeps track of the indices.
@@ -85,7 +91,60 @@
          (iheap2-remove-min! h1)
          (iheap2-remove! h2 a)
          (element-val a)))))
+  (unless (equal? lres2 sorted)
+    (error "iheap2 produced wrong result"))
 
-  (unless (equal? lres1 lres2)
-    (error "Results are not equal!")))
+  ;; iheap3
+  (displayln "* iheap3 (internal hash table)")
+  (define lres3
+    (let ()
+      (struct element (val) #:transparent)
+      (define h1 (make-iheap3 (lambda (e1 e2) (< (element-val e1) (element-val e2)))))
+      (define h2 (make-iheap3 (lambda (e1 e2) (> (element-val e1) (element-val e2)))))
 
+      (define elts (map (λ (x) (element x)) lst))
+
+      ;; Add nodes to both heaps. Tracking is automatic.
+      (displayln "*** Add elements")
+      (time+memory
+       (iheap3-add-all! h1 elts)
+       (iheap3-add-all! h2 elts))
+
+      ; Remove min for h1, and remove same element in h2
+      (displayln "*** Remove elements")
+      (time+memory
+       (for/list ([n (in-range N)])
+         (define a (iheap3-min h1))
+         (iheap3-remove-min! h1)
+         (iheap3-remove! h2 a)
+         (element-val a)))))
+  (unless (equal? lres3 sorted)
+    (error "iheap3 produced wrong result"))
+
+  ;; iheap3 w/o wrapper
+  (displayln "* iheap3 w/o wrapper")
+  (define lres3*
+    (let ()
+      (define h1 (make-iheap3 <))
+      (define h2 (make-iheap3 >))
+
+      (define elts lst)
+
+      ;; Add nodes to both heaps. Tracking is automatic.
+      (displayln "*** Add elements")
+      (time+memory
+       (iheap3-add-all! h1 elts)
+       (iheap3-add-all! h2 elts))
+
+      ; Remove min for h1, and remove same element in h2
+      (displayln "*** Remove elements")
+      (time+memory
+       (for/list ([n (in-range N)])
+         (define a (iheap3-min h1))
+         (iheap3-remove-min! h1)
+         (iheap3-remove! h2 a)
+         (values a)))))
+  (unless (equal? lres3* sorted)
+    (error "iheap3 (w/o wrapper) produced wrong result" lres3*))
+
+  (void))
