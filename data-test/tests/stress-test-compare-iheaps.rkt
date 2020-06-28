@@ -14,6 +14,7 @@
   (begin
     (collect-garbage)
     (collect-garbage)
+    (collect-garbage)
     (define pre (current-memory-use))
     (begin0 (time body ...)
       (let ([post (current-memory-use)])
@@ -21,7 +22,7 @@
 
 
 (for ([N (in-list '(1000 100000 1000000 10000000))])
-  (printf "\nN=~a\n" N)
+  (printf "\n\nN=~a\n" N)
   (define lst (build-list N (λ (i) (random (expt 2 31)))))
   (define sorted (sort lst <))
 
@@ -29,7 +30,7 @@
   ;;; The user must keep the *nodes* returned by iheap-add-all!
   ;;; in the same structure containing the user's values.
   ;;; Nodes are opaque.
-  (displayln "* iheap (opaque)")
+  (displayln "\n* iheap (opaque)")
   (define lres1
     (let ()
       (struct element (val [h1-node #:mutable] [h2-node #:mutable])
@@ -63,7 +64,7 @@
 
   ;;; Indexed heaps with getter and setter so the user keeps track of the indices.
   ;;; Indices are not opaque.
-  (displayln "* iheap2 (visible indices)")
+  (displayln "\n* iheap2 (visible indices)")
   (define lres2
     (let ()
       (struct element (val [h1-idx #:mutable] [h2-idx #:mutable])
@@ -95,7 +96,7 @@
     (error "iheap2 produced wrong result"))
 
   ;; iheap3
-  (displayln "* iheap3 (internal hash table)")
+  (displayln "\n* iheap3 (internal hash table)")
   (define lres3
     (let ()
       (struct element (val) #:transparent)
@@ -121,8 +122,40 @@
   (unless (equal? lres3 sorted)
     (error "iheap3 produced wrong result"))
 
+  ;; iheap3 forced first removal
+  (displayln "\n* iheap3 with early get-index")
+  (define lres3b
+    (let ()
+      (struct element (val) #:transparent)
+      (define h1 (make-iheap3 (lambda (e1 e2) (< (element-val e1) (element-val e2)))))
+      (define h2 (make-iheap3 (lambda (e1 e2) (> (element-val e1) (element-val e2)))))
+
+      (define elts (map (λ (x) (element x)) lst))
+
+      ;; Add nodes to both heaps. Tracking is automatic.
+      (displayln "*** Add elements")
+      (let ([x (first elts)])
+        (iheap3-add! h1 x)
+        (iheap3-remove! h1 x)
+        (iheap3-add! h2 x)
+        (iheap3-remove! h2 x))
+      (time+memory
+       (iheap3-add-all! h1 elts)
+       (iheap3-add-all! h2 elts))
+
+      ; Remove min for h1, and remove same element in h2
+      (displayln "*** Remove elements")
+      (time+memory
+       (for/list ([n (in-range N)])
+         (define a (iheap3-min h1))
+         (iheap3-remove-min! h1)
+         (iheap3-remove! h2 a)
+         (element-val a)))))
+  (unless (equal? lres3b sorted)
+    (error "iheap3b produced wrong result"))
+
   ;; iheap3 w/o wrapper
-  (displayln "* iheap3 w/o wrapper")
+  (displayln "\n* iheap3 w/o wrapper")
   (define lres3*
     (let ()
       (define h1 (make-iheap3 <))
