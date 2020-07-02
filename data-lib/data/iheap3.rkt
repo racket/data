@@ -5,9 +5,17 @@
 
 (define MIN-SIZE 4)
 
-(struct iheap2 ([vec #:mutable] [count #:mutable] <=? set-index! get-index))
+(struct iheap3 ([vec #:mutable] [count #:mutable] <=? [elt=>idx #:mutable]))
 ;; length(vec)/4 <= size <= length(vec), except size >= MIN-SIZE
 ;; size = next available index
+;; elt=>idx : #f or Hasheq[Element => Nat], not initialized until used by
+;;   get-index (that is, by heap-remove!)
+
+;; If heap contains duplicate elements, then the hash will lose some.
+;; Could detect, could handle duplicates (more complicated), or could
+;; just warn user "don't do that".
+
+;; Allow user to select hash type (hasheq vs hasheqv vs hash)?
 
 ;; A VT is a binary tree represented as a vector.
 
@@ -23,12 +31,42 @@
 (define (vt-leftchild? n) (odd? n))
 (define (vt-rightchild? n) (even? n))
 
+(define (set-index! elt=>idx k n)
+  (when elt=>idx (hash-set! elt=>idx k n)))
+
+(define (remove-index! elt=>idx k)
+  (when elt=>idx (hash-remove! elt=>idx k)))
+
+#;(define (get-index h k)
+  (define (get-elt=>idx h)
+    (match h
+      [(iheap3 vec size <=? elt=>idx)
+       (or elt=>idx
+           (let ([elt=>idx (make-hasheq)])
+             (for ([idx (in-range size)] [elt (in-vector vec)])
+               (hash-set! elt=>idx elt idx))
+             (set-iheap3-elt=>idx! h elt=>idx)
+             elt=>idx))]))
+  (hash-ref (get-elt=>idx h) k #f))
+
+(define (get-index h k)
+  (define elt=>idx
+    (or (iheap3-elt=>idx h)
+        (match h
+          [(iheap3 vec size <=? elt=>idx)
+           (let ([elt=>idx (make-hasheq)])
+             (for ([idx (in-range size)] [elt (in-vector vec)])
+               (hash-set! elt=>idx elt idx))
+             (set-iheap3-elt=>idx! h elt=>idx)
+             elt=>idx)])))
+  (hash-ref elt=>idx k #f))
+
 ;; Operations
 
 ;; Instead of exchanging the parent and the child at each iteration,
 ;; only the child is updated, whereas the parent needs to be update
 ;; only once, after the loop.
-(define (iheap2ify-up <=? vec n set-index!)
+(define (iheap3ify-up <=? vec n elt=>idx)
   (define n-key (vector-ref vec n))
   (define new-n
     (let loop ([n n])
@@ -42,16 +80,16 @@
             n]
            [else
             (vector-set! vec n parent-key)
-            (set-index! parent-key n)
+            (set-index! elt=>idx parent-key n)
             #;(vector-set! vec parent key) ; this can wait until after the loop
             (loop parent)])])))
   (unless (= n new-n)
     ; All parent updates are collapsed into this one:
     (vector-set! vec new-n n-key)
-    (set-index! n-key new-n)))
+    (set-index! elt=>idx n-key new-n)))
 
-;; See comment for iheap2ify-up
-(define (iheap2ify-down <=? vec n size set-index!)
+;; See comment for iheap3ify-up
+(define (iheap3ify-down <=? vec n size elt=>idx)
   (define n-key (vector-ref vec n))
   (define new-n
     (let loop ([n n])
@@ -72,12 +110,12 @@
            [else
             (vector-set! vec n child-key)
             #;(vector-set! vec child n-key) ; this can wait until after the loop
-            (set-index! child-key n)
+            (set-index! elt=>idx child-key n)
             (loop child)])]
         [else n])))
   (unless (= n new-n)
     (vector-set! vec new-n n-key)
-    (set-index! n-key new-n)))
+    (set-index! elt=>idx n-key new-n)))
 
 (define (fittest-block-size n)
   (max MIN-SIZE
@@ -100,206 +138,200 @@
   (vector-copy! v2 0 v1 0 new-size)
   v2)
 
-;; iheap2s
+;; iheap3s
 
-(define (make-iheap2 <=? #:set-index! set-index! #:get-index get-index)
-  (iheap2 (make-vector MIN-SIZE #f) 0 <=? set-index! get-index))
+(define (make-iheap3 <=?)
+  (iheap3 (make-vector MIN-SIZE #f) 0 <=? #f))
 
-(define (list->iheap2 <=? lst)
-  (vector->iheap2 <=? (list->vector lst)))
+(define (list->iheap3 <=? lst)
+  (vector->iheap3 <=? (list->vector lst)))
 
-(define (vector->iheap2 <=? vec0
-                      [start 0] [end (vector-length vec0)]
-                      #:set-index! set-index!
-                      #:get-index get-index)
+(define (vector->iheap3 <=? vec0
+                      [start 0] [end (vector-length vec0)])
   (define size (- end start))
   (define vec (make-vector (fittest-block-size size) #f))
   ;; size <= length(vec)
   (vector-copy! vec 0 vec0 start end)
   (for ([n (in-range (sub1 size) -1 -1)])
-    (iheap2ify-down <=? vec n size set-index!))
-  (iheap2 vec size <=? set-index! get-index))
+    (iheap3ify-down <=? vec n size #f))
+  (iheap3 vec size <=? #f))
 
-(define (iheap2-copy h)
+(define (iheap3-copy h)
   (match h
-    [(iheap2 vec count <=? set-index! get-index)
-     (iheap2 (vector-copy vec) count <=? set-index! get-index)]))
+    [(iheap3 vec count <=? _)
+     ;; Should elt=>idx (if initialized) be copied over too?
+     ;; Only worthwhile if heap-remove! will be used on new heap,
+     ;; which it isn't in the in-heap use case.
+     (iheap3 (vector-copy vec) count <=? #f)]))
 
-(define (iheap2-add! h . keys)
-  (iheap2-add-all! h (list->vector keys)))
+(define (iheap3-add! h . keys)
+  (iheap3-add-all! h (list->vector keys)))
 
-(define (iheap2-add-all! h keys)
+(define (iheap3-add-all! h keys)
   (let-values ([(keys keys-size)
                 (cond [(list? keys)
                        (let ([keys-v (list->vector keys)])
                          (values keys-v (vector-length keys-v)))]
                       [(vector? keys)
                        (values keys (vector-length keys))]
-                      [(iheap2? keys)
-                       (values (iheap2-vec keys) (iheap2-count keys))])])
+                      [(iheap3? keys)
+                       (values (iheap3-vec keys) (iheap3-count keys))])])
     (match h
-      [(iheap2 vec size <=? set-index! _)
+      [(iheap3 vec size <=? elt=>idx)
        (let* ([new-size (+ size keys-size)]
               [vec (if (> new-size (vector-length vec))
                        (let ([vec (grow-vector vec new-size)])
-                         (set-iheap2-vec! h vec)
+                         (set-iheap3-vec! h vec)
                          vec)
                        vec)])
          (vector-copy! vec size keys 0 keys-size)
          (for ([n (in-range size new-size)]
                [item (in-vector vec size)])
-           (set-index! item n)
-           (iheap2ify-up <=? vec n set-index!))
-         (set-iheap2-count! h new-size))])))
+           (set-index! elt=>idx item n)
+           (iheap3ify-up <=? vec n elt=>idx))
+         (set-iheap3-count! h new-size))])))
 
-(define (iheap2-min h)
+(define (iheap3-min h)
   (match h
-    [(iheap2 vec size <=? set-index! _)
+    [(iheap3 vec size <=? _)
      (when (zero? size)
-       (error 'iheap2-min "empty iheap2"))
+       (error 'iheap3-min "empty iheap3"))
      (vector-ref vec 0)]))
 
-(define (iheap2-remove-min! h)
-  (when (zero? (iheap2-count h))
-    (error 'iheap2-remove-min! "empty iheap2"))
-  (iheap2-remove-index! h 0))
+(define (iheap3-remove-min! h)
+  (when (zero? (iheap3-count h))
+    (error 'iheap3-remove-min! "empty iheap3"))
+  (iheap3-remove-index! h 0))
 
-(define (iheap2-remove-index! h index)
+(define (iheap3-remove-index! h index)
   (match h
-    [(iheap2 vec size <=? set-index! _)
+    [(iheap3 vec size <=? elt=>idx)
      (unless (< index size)
        (if (zero? size)
-           (error 'iheap2-remove-index!
-                  "empty iheap2: ~s" index)
-           (error 'iheap2-remove-index!
+           (error 'iheap3-remove-index!
+                  "empty iheap3: ~s" index)
+           (error 'iheap3-remove-index!
                   "index out of bounds [0,~s]: ~s" (sub1 size) index)))
      (define sub1-size (sub1 size))
      (define last-item (vector-ref vec sub1-size))
      (define removed-item (vector-ref vec index))
      (vector-set! vec index last-item)
      (vector-set! vec sub1-size #f)
-     (when set-index!
-       (set-index! last-item index)
-       (set-index! removed-item #f))
+     (when elt=>idx
+       (set-index! elt=>idx last-item index)
+       (remove-index! elt=>idx removed-item))
      (cond
        [(= sub1-size index)
         ;; easy to remove the right-most leaf
         (void)]
        [(= index 0)
         ;; can only go down when at the root
-        (iheap2ify-down <=? vec index sub1-size set-index!)]
+        (iheap3ify-down <=? vec index sub1-size elt=>idx)]
        [else
         (define index-parent (vt-parent index))
         (cond
           ;; if we are in the right relationship with our parent,
-          ;; try to iheap2ify down
+          ;; try to iheap3ify down
           [(<=? (vector-ref vec index-parent) (vector-ref vec index))
-           (iheap2ify-down <=? vec index sub1-size set-index!)]
+           (iheap3ify-down <=? vec index sub1-size elt=>idx)]
           [else
-           ;; otherwise we need to iheap2ify up
-           (iheap2ify-up <=? vec index set-index!)])])
+           ;; otherwise we need to iheap3ify up
+           (iheap3ify-up <=? vec index elt=>idx)])])
      (when (< MIN-SIZE size (quotient (vector-length vec) 4))
-       (set-iheap2-vec! h (shrink-vector vec size)))
-     (set-iheap2-count! h sub1-size)]))
+       (set-iheap3-vec! h (shrink-vector vec size)))
+     (set-iheap3-count! h sub1-size)]))
 
 ;; Returns whether the removal was successful, that is,
-;; whether v was indeed in the iheap2.
-(define (iheap2-remove! h v)
-  (define idx ((iheap2-get-index h) v))
+;; whether v was indeed in the iheap3.
+(define (iheap3-remove! h v)
+  (define idx (get-index h v))
   (cond [idx
-         (unless (eq? v (vector-ref (iheap2-vec h) idx))
+         (unless (eq? v (vector-ref (iheap3-vec h) idx))
            (error "Key does not belong to iheap" v))
-         (iheap2-remove-index! h idx)
+         (iheap3-remove-index! h idx)
          #t]
         [else #f]))
 
-(define (in-iheap2 h)
-  (in-iheap2/consume! (iheap2-copy h)))
+(define (in-iheap3 h)
+  (in-iheap3/consume! (iheap3-copy h)))
 
-(define (in-iheap2/consume! h)
+(define (in-iheap3/consume! h)
   (make-do-sequence
    (lambda ()
-     (values (lambda (_) (iheap2-min h))
-             (lambda (_) (iheap2-remove-min! h) #t)
+     (values (lambda (_) (iheap3-min h))
+             (lambda (_) (iheap3-remove-min! h) #t)
              #t
-             (lambda (_) (> (iheap2-count h) 0))
+             (lambda (_) (> (iheap3-count h) 0))
              (lambda _ #t)
              (lambda _ #t)))))
 
 ;; --------
 
-;; preferred order is (iheap2-sort vec <=?), but allow old order too
-(define (iheap2-sort! x y)
+;; preferred order is (iheap3-sort vec <=?), but allow old order too
+(define (iheap3-sort! x y)
   (cond [(and (vector? x) (procedure? y))
-         (iheap2-sort!* x y)]
+         (iheap3-sort!* x y)]
         [(and (vector? y) (procedure? x))
-         (iheap2-sort!* y x)]
+         (iheap3-sort!* y x)]
         [else
          (unless (vector? x)
-           (raise-argument-error 'iheap2-sort! "vector?" x))
-         (raise-argument-error 'iheap2-sort! "procedure?" y)]))
+           (raise-argument-error 'iheap3-sort! "vector?" x))
+         (raise-argument-error 'iheap3-sort! "procedure?" y)]))
 
-(define (iheap2-sort!* v <=?)
-  ;; to get ascending order, need max-iheap2, so reverse comparison
+(define (iheap3-sort!* v <=?)
+  ;; to get ascending order, need max-iheap3, so reverse comparison
   (define (>=? x y) (<=? y x))
   (define size (vector-length v))
   (for ([n (in-range (sub1 size) -1 -1)])
-    (iheap2ify-down >=? v n size #f))
+    (iheap3ify-down >=? v n size #f))
   (for ([last (in-range (sub1 size) 0 -1)])
     (let ([tmp (vector-ref v 0)])
       (vector-set! v 0 (vector-ref v last))
       (vector-set! v last tmp))
-    (iheap2ify-down >=? v 0 last #f)))
+    (iheap3ify-down >=? v 0 last #f)))
 
-(define (iheap2->vector h)
+(define (iheap3->vector h)
   (match h
-    [(iheap2 vec size <=? set-index! _)
+    [(iheap3 vec size <=? _)
      (let ([v (vector-copy vec 0 size)])
-       (iheap2-sort!* v <=?)
+       (iheap3-sort!* v <=?)
        v)]))
 
 ;; --------
 
 (provide/contract
- [make-iheap2 (->* ((procedure-arity-includes/c 2)
+ [make-iheap3 (->* ((procedure-arity-includes/c 2)
                     #;(and/c (procedure-arity-includes/c 2)
-                             (unconstrained-domain-> any/c))
-                    #:set-index! (procedure-arity-includes/c 2)
-                    #;(-> any/c (or/c #f exact-nonnegative-integer?) any/c)
-                    #:get-index  (procedure-arity-includes/c 1)
-                    #;(-> any/c (or/c #f exact-nonnegative-integer?)))
-                 iheap2?)]
- [iheap2? (-> any/c boolean?)]
- [iheap2-count (-> iheap2? exact-nonnegative-integer?)]
- [iheap2-add! (->* (iheap2?) () #:rest list? void?)]
- [iheap2-add-all! (-> iheap2? (or/c list? vector? iheap2?) void?)]
- [iheap2-min (-> iheap2? any/c)]
- [iheap2-remove-min! (-> iheap2? void?)]
- [iheap2-remove! (->* (iheap2? any/c) boolean?)]
- [iheap2-remove-index! (-> iheap2? exact-nonnegative-integer? void?)]
- [vector->iheap2 (->* ((-> any/c any/c any/c)
-                       vector?
-                       #:set-index! (procedure-arity-includes/c 2)
-                       #;(-> any/c exact-nonnegative-integer? any/c)
-                       #:get-index (procedure-arity-includes/c 1)
-                       #;(-> any/c (or/c #f exact-nonnegative-integer?)))
+                             (unconstrained-domain-> any/c)))
+                 iheap3?)]
+ [iheap3? (-> any/c boolean?)]
+ [iheap3-count (-> iheap3? exact-nonnegative-integer?)]
+ [iheap3-add! (->* (iheap3?) () #:rest list? void?)]
+ [iheap3-add-all! (-> iheap3? (or/c list? vector? iheap3?) void?)]
+ [iheap3-min (-> iheap3? any/c)]
+ [iheap3-remove-min! (-> iheap3? void?)]
+ [iheap3-remove! (->* (iheap3? any/c) boolean?)]
+ [iheap3-remove-index! (-> iheap3? exact-nonnegative-integer? void?)]
+ [vector->iheap3 (->* ((procedure-arity-includes/c 2)
+                       #;(-> any/c any/c any/c)
+                       vector?)
                       []
-                    iheap2?)]
- [iheap2->vector (-> iheap2? vector?)]
- [iheap2-copy (-> iheap2? iheap2?)]
+                    iheap3?)]
+ [iheap3->vector (-> iheap3? vector?)]
+ [iheap3-copy (-> iheap3? iheap3?)]
 
- [in-iheap2 (-> iheap2? sequence?)]
- [in-iheap2/consume! (-> iheap2? sequence?)])
+ [in-iheap3 (-> iheap3? sequence?)]
+ [in-iheap3/consume! (-> iheap3? sequence?)])
 
-(provide iheap2-sort!)
+(provide iheap3-sort!)
 
 (module+ test-util
-  (provide valid-iheap2?
+  (provide valid-iheap3?
            fittest-block-size
            MIN-SIZE)
-  (define (valid-iheap2? a-iheap2)
-    (match a-iheap2
-      [(iheap2 vec size <=? set-index! _)
+  (define (valid-iheap3? a-iheap3)
+    (match a-iheap3
+      [(iheap3 vec size <=? _)
        (let loop ([i 0]
                   [parent -inf.0])
          (cond

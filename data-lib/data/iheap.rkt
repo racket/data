@@ -133,10 +133,10 @@
      ; CAN'T JUST COPY VEC
      (iheap (vector-copy vec) count <=?)]))
 
-(define (iheap-add! h #:set-node! set-node! . keys)
-  (iheap-add-all! h (list->vector keys) #:set-node! set-node!))
+(define (iheap-add! h . keys)
+  (iheap-add-all! h (list->vector keys)))
 
-(define (iheap-add-all! h keys #:set-node! set-node!)
+(define (iheap-add-all! h keys)
   (let-values ([(keys keys-size)
                 (cond [(list? keys)
                        (let ([keys-v (list->vector keys)])
@@ -144,10 +144,10 @@
                       [(vector? keys)
                        (values keys (vector-length keys))]
                       #;[(heap? keys) ; no access to heap-vec
-                         (values (heap-vec keys) (heap-count keys))]
+                       (values (heap-vec keys) (heap-count keys))]
                       #;[(iheap? keys)
                          ; must extract the keys from the nodes
-                         (values (iheap-vec keys) (iheap-count keys))])])
+                       (values (iheap-vec keys) (iheap-count keys))])])
     (match h
       [(iheap vec size <=?)
        (let* ([new-size (+ size keys-size)]
@@ -157,16 +157,17 @@
                        vec)
                      vec)])
          #;(vector-copy! vec size keys 0 keys-size)
-         (for ([n (in-range size new-size)]
-               [item (in-vector keys size)])
-           (define nd (node item n))
-           (set-node! item nd)
-           (vector-set! vec n nd)
-           (iheapify-up <=? vec n)
-           nd)
+         (define nodes
+           (for/list ([n (in-range size new-size)]
+                      [item (in-vector keys size)])
+             (define nd (node item n))
+             (vector-set! vec n nd)
+             (iheapify-up <=? vec n)
+             nd))
          ; A little risky to do that afterward only,
          ; but iheapify-up doesn't use.
-         (set-iheap-count! h new-size))])))
+         (set-iheap-count! h new-size) 
+         nodes)])))
 
 (define (iheap-min h)
   (match h
@@ -277,14 +278,15 @@
 ;; --------
 
 (provide/contract
- [make-iheap (->* ((and/c (procedure-arity-includes/c 2)
-                         (unconstrained-domain-> any/c)))
+ [make-iheap (->* ((procedure-arity-includes/c 2)
+                   #;(and/c (procedure-arity-includes/c 2)
+                            (unconstrained-domain-> any/c)))
                  iheap?)]
  [iheap? (-> any/c boolean?)]
  [iheap-node-key (-> node? any/c)]
  [iheap-count (-> iheap? exact-nonnegative-integer?)]
- [iheap-add! (->* (iheap? #:set-node! (-> any/c node? any/c)) () #:rest list? void?)]
- [iheap-add-all! (-> iheap? (or/c list? vector? iheap?) #:set-node! (-> any/c node? any/c) void?)]
+ [iheap-add! (->* (iheap?) () #:rest list? list?)]
+ [iheap-add-all! (-> iheap? (or/c list? vector? iheap?) list?)]
  [iheap-min (-> iheap? any/c)]
  [iheap-remove-min! (-> iheap? void?)]
  [iheap-remove! (->* (iheap? node?)  boolean?)]
