@@ -8,7 +8,7 @@
          #;data/iheap3
          #;racket/places)
 
-;;;; Using two priority queues with indexed heaps.
+;;;; Using three priority queues with indexed heaps.
 
 ;;;; iheap:  exposes opaque nodes.
 ;;;; iheap2: exposes indices.
@@ -24,6 +24,7 @@
       (let ([post (current-memory-use)])
         (printf "memory use: ~a\n" (- post pre))))))
 
+; Remove from alternating heaps
 (define-syntax-rule (remove-elements [N h1 h2] [ha hb] body ... val)
   (begin
     ; Remove min for h1, and remove same element in h2
