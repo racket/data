@@ -278,8 +278,9 @@
 ;; --------
 
 (provide/contract
- [make-iheap (->* ((and/c (procedure-arity-includes/c 2)
-                         (unconstrained-domain-> any/c)))
+ [make-iheap (->* ((procedure-arity-includes/c 2)
+                   #;(and/c (procedure-arity-includes/c 2)
+                            (unconstrained-domain-> any/c)))
                  iheap?)]
  [iheap? (-> any/c boolean?)]
  [iheap-node-key (-> node? any/c)]

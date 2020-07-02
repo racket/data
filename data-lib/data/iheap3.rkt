@@ -37,7 +37,7 @@
 (define (remove-index! elt=>idx k)
   (when elt=>idx (hash-remove! elt=>idx k)))
 
-(define (get-index h k)
+#;(define (get-index h k)
   (define (get-elt=>idx h)
     (match h
       [(iheap3 vec size <=? elt=>idx)
@@ -48,6 +48,18 @@
              (set-iheap3-elt=>idx! h elt=>idx)
              elt=>idx))]))
   (hash-ref (get-elt=>idx h) k #f))
+
+(define (get-index h k)
+  (define elt=>idx
+    (or (iheap3-elt=>idx h)
+        (match h
+          [(iheap3 vec size <=? elt=>idx)
+           (let ([elt=>idx (make-hasheq)])
+             (for ([idx (in-range size)] [elt (in-vector vec)])
+               (hash-set! elt=>idx elt idx))
+             (set-iheap3-elt=>idx! h elt=>idx)
+             elt=>idx)])))
+  (hash-ref elt=>idx k #f))
 
 ;; Operations
 
@@ -288,8 +300,9 @@
 ;; --------
 
 (provide/contract
- [make-iheap3 (->* ((and/c (procedure-arity-includes/c 2)
-                           (unconstrained-domain-> any/c)))
+ [make-iheap3 (->* ((procedure-arity-includes/c 2)
+                    #;(and/c (procedure-arity-includes/c 2)
+                             (unconstrained-domain-> any/c)))
                  iheap3?)]
  [iheap3? (-> any/c boolean?)]
  [iheap3-count (-> iheap3? exact-nonnegative-integer?)]
@@ -299,7 +312,8 @@
  [iheap3-remove-min! (-> iheap3? void?)]
  [iheap3-remove! (->* (iheap3? any/c) boolean?)]
  [iheap3-remove-index! (-> iheap3? exact-nonnegative-integer? void?)]
- [vector->iheap3 (->* ((-> any/c any/c any/c)
+ [vector->iheap3 (->* ((procedure-arity-includes/c 2)
+                       #;(-> any/c any/c any/c)
                        vector?)
                       []
                     iheap3?)]

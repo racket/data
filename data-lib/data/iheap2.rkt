@@ -261,10 +261,13 @@
 ;; --------
 
 (provide/contract
- [make-iheap2 (->* ((and/c (procedure-arity-includes/c 2)
-                           (unconstrained-domain-> any/c))
-                    #:set-index! (-> any/c (or/c #f exact-nonnegative-integer?) any/c)
-                    #:get-index  (-> any/c (or/c #f exact-nonnegative-integer?)))
+ [make-iheap2 (->* ((procedure-arity-includes/c 2)
+                    #;(and/c (procedure-arity-includes/c 2)
+                             (unconstrained-domain-> any/c))
+                    #:set-index! (procedure-arity-includes/c 2)
+                    #;(-> any/c (or/c #f exact-nonnegative-integer?) any/c)
+                    #:get-index  (procedure-arity-includes/c 1)
+                    #;(-> any/c (or/c #f exact-nonnegative-integer?)))
                  iheap2?)]
  [iheap2? (-> any/c boolean?)]
  [iheap2-count (-> iheap2? exact-nonnegative-integer?)]
@@ -276,8 +279,10 @@
  [iheap2-remove-index! (-> iheap2? exact-nonnegative-integer? void?)]
  [vector->iheap2 (->* ((-> any/c any/c any/c)
                        vector?
-                       #:set-index! (-> any/c exact-nonnegative-integer? any/c)
-                       #:get-index  (-> any/c (or/c #f exact-nonnegative-integer?)))
+                       #:set-index! (procedure-arity-includes/c 2)
+                       #;(-> any/c exact-nonnegative-integer? any/c)
+                       #:get-index (procedure-arity-includes/c 1)
+                       #;(-> any/c (or/c #f exact-nonnegative-integer?)))
                       []
                     iheap2?)]
  [iheap2->vector (-> iheap2? vector?)]
