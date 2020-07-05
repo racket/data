@@ -278,7 +278,7 @@
   (displayln "*******************")
   (displayln "**** One queue ****")
   (displayln "*******************")
-  #;(one-queue-stress-test)
+  (one-queue-stress-test)
   (display "\n\n\n")
   (displayln "********************")
   (displayln "**** Two queues ****")
