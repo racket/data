@@ -3,10 +3,10 @@
 (require (file "../../data-lib/data/iheap.rkt")
          (file "../../data-lib/data/iheap2.rkt")
          (file "../../data-lib/data/iheap3.rkt")
+         data/heap
          #;data/iheap
          #;data/iheap2
-         #;data/iheap3
-         #;racket/places)
+         #;data/iheap3)
 
 ;;;; Using three priority queues with indexed heaps.
 
@@ -139,7 +139,6 @@
    (iheap2-remove! hb a)
    (element-val a)))
 
-;; iheap3 forced first removal
 ;; iheap3
 (define (run-iheap3 lst)
   (define N (length lst))
@@ -222,8 +221,44 @@
                  run-iheap3 #;run-iheap3-early-get-index run-iheap3-w/o-wrapper
                  ))
 
-(provide main)
-(define (main)
+(define-syntax-rule (test-one-queue N make-queue queue-insert! queue-min queue-remove-min! queue-count)
+  (begin
+    (printf "\n*** ~a\n" 'make-queue)
+    (define q (make-queue >))
+    (display " add:    ")
+    (time
+     (for ([i (in-range N)])
+       (queue-insert! q i)))
+    (display " remove: ")
+    (define res
+      (time
+       (for/list ([i (in-range N)])
+         (define x (queue-min q))
+         (queue-remove-min! q)
+         x)))
+
+    (unless (equal? res (range (- N 1) -1 -1))
+      (error "wrong result"))
+    (unless (equal? (queue-count q) 0)
+      (error "not all elements have been removed"))))
+
+(define (one-queue-stress-test)
+  (for ([N (in-list '(1000 100000 1000000 10000000))])
+    (printf "\n\nN = ~a\n" N)
+    (test-one-queue N
+                    make-heap
+                    heap-add!
+                    heap-min
+                    heap-remove-min!
+                    heap-count)
+    (test-one-queue N
+                    make-iheap3
+                    iheap3-add!
+                    iheap3-min
+                    iheap3-remove-min!
+                    iheap3-count)))
+
+(define (two-queues-stress-test)
   (for ([N (in-list '(1000 100000 1000000 10000000))])
     (printf "\n\nN=~a\n" N)
     (define lst (build-list N (λ (i) (random (expt 2 31)))))
@@ -236,27 +271,15 @@
        (when (and prev-lres (not (equal? lres prev-lres)))
          (error "result is different from the previous one" lres))
        lres))
-
-    ;; Using places:
-    #;
-    (define ps
-      (for/list ([fun-name (in-list (dict-keys fun-dict))])
-        (define p
-          (place/context ch
-                 (displayln fun-name)
-                 (define lres #f)
-                 (define out
-                   (with-output-to-string
-                     (λ () (set! lres ((dict-ref fun-dict fun-name) lst)))))
-                 (place-channel-put ch lres)
-                 (place-channel-put ch out)))
-        p))
-    #;
-    (for ([p (in-list ps)])
-      (define lres (place-channel-get p))
-      (define out (place-channel-get p))
-      (displayln out)
-      (unless (equal? lres sorted)
-        (error "someone produced wrong result" lres)))
-
     (void)))
+
+(provide main)
+(define (main)
+  (displayln "*******************")
+  (displayln "**** One queue ****")
+  (displayln "*******************")
+  (one-queue-stress-test)
+  (displayln       "********************")
+  (displayln "\n\n\n**** Two queues ****")
+  (displayln       "********************")
+  (two-queues-stress-test))
