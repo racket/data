@@ -44,6 +44,24 @@
     (heap->vector h))
   '#(2 6 8 10))
 
+(test-equal? "heap-remove-eq!"
+  (let ()
+    (struct node (val))
+    (define (node<=? a b) (<= (node-val a) (node-val b)))
+    (define h (make-heap node<=?))
+    (define nds (map node '(6 2 4 10 8)))
+    (heap-add-all! h nds)
+    (list
+     (heap-remove-eq! h (node 6))
+     (vector-map node-val (heap->vector h)) ; does not exist
+     (heap-remove-eq! h (third nds))
+     (vector-map node-val (heap->vector h)) ; remove once
+     (heap-remove-eq! h (third nds))
+     (vector-map node-val (heap->vector h)) ; remove twice
+     (heap-remove-eq! h (first nds))
+     (vector-map node-val (heap->vector h))))
+  '(#f #(2 4 6 8 10) #t #(2 6 8 10) #f #(2 6 8 10) #t #(2 8 10)))
+
 (define (rand-test range count1 count2 count3)
   (let ([h (make-heap <=)]
         [xs null]) ;; mutated
