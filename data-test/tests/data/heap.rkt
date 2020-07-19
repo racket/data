@@ -1,7 +1,7 @@
 #lang racket
 (require rackunit
          data/heap
-         (submod data/heap test-util))
+         (submod data/heap/unsafe test-util))
 
 ;; Check growth rate of the vectors
 (for ([n (in-range 10000)])
