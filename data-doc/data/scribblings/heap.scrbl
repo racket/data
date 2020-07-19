@@ -14,8 +14,17 @@
 @author[@author+email["Ryan Culpepper" "ryanc@racket-lang.org"]]
 
 Binary heaps are a simple implementation of priority queues.
+For a heap of n elements, @racket[heap-add!] and @racket[heap-remove-min!] take O(log n) time
+per added or removed element,
+while @racket[heap-min] and @racket[heap-count] take constant time;
+@racket[heap-remove!] takes O(n) time, and @racket[heap-remove-eq!] takes O(log n) time
+on average when applicable;
+@racket[heap-sort!] takes O(n log n) time.
+
 
 Operations on binary heaps are not thread-safe.
+
+All functions are also provided by @racket[data/heap/unsafe] without contracts.
 
 @defproc[(make-heap [<=? (-> any/c any/c any/c)])
          heap?]{
