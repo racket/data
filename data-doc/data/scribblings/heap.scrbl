@@ -18,7 +18,7 @@ For a heap of n elements, @racket[heap-add!] and @racket[heap-remove-min!] take 
 per added or removed element,
 while @racket[heap-min] and @racket[heap-count] take constant time;
 @racket[heap-remove!] takes O(n) time, and @racket[heap-remove-eq!] takes O(log n) time
-on average when applicable;
+on average;
 @racket[heap-sort!] takes O(n log n) time.
 
 

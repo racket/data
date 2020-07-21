@@ -275,7 +275,7 @@
   (define idx (get-index-eq h v))
   (cond [idx
          (unless (eq? v (vector-ref (heap-vec h) idx))
-           (error "Key does not belong to heap" v))
+           (error "The key is not at the expected index;\n due to concurrent modification or an internal error\n key: ~e" v))
          (heap-remove-index! h idx)
          #t]
         [else #f]))
