@@ -134,8 +134,8 @@ This operation takes O(n) time---see also @racket[heap-remove-eq!].
 
 Removes @racket[v] from the heap @racket[h] if it exists according to @racket[eq?],
 and returns @racket[#t] if the removal was successful, @racket[#f] otherwise.
-This operation takes O(log n) time, plus the indexing cost of @racket[hash-ref]
-(which is O(n) in the worst case, but O(1) on average). The heap must not contain duplicate
+This operation takes O(log n) time, plus the indexing cost (which is O(1) on average,
+but O(n) in the worst case). The heap must not contain duplicate
 elements according to @racket[eq?], otherwise it may not be possible to remove all duplicates
 (see the example below). 
 
@@ -237,7 +237,7 @@ Equivalent to @racket[in-heap/consume!] except the heap is copied first.
 Sorts vector @racket[v] using the comparison function @racket[<=?].
 
 @examples[#:eval the-eval
-  (define terms (vector "batch" "deal" "flock" "good deal" "hatful" "lot"))
+  (define terms (vector "flock" "hatful" "deal" "batch" "lot" "good deal"))
   (heap-sort! terms string<=?)
   terms
 ]
