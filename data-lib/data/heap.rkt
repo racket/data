@@ -1,7 +1,7 @@
 #lang racket/base
-(require racket/vector
-         racket/match
-         racket/contract/base)
+(require racket/contract/base
+         racket/vector
+         racket/match)
 
 (define MIN-SIZE 4)
 
@@ -210,11 +210,11 @@
         (define index-parent (vt-parent index))
         (cond
           ;; if we are in the right relationship with our parent,
-          ;; try to iheap3ify down
+          ;; try to heapify down
           [(<=? (vector-ref vec index-parent) (vector-ref vec index))
            (heapify-down <=? vec index sub1-size elt=>idx)]
           [else
-           ;; otherwise we need to iheap3ify up
+           ;; otherwise we need to heapify up
            (heapify-up <=? vec index elt=>idx)])])
      (when (< MIN-SIZE size (quotient (vector-length vec) 4))
        (set-heap-vec! h (shrink-vector vec size)))
