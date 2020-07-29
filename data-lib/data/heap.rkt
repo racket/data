@@ -260,7 +260,10 @@
   (define idx (get-index-eq h v))
   (cond [idx
          (unless (eq? v (vector-ref (heap-vec h) idx))
-           (error "The key is not at the expected index;\n due to concurrent modification or an internal error\n key: ~e" v))
+           (error 'heap-remove-eq!
+                  (string-append "the key is not at the expected index;\n"
+                                 " due to concurrent modification or an internal error\n"
+                                 "  key: ~e") v))
          (heap-remove-index! h idx)
          #t]
         [else #f]))
