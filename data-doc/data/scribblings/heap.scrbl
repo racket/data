@@ -1,5 +1,5 @@
 #lang scribble/manual
-@(require scribble/eval
+@(require scribble/example
           (for-label data/heap
                      racket/contract
                      racket/base))
@@ -14,8 +14,17 @@
 @author[@author+email["Ryan Culpepper" "ryanc@racket-lang.org"]]
 
 Binary heaps are a simple implementation of priority queues.
+For a heap of n elements, @racket[heap-add!] and @racket[heap-remove-min!] take O(log n) time
+per added or removed element,
+while @racket[heap-min] and @racket[heap-count] take constant time;
+@racket[heap-remove!] takes O(n) time, and @racket[heap-remove-eq!] takes O(log n) time
+on average;
+@racket[heap-sort!] takes O(n log n) time.
+
 
 Operations on binary heaps are not thread-safe.
+
+All functions are also provided by @racket[data/heap/unsafe] without contracts.
 
 @defproc[(make-heap [<=? (-> any/c any/c any/c)])
          heap?]{
@@ -90,7 +99,7 @@ heap's ordering. If the heap is empty, an exception is raised.
   (heap-min a-heap)
 
   @code:comment{Taking the min of the empty heap is an error:}
-  (heap-min (make-heap <=))
+  (eval:error (heap-min (make-heap <=)))
 ]
 }
 
@@ -112,12 +121,46 @@ empty, an exception is raised.
 @defproc[(heap-remove! [h heap?] [v any/c] [#:same? same? (-> any/c any/c any/c) equal?]) boolean?]{
 Removes @racket[v] from the heap @racket[h] if it exists,
 and returns @racket[#t] if the removal was successful, @racket[#f] otherwise.
+This operation takes O(n) time---see also @racket[heap-remove-eq!].
 @examples[#:eval the-eval
-  (define a-heap (make-heap string<=? string=?))
+  (define a-heap (make-heap string<=?))
   (heap-add! a-heap "a" "b" "c")
   (heap-remove! a-heap "b")
   (for/list ([a (in-heap a-heap)]) a)]
 @history[#:changed "7.6.0.18" @elem{Returns a @racket[boolean?] instead of @racket[void?]}]}
+
+
+@defproc[(heap-remove-eq! [h heap?] [v any/c]) boolean?]{
+
+Removes @racket[v] from the heap @racket[h] if it exists according to @racket[eq?],
+and returns @racket[#t] if the removal was successful, @racket[#f] otherwise.
+This operation takes O(log n) time, plus the indexing cost (which is O(1) on average,
+but O(n) in the worst case). The heap must not contain duplicate
+elements according to @racket[eq?], otherwise it may not be possible to remove all duplicates
+(see the example below). 
+
+@examples[#:eval the-eval
+    (define h (make-heap string<=?))
+    (define elt1 "123")
+    (define elt2 "abcxyz")
+    (heap-add! h elt1 elt2)
+    @code:comment{The element is not found because no element of the heap is `eq?`}
+    @code:comment{to the provided value:}
+    (heap-remove-eq! h (string-append "abc" "xyz"))
+    (heap->vector h)
+    @code:comment{But this succeeds:}
+    (heap-remove-eq! h elt2)
+    (heap->vector h)
+    @code:comment{Removing duplicate elements (according to `eq?`) may fail:}
+    (heap-add! h elt2 elt2)
+    (heap->vector h)
+    (heap-remove-eq! h elt2)
+    (heap-remove-eq! h elt2)
+    (heap->vector h)
+    @code:comment{But we can resort to the more general `heap-remove!`:}
+    (heap-remove! h elt2 #:same? string=?)
+    (heap->vector h)]
+@history[#:added "7.8.0.5"]}
 
 @defproc[(vector->heap [<=? (-> any/c any/c any/c)] [items vector?]) heap?]{
 
@@ -194,7 +237,7 @@ Equivalent to @racket[in-heap/consume!] except the heap is copied first.
 Sorts vector @racket[v] using the comparison function @racket[<=?].
 
 @examples[#:eval the-eval
-  (define terms (vector "batch" "deal" "flock" "good deal" "hatful" "lot"))
+  (define terms (vector "flock" "hatful" "deal" "batch" "lot" "good deal"))
   (heap-sort! terms string<=?)
   terms
 ]
