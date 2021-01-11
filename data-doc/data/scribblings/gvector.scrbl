@@ -132,7 +132,7 @@ elements of @racket[gv] in order.
 }
 
 @defproc[(list->gvector [l list?])
-         gvector?]
+         gvector?]{
 Returns a gvector of length @racket[(length l)] containint the
 elements of @racket[l] in order.
 }
