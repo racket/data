@@ -7,8 +7,6 @@
 
 @title[#:tag "data"]{Data: Data Structures}
 
-@defmodule[data]
-
 This manual documents data structure libraries available in the
 @racketmodname[data] collection.
 
