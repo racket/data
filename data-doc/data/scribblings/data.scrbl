@@ -8,7 +8,7 @@
 @title[#:tag "data"]{Data: Data Structures}
 
 This manual documents data structure libraries available in the
-@racketmodname[data] collection.
+@racketidfont{data} collection.
 
 @local-table-of-contents[#:style 'immediate-only]
 
