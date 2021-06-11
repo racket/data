@@ -94,7 +94,7 @@ Operations on queues mutate it in a thread-unsafe way.
   of elements in @racket[q].
   
   @defexamples[#:eval qeval
-    (define queue (make-queue))
+    (define q (make-queue))
     (queue-length q)
     (enqueue! q 5)
     (enqueue! q 12)
