@@ -73,7 +73,7 @@ Operations on queues mutate it in a thread-unsafe way.
     (queue->list q)]
 }
 
-@defproc[(queue->list [queue queue?]) (listof any/c)]{
+@defproc[(queue->list [q queue?]) (listof any/c)]{
   Returns an immutable list containing the elements of the queue
   in the order the elements were added.
 
@@ -87,7 +87,7 @@ Operations on queues mutate it in a thread-unsafe way.
     (queue->list q)]
 }
 
-@defproc[(queue-length [queue queue?]) exact-nonnegative-integer?]{
+@defproc[(queue-length [q queue?]) exact-nonnegative-integer?]{
   Returns the number of elements in the queue.
 
   This takes constant time, independent of the number
@@ -143,11 +143,11 @@ Operations on queues mutate it in a thread-unsafe way.
     (non-empty-queue? 'not-a-queue)]
 }
 
-@defproc[(in-queue [queue queue?])
+@defproc[(in-queue [q queue?])
          sequence?]{
 
 Returns a sequence whose elements are the elements of
-@racket[queue].
+@racket[q].
 }
 
 @deftogether[(
