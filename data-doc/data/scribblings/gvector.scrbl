@@ -19,7 +19,7 @@
 A growable vector (gvector) is a mutable sequence whose length can
 change over time. A gvector also acts as a dictionary (@racket[dict?]
 from @racketmodname[racket/dict]), where the keys are zero-based
-indexes and the values are the elements of the gvector. A gvector can
+indices and the values are the elements of the gvector. A gvector can
 be extended by adding an element to the end, and it can be shrunk by
 removing any element, although removal can take time linear in the
 number of elements in the gvector.
@@ -64,7 +64,8 @@ invoked if it is a procedure, returned otherwise.
                        [value any/c] ...)
          void?]{
 
-Adds each @racket[value] to the end of the gvector @racket[gv].
+Adds each @racket[value] to the end of the gvector @racket[gv]. 
+Takes (amortized) time propotional to the number of added @racket[value]s.
 }
 
 @defproc[(gvector-insert! [gv gvector]
@@ -133,7 +134,7 @@ elements of @racket[gv] in order.
 
 @defproc[(list->gvector [l list?])
          gvector?]{
-Returns a gvector of length @racket[(length l)] containint the
+Returns a gvector of length @racket[(length l)] containing the
 elements of @racket[l] in order.
 }
 
