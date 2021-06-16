@@ -64,7 +64,8 @@ invoked if it is a procedure, returned otherwise.
                        [value any/c] ...)
          void?]{
 
-Adds each @racket[value] to the end of the gvector @racket[gv].
+Adds each @racket[value] to the end of the gvector @racket[gv]. 
+Takes (amortized) time proportional to the number of added @racket[value]s.
 }
 
 @defproc[(gvector-insert! [gv gvector]
@@ -133,7 +134,7 @@ elements of @racket[gv] in order.
 
 @defproc[(list->gvector [l list?])
          gvector?]{
-Returns a gvector of length @racket[(length l)] containint the
+Returns a gvector of length @racket[(length l)] containing the
 elements of @racket[l] in order.
 }
 
