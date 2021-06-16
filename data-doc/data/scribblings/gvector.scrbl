@@ -65,7 +65,7 @@ invoked if it is a procedure, returned otherwise.
          void?]{
 
 Adds each @racket[value] to the end of the gvector @racket[gv]. 
-Takes (amortized) time propotional to the number of added @racket[value]s.
+Takes (amortized) time proportional to the number of added @racket[value]s.
 }
 
 @defproc[(gvector-insert! [gv gvector]
