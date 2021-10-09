@@ -8,3 +8,6 @@
 (define pkg-desc "Data strucutures")
 
 (define pkg-authors '(ryanc))
+
+(define license
+  '(Apache-2.0 OR MIT))
