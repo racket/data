@@ -13,3 +13,6 @@
                      "rackunit-lib"
                      "math-lib"))
 (define update-implies '("data-lib"))
+
+(define license
+  '(Apache-2.0 OR MIT))

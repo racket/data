@@ -17,3 +17,6 @@
                      "pict-doc"
                      "pict-lib"))
 (define update-implies '("data-lib" "data-enumerate-lib"))
+
+(define license
+  '(Apache-2.0 OR MIT))

@@ -8,3 +8,6 @@
 
 (define pkg-authors '(maxsnew jay robby))
 (define version "1.3")
+
+(define license
+  '(Apache-2.0 OR MIT))
