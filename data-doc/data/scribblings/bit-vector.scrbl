@@ -70,7 +70,7 @@ invoked if it is a procedure, returned otherwise.
 @defproc[(bit-vector-set! 
           [bv bit-vector?]
           [index (and/c exact-nonnegative-integer? 
-                        (</c (+ 1 (bit-vector-length vv))))]
+                        (</c (+ 1 (bit-vector-length bv))))]
           [value boolean?])
          void?]{
 
@@ -101,7 +101,7 @@ Returns the number of set bits in the bit-vector @racket[bv].
 
 @defproc[(bit-vector-copy [bv bit-vector?]
                           [start exact-nonnegative-integer? 0]
-                          [end exact-nonnegative-integer? (bit-vector-length v)])
+                          [end exact-nonnegative-integer? (bit-vector-length bv)])
          bit-vector?]{
 
 Creates a fresh bit-vector with the
