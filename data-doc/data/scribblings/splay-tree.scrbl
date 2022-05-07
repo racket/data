@@ -148,9 +148,9 @@ This operation is only allowed on adjustable splay trees, and it takes
 }
 
 @deftogether[[
-@defproc[(splay-tree-iterate-least [s splay-tree])
+@defproc[(splay-tree-iterate-least [s splay-tree?])
          (or/c #f splay-tree-iter?)]
-@defproc[(splay-tree-iterate-greatest [s splay-tree])
+@defproc[(splay-tree-iterate-greatest [s splay-tree?])
          (or/c #f splay-tree-iter?)]
 @defproc[(splay-tree-iterate-least/>? [s splay-tree?] [key any/c])
          (or/c #f splay-tree-iter?)]
