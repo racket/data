@@ -154,3 +154,27 @@
                       bitlist)
         (check-equal? (string->bit-vector s)
                       (list->bit-vector bitlist))))))
+
+(test-case "bit-vector-set! error"
+  (define bv (bit-vector #f #f #f))
+
+  (check-exn #rx"index is out of range"
+             (λ () (bit-vector-set! bv 4 #t)))
+
+  (check-exn #rx"expected: natural\\?"
+             (λ () (bit-vector-set! bv -1 #t)))
+
+  (check-exn #rx"expected: bit-vector\\?"
+             (λ () (bit-vector-set! 1 0 #t))))
+
+(test-case "bit-vector-ref error"
+  (define bv (bit-vector #f #f #f))
+
+  (check-exn #rx"index is out of range"
+             (λ () (bit-vector-ref bv 4)))
+
+  (check-exn #rx"expected: natural\\?"
+             (λ () (bit-vector-ref bv -1)))
+
+  (check-exn #rx"expected: bit-vector\\?"
+             (λ () (bit-vector-ref 1 0))))
