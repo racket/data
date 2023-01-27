@@ -478,7 +478,7 @@ Options
      (let loop ([x root] [onto null] [k* 0])
        (match x
          [(node key value left right)
-          (let ([key (+ key k*)])
+          (let ([key (if adjust? (+ key k*) key)])
             (loop left
                   (cons (cons key value)
                         (loop right onto key))
