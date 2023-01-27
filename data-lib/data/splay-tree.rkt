@@ -475,14 +475,12 @@ Options
 (define (splay-tree->list s)
   (match s
     [(splay-tree root size cmp adjust?)
-     (let loop ([x root] [onto null] [k* 0])
+     (let loop ([x root] [onto null])
        (match x
          [(node key value left right)
-          (let ([key (+ key k*)])
-            (loop left
-                  (cons (cons key value)
-                        (loop right onto key))
-                  key))]
+          (loop left
+                (cons (cons key value)
+                      (loop right onto)))]
          [#f onto]))]))
 
 ;; ------------------------------------------------------------
