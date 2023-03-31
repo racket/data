@@ -213,6 +213,76 @@
         [is (interval-map-iter-si iter)])
     (cdr (skip-list-iterate-value s is))))
 
+(define (interval-map-iterate-least im)
+  (cond [(skip-list-iterate-least (interval-map-s im))
+         => interval-map-iter]
+        [else #f]))
+
+(define (interval-map-iterate-greatest im)
+  (cond [(skip-list-iterate-greatest (interval-map-s im))
+         => interval-map-iter]
+        [else #f]))
+
+(define (interval-map-iterate-least/start>? im start)
+  (cond [(skip-list-iterate-least/>? (interval-map-s im) start)
+         => interval-map-iter]
+        [else #f]))
+
+(define (interval-map-iterate-least/start>=? im start)
+  (cond [(skip-list-iterate-least/>=? (interval-map-s im) start)
+         => interval-map-iter]
+        [else #f]))
+
+(define (interval-map-iterate-greatest/start<? im start)
+  (cond [(skip-list-iterate-greatest/<? (interval-map-s im) start)
+         => interval-map-iter]
+        [else #f]))
+
+(define (interval-map-iterate-greatest/start<=? im start)
+  (cond [(skip-list-iterate-greatest/<=? (interval-map-s im) start)
+         => interval-map-iter]
+        [else #f]))
+
+(define (interval-map-iterate-least/end>? im end)
+  (cond
+    [(interval-map-iterate-greatest/start<=? im end)
+     => (λ (iter)
+          (if (> (cdr (interval-map-iterate-key im iter)) end)
+              iter
+              (interval-map-iterate-next im iter)))]
+    [else
+     (interval-map-iterate-least/start>? im end)]))
+
+(define (interval-map-iterate-least/end>=? im end)
+  (cond
+    [(interval-map-iterate-greatest/start<? im end)
+     => (λ (iter)
+          (if (>= (cdr (interval-map-iterate-key im iter)) end)
+              iter
+              (interval-map-iterate-next im iter)))]
+    [else
+     (interval-map-iterate-least/start>=? im end)]))
+
+(define (interval-map-iterate-greatest/end<? im end)
+  (cond
+    [(interval-map-iterate-greatest/start<? im end)
+     => (λ (iter)
+          (define ivl (interval-map-iterate-key im iter))
+          (if (< (cdr ivl) end)
+              iter
+              (interval-map-iterate-greatest/start<? im (car ivl))))]
+    [else #f]))
+
+(define (interval-map-iterate-greatest/end<=? im end)
+  (cond
+    [(interval-map-iterate-greatest/start<? im end)
+     => (λ (iter)
+          (define ivl (interval-map-iterate-key im iter))
+          (if (<= (cdr ivl) end)
+              iter
+              (interval-map-iterate-greatest/start<? im (car ivl))))]
+    [else #f]))
+
 ;; ============================================================
 
 ;; Interval map
@@ -330,6 +400,47 @@
  [interval-map-iterate-value
   (->i ([im interval-map?] [i interval-map-iter?])
        [_r (im) (val-c im)])]
+
+ [interval-map-iterate-least
+  (-> interval-map?
+      (or/c interval-map-iter? #f))]
+ [interval-map-iterate-greatest
+  (-> interval-map?
+      (or/c interval-map-iter? #f))]
+
+ [interval-map-iterate-least/start>?
+  (->i ([im interval-map?]
+        [start (im) (key-c im)])
+      [_ (or/c interval-map-iter? #f)])]
+ [interval-map-iterate-least/start>=?
+  (->i ([im interval-map?]
+        [start (im) (key-c im)])
+      [_ (or/c interval-map-iter? #f)])]
+ [interval-map-iterate-greatest/start<?
+  (->i ([im interval-map?]
+        [start (im) (key-c im)])
+      [_ (or/c interval-map-iter? #f)])]
+ [interval-map-iterate-greatest/start<=?
+  (->i ([im interval-map?]
+        [start (im) (key-c im)])
+      [_ (or/c interval-map-iter? #f)])]
+
+ [interval-map-iterate-least/end>?
+  (->i ([im interval-map?]
+        [start (im) (key-c im)])
+      [_ (or/c interval-map-iter? #f)])]
+ [interval-map-iterate-least/end>=?
+  (->i ([im interval-map?]
+        [start (im) (key-c im)])
+      [_ (or/c interval-map-iter? #f)])]
+ [interval-map-iterate-greatest/end<?
+  (->i ([im interval-map?]
+        [start (im) (key-c im)])
+      [_ (or/c interval-map-iter? #f)])]
+ [interval-map-iterate-greatest/end<=?
+  (->i ([im interval-map?]
+        [start (im) (key-c im)])
+      [_ (or/c interval-map-iter? #f)])]
 
  [interval-map-iter?
   (-> any/c boolean?)])
