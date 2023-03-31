@@ -1,6 +1,7 @@
 #lang scribble/manual
 @(require scribble/eval
           (for-label data/interval-map
+                     data/order
                      racket/contract
                      racket/dict
                      racket/base))
@@ -86,9 +87,9 @@ applied if it is a procedure, or returned otherwise.
                  (or/c #f exact-integer?)
                  any/c)]{
 Like @racket[interval-map-ref], but also returns the bounds of the interval
-associated with @racket[position]. If no mapping is found and @racket[default] 
-is a procedure, it is applied. If no mapping is found and @racket[default] 
-is not a procedure,  @racket[#f] is returned for the start and end positions 
+associated with @racket[position]. If no mapping is found and @racket[default]
+is a procedure, it is applied. If no mapping is found and @racket[default]
+is not a procedure,  @racket[#f] is returned for the start and end positions
 and @racket[default] is returned as the value.
 }
 
@@ -189,6 +190,56 @@ Implementations of @racket[dict-iterate-first],
 @racket[dict-iterate-next], @racket[dict-iterate-key], and
 @racket[dict-iterate-value], respectively.
 }
+
+@deftogether[[
+ @defproc[(interval-map-iterate-least [interval-map interval-map?])
+          (or/c interval-map-iter? #f)]
+ @defproc[(interval-map-iterate-greatest [interval-map interval-map?])
+          (or/c interval-map-iter? #f)]]]{
+
+Like @racket[dict-iterate-least] and @racket[dict-iterate-greatest],
+respectively, though interval maps do not implement the
+@racket[gen:ordered-dict] interface.
+
+@history[#:added "1.2"]}
+
+@deftogether[[
+ @defproc[(interval-map-iterate-least/start>? [interval-map interval-map?]
+                                              [start exact-integer?])
+          (or/c interval-map-iter? #f)]
+ @defproc[(interval-map-iterate-least/start>=? [interval-map interval-map?]
+                                               [start exact-integer?])
+          (or/c interval-map-iter? #f)]
+ @defproc[(interval-map-iterate-greatest/start<? [interval-map interval-map?]
+                                                 [start exact-integer?])
+          (or/c interval-map-iter? #f)]
+ @defproc[(interval-map-iterate-greatest/start<=? [interval-map interval-map?]
+                                                  [start exact-integer?])
+          (or/c interval-map-iter? #f)]
+ @defproc[(interval-map-iterate-least/end>? [interval-map interval-map?]
+                                            [end exact-integer?])
+          (or/c interval-map-iter? #f)]
+ @defproc[(interval-map-iterate-least/end>=? [interval-map interval-map?]
+                                             [end exact-integer?])
+          (or/c interval-map-iter? #f)]
+ @defproc[(interval-map-iterate-greatest/end<? [interval-map interval-map?]
+                                               [end exact-integer?])
+          (or/c interval-map-iter? #f)]
+ @defproc[(interval-map-iterate-greatest/end<=? [interval-map interval-map?]
+                                                [end exact-integer?])
+          (or/c interval-map-iter? #f)]]]{
+
+Like @racket[dict-iterate-least/>?], @racket[dict-iterate-least/>=?],
+@racket[dict-iterate-greatest/<?], and @racket[dict-iterate-greatest/<=?],
+but each function comes in a @tt{start} and an @tt{end} variant
+corresponding to the start or end of each interval, respectively.
+
+Note that interval maps do not implement the @racket[gen:ordered-dict]
+interface, as these operations accept individual bounds rather than the
+pairs returned by @racket[interval-map-iterate-key]. Therefore, these
+operations must be used directly.
+
+@history[#:added "1.2"]}
 
 @defproc[(interval-map-iter? [v any/c])
          boolean?]{
