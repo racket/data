@@ -178,3 +178,15 @@
 
   (check-exn #rx"expected: bit-vector\\?"
              (λ () (bit-vector-ref 1 0))))
+
+;; Check equality for 2 vector with the same bits, one initiliazed with #f, the other with #t
+(test-case "bit-vector #f #t"
+           (for* ([n (in-range 17)]
+                  [i (in-range n)])
+             (define bv1 (make-bit-vector n #false))
+             (define bv2 (make-bit-vector n #true))
+             (bit-vector-set! bv1 i #true)
+             (for ([j (in-range n)] #:unless (= i j))
+               (bit-vector-set! bv2 j #false))
+             (check-equal? bv1 bv2))
+           )
