@@ -1,5 +1,6 @@
 #lang racket/base
 (require rackunit
+         rackunit/text-ui
          racket/contract
          racket/dict
          data/skip-list
@@ -358,3 +359,16 @@ Conclusions:
  - in-dict-keys is slow for splay trees
 
 |#
+
+;; regression test
+
+(printf "== regression tests\n")
+(run-tests
+ (test-suite "splay-tree"
+             (test-case "splay-tree->list"
+               (define t (make-splay-tree))
+               (splay-tree-set! t 1 'a)
+               (splay-tree-set! t 2 'b)
+               (splay-tree-set! t 3 'c)
+               (check-equal? (splay-tree->list t)
+                             '((1 . a) (2 . b) (3 . c))))))
