@@ -3,16 +3,23 @@
 (require (for-syntax racket/base
                      syntax/contract
                      syntax/for-body)
+	 racket/performance-hint
          racket/serialize
+         racket/fixnum
          racket/contract/base
          racket/dict
+	 racket/unsafe/ops
          racket/vector
          racket/struct)
 
 (define DEFAULT-CAPACITY 10)
 
+(define MIN-CAPACITY 8)
+
 (define (make-gvector #:capacity [capacity DEFAULT-CAPACITY])
-  (gvector (make-vector capacity #f) 0))
+  (unless (exact-nonnegative-integer? capacity)
+    (raise-argument-error* 'make-gvector 'data/gvector "exact-nonnegative-integer?" capacity))
+  (gvector (make-vector (max capacity MIN-CAPACITY) 0) 0))
 
 (define gvector*
   (let ([gvector
@@ -29,43 +36,62 @@
   (unless (< index hi)
     (raise-range-error who "gvector" "" index gv 0 (sub1 hi))))
 
-;; ensure-free-space! : GVector Nat -> Void
-(define (ensure-free-space! gv needed-free-space)
-  (define vec (gvector-vec gv))
-  (define n (gvector-n gv))
-  (define cap (vector-length vec))
-  (define needed-cap (+ n needed-free-space))
-  (unless (<= needed-cap cap)
-    (define new-cap
-      (let loop ([new-cap (max DEFAULT-CAPACITY cap)])
-        (if (<= needed-cap new-cap) new-cap (loop (* 2 new-cap)))))
-    (define new-vec (make-vector new-cap #f))
-    (vector-copy! new-vec 0 vec)
-    (set-gvector-vec! gv new-vec)))
+(begin-encourage-inline
 
-(define gvector-add!
-  (case-lambda
-    [(gv item)
-     (ensure-free-space! gv 1)
-     (define n (gvector-n gv))
-     (define v (gvector-vec gv))
-     (vector-set! v n item)
-     (set-gvector-n! gv (add1 n))]
-    [(gv . items)
-     (define item-count (length items))
-     (ensure-free-space! gv item-count)
-     (define n (gvector-n gv))
-     (define v (gvector-vec gv))
-     (for ([index (in-naturals n)] [item (in-list items)])
-       (vector-set! v index item))
-     (set-gvector-n! gv (+ n item-count))]))
+  (define (check-gvector who gv)
+    (unless (gvector? gv)
+      (raise-argument-error* who 'data/gvector "gvector?" gv)))
+
+
+  ;; ensure-free-space-vec! : Vector Nat Nat -> Vector/#f
+  (define (ensure-free-space-vec! vec n needed-free-space)
+    (define cap (unsafe-vector*-length vec))
+    (define needed-cap (unsafe-fx+ n needed-free-space))
+    (cond [(<= needed-cap cap) #f]
+	  [else
+	   ;; taken from Rust's raw_vec implementation
+	   (let* ([new-cap (unsafe-fxmax (unsafe-fx* 2 cap) needed-cap)]
+		  [new-cap (unsafe-fxmax new-cap MIN-CAPACITY)])
+	     (vector*-extend vec new-cap 0))]))
+
+  (define (ensure-free-space! gv needed-free-space)
+    (define v (ensure-free-space-vec! (gvector-vec gv) (gvector-n gv) needed-free-space))
+    (when v (set-gvector-vec! gv v)))
+
+  (define-syntax-rule (gv-ensure-space! gv n v needed-free-space)
+    (begin (define n (gvector-n gv))
+	   (define v1 (gvector-vec gv))
+	   (define v2 (ensure-free-space-vec! v1 n needed-free-space))
+	   (define v (if v2 (begin (set-gvector-vec! gv v2) v2) v1))))
+
+  ;; only safe on unchaperoned gvectors
+  (define (unsafe-gvector-add! gv item)
+    (gv-ensure-space! gv n v 1)
+    (unsafe-vector*-set! v n item)
+    (set-gvector-n! gv (unsafe-fx+ 1 n)))
+
+  (define gvector-add!
+    (case-lambda
+      [(gv item)
+       (check-gvector 'gvector-add! gv)
+       (gv-ensure-space! gv n v 1)
+       (unsafe-vector*-set! v n item)
+       (set-gvector-n! gv (unsafe-fx+ 1 n))]
+      [(gv . items)
+       (check-gvector 'gvector-add! gv)
+       (define item-count (length items))
+       (gv-ensure-space! gv n v item-count)
+       (for ([index (in-naturals n)] [item (in-list items)])
+	 (unsafe-vector*-set! v index item))
+       (set-gvector-n! gv (+ n item-count))])))
 
 ;; SLOW!
 (define (gvector-insert! gv index item)
   ;; This does (n - index) redundant copies on resize, but that
   ;; happens rarely and I prefer the simpler code.
-  (define n (gvector-n gv))
+  (check-gvector 'gvector-insert! gv)
   (check-index 'gvector-insert! gv index #t)
+  (define n (gvector-n gv))
   (ensure-free-space! gv 1)
   (define v (gvector-vec gv))
   (vector-copy! v (add1 index) v index n)
@@ -97,6 +123,7 @@
 
 ;; SLOW!
 (define (gvector-remove! gv index)
+  (check-gvector 'gvector-remove! gv)
   (define n (gvector-n gv))
   (define v (gvector-vec gv))
   (check-index 'gvector-remove! gv index #f)
@@ -106,6 +133,7 @@
   (trim! gv))
 
 (define (gvector-remove-last! gv)
+  (check-gvector 'gvector-remove-last! gv)
   (let ([n (gvector-n gv)]
         [v (gvector-vec gv)])
     (unless (> n 0) (error 'gvector-remove-last! "empty"))
@@ -114,15 +142,17 @@
     last-val))
 
 (define (gvector-count gv)
+  (check-gvector 'gvector-count gv)
   (gvector-n gv))
 
 (define none (gensym 'none))
 
 (define (gvector-ref gv index [default none])
+  (check-gvector 'gvector-ref gv)
   (unless (exact-nonnegative-integer? index)
     (raise-type-error 'gvector-ref "exact nonnegative integer" index))
   (if (< index (gvector-n gv))
-      (vector-ref (gvector-vec gv) index)
+      (unsafe-vector*-ref (gvector-vec gv) index)
       (cond [(eq? default none)
              (check-index 'gvector-ref gv index #f)]
             [(procedure? default) (default)]
@@ -130,29 +160,36 @@
 
 ;; gvector-set! with index = |gv| is interpreted as gvector-add!
 (define (gvector-set! gv index item)
+  (check-gvector 'gvector-set gv)
   (let ([n (gvector-n gv)])
     (check-index 'gvector-set! gv index #t)
-    (if (= index n)
-        (gvector-add! gv item)
-        (vector-set! (gvector-vec gv) index item))))
+    (if (unsafe-fx= index n)
+        (unsafe-gvector-add! gv item)
+        (unsafe-vector*-set! (gvector-vec gv) index item))))
 
 ;; creates a snapshot vector
 (define (gvector->vector gv)
-  (vector-copy (gvector-vec gv) 0 (gvector-n gv)))
+  (check-gvector 'gvector->vector gv)
+  (vector*-copy (gvector-vec gv) 0 (gvector-n gv)))
 
 (define (gvector->list gv)
+  (check-gvector 'gvector->list gv)
   (vector->list (gvector->vector gv)))
 
 ;; constructs a gvector
 (define (vector->gvector v)
+  (unless (vector? v)
+    (raise-argument-error* vector->gvector 'data/gvector "vector?" v))
   (define lv (vector-length v))
-  (define gv (make-gvector #:capacity lv))
+  (define gv (make-gvector #:capacity (max lv DEFAULT-CAPACITY)))
   (define nv (gvector-vec gv))
   (vector-copy! nv 0 v)
   (set-gvector-n! gv lv)
   gv)
 
 (define (list->gvector v)
+  (unless (list? v)
+    (raise-argument-error* list->gvector 'data/gvector "list?" v))
   (vector->gvector (list->vector v)))
 
 ;; Iteration methods
@@ -165,8 +202,8 @@
 (define (gvector-iterate-next gv iter)
   (check-index 'gvector-iterate-next gv iter #f)
   (let ([n (gvector-n gv)])
-    (and (< (add1 iter) n)
-         (add1 iter))))
+    (and (< (unsafe-fx+ 1 iter) n)
+         (unsafe-fx+ 1 iter))))
 
 (define (gvector-iterate-key gv iter)
   (check-index 'gvector-iterate-key gv iter #f)
@@ -177,8 +214,7 @@
   (gvector-ref gv iter))
 
 (define (in-gvector gv)
-  (unless (gvector? gv)
-    (raise-type-error 'in-gvector "gvector" gv))
+  (check-gvector 'in-gvector gv)
   (in-dict-values gv))
 
 (define-sequence-syntax in-gvector*
@@ -192,11 +228,11 @@
             (:do-in ([(gv) gv-expr-c])
                     (void) ;; outer-check; handled by contract
                     ([index 0] [vec (gvector-vec gv)] [n (gvector-n gv)]) ;; loop bindings
-                    (< index n) ;; pos-guard
-                    ([(var) (vector-ref vec index)]) ;; inner bindings
+                    (unsafe-fx< index n) ;; pos-guard
+                    ([(var) (unsafe-vector*-ref vec index)]) ;; inner bindings
                     #t ;; pre-guard
                     #t ;; post-guard
-                    ((add1 index) (gvector-vec gv) (gvector-n gv)))]))]
+                    ((unsafe-fx+ 1 index) vec n))]))]
       [[(var ...) (in-gv gv-expr)]
        (with-syntax ([gv-expr-c (wrap-expr/c #'gvector? #'gv-expr #:macro #'in-gv)])
          (syntax/loc stx
@@ -206,25 +242,34 @@
 (define-syntax (for/gvector stx)
   (syntax-case stx ()
     [(_ (clause ...) . body)
+     #'(for/gvector #:capacity DEFAULT-CAPACITY (clause ...) . body)]
+    [(_ #:capacity cap (clause ...) . body)
      (with-syntax ([((pre-body ...) post-body) (split-for-body stx #'body)])
        (quasisyntax/loc stx
-         (let ([gv (make-gvector)])
+         (let ([gv (make-gvector #:capacity cap)])
            (for/fold/derived #,stx () (clause ...)
             pre-body ...
-            (call-with-values (lambda () . post-body)
-              (lambda args (apply gvector-add! gv args) (values))))
+	     (call-with-values (lambda () . post-body)
+			       (case-lambda
+				 [(one) (unsafe-gvector-add! gv one)]
+				 [args (apply gvector-add! gv args)]))
+	     (values))
            gv)))]))
 
 (define-syntax (for*/gvector stx)
   (syntax-case stx ()
     [(_ (clause ...) . body)
+     #'(for/gvector #:capacity DEFAULT-CAPACITY (clause ...) . body)]
+    [(_ #:capacity cap (clause ...) . body)
      (with-syntax ([((pre-body ...) post-body) (split-for-body stx #'body)])
        (quasisyntax/loc stx
-         (let ([gv (make-gvector)])
+         (let ([gv (make-gvector #:capacity cap)])
            (for*/fold/derived #,stx () (clause ...)
             pre-body ...
             (call-with-values (lambda () . post-body)
-              (lambda args (apply gvector-add! gv args) (values))))
+                              (case-lambda
+                                [(one) (begin (unsafe-gvector-add! gv one) (values))]
+                                [args (begin (apply gvector-add! gv args) (values))])))
            gv)))]))
 
 (struct gvector (vec n)
@@ -276,39 +321,24 @@
    #t
    (or (current-load-relative-directory) (current-directory))))
 
-(provide/contract
- [gvector?
-  (-> any/c any)]
- [rename gvector* gvector
-  (->* () () #:rest any/c gvector?)]
- [make-gvector
-  (->* () (#:capacity exact-positive-integer?) gvector?)]
- [gvector-ref
-  (->* (gvector? exact-nonnegative-integer?) (any/c) any)]
- [gvector-set!
-  (-> gvector? exact-nonnegative-integer? any/c any)]
- [gvector-add!
-  (->* (gvector?) () #:rest any/c any)]
- [gvector-insert!
-  (-> gvector? exact-nonnegative-integer? any/c any)]
- [gvector-remove!
-  (-> gvector? exact-nonnegative-integer? any)]
- [gvector-remove-last!
-  (-> gvector? any)]
- [gvector-count
-  (-> gvector? any)]
- [gvector->vector
-  (-> gvector? vector?)]
- [gvector->list
-  (-> gvector? list?)]
- [vector->gvector
-  (-> vector? gvector?)]
- [list->gvector
-  (-> list? gvector?)])
-
-(provide (rename-out [in-gvector* in-gvector])
-         for/gvector
-         for*/gvector)
+(provide
+ gvector?
+ (rename-out [gvector* gvector])
+ make-gvector
+ gvector-ref
+ gvector-set!
+ gvector-add!
+ gvector-insert!
+ gvector-remove!
+ gvector-remove-last!
+ gvector-count
+ gvector->vector
+ gvector->list
+ vector->gvector
+ list->gvector
+ (rename-out [in-gvector* in-gvector])
+ for/gvector
+ for*/gvector)
 
 (module+ deserialize
   (provide deserialize-gvector)
