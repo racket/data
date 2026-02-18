@@ -101,7 +101,7 @@ than @racket[key], and the greatest key less than or equal to
 @racket[#f] is returned.
 }
 
-@defproc*[([(order [name symbol?] 
+@defproc*[([(order [name symbol?]
                    [domain-contract contract?]
                    [comparator (-> any/c any/c ordering/c)])
             (and/c order? procedure?)]
@@ -113,10 +113,11 @@ than @racket[key], and the greatest key less than or equal to
                        (lambda (x y) (<? y x))])
             (and/c order? procedure?)])]{
 
-Produces a named order object encapsulating a domain contract and a
+Produces an order object encapsulating a domain contract and a
 comparator function. If a single procedure is given, it is used
 directly as the comparator. If two or three procedures are given, they
-are used to construct the comparator.
+are used to construct the comparator. The given @racket[name] names
+the order object as returned by @racket[object-name].
 
 The @racket[domain-contract] is not applied to the comparison
 function; rather, clients of the order are advised to incorporate the
@@ -134,6 +135,10 @@ comparator.
 (string-order "abc" "acdc")
 (string-order "x" 12)
 ]
+
+@history[#:changed "1.2.1" @elem{Changed the name of an order object as
+  returned by @racket[object-name] to @racket[name] instead of
+  @racket[(object-name comparator)].}]
 }
 
 @defproc[(order? [x any/c]) boolean?]{

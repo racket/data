@@ -68,7 +68,8 @@
 ;; ============================================================
 
 (struct order (name domain-contract comparator =? <?)
-        #:property prop:procedure (struct-field-index comparator))
+  #:property prop:object-name (struct-field-index name)
+  #:property prop:procedure (struct-field-index comparator))
 
 (define order*
   (let ([order

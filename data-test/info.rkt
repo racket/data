@@ -9,7 +9,7 @@
 (define pkg-authors '(ryanc))
 (define build-deps '("data-enumerate-lib"
                      "racket-index"
-                     ["data-lib" #:version "1.2"]
+                     ["data-lib" #:version "1.2.1"]
                      "rackunit-lib"
                      "math-lib"))
 (define update-implies '("data-lib"))
