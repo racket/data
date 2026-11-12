@@ -32,11 +32,13 @@ Operations on gvectors are not thread-safe.
 Additionally, gvectors are serializable with the
 @racketmodname[racket/serialize] collection.
 
-@defproc[(make-gvector [#:capacity capacity exact-positive-integer? 10])
+@defproc[(make-gvector [#:capacity capacity exact-nonnegative-integer? 10])
          gvector?]{
 
 Creates a new empty gvector with an initial capacity of
 @racket[capacity].
+
+@history[#:changed "1.3" @elem{Allowed a @racket[capacity] of @racket[0].}]
 }
 
 @defproc[(gvector [elem any/c] ...)
@@ -64,8 +66,29 @@ invoked if it is a procedure, returned otherwise.
                        [value any/c] ...)
          void?]{
 
-Adds each @racket[value] to the end of the gvector @racket[gv]. 
+Adds each @racket[value] to the end of the gvector @racket[gv].
 Takes (amortized) time proportional to the number of added @racket[value]s.
+}
+
+@defproc[(gvector-append! [gv gvector?]
+                          [other gvector?])
+         void?]{
+
+Adds the elements of @racket[other] to the end of @racket[gv], in order,
+and leaves @racket[other] unchanged; the two may be the same gvector.
+Takes (amortized) time proportional to @racket[(gvector-count other)].
+
+@history[#:added "1.3"]
+}
+
+@defproc[(gvector-append [gv gvector?]
+                         [other gvector?])
+         gvector?]{
+
+Returns a new gvector with the elements of @racket[gv] followed by those
+of @racket[other], and leaves both unchanged.
+
+@history[#:added "1.3"]
 }
 
 @defproc[(gvector-insert! [gv gvector?]
@@ -150,15 +173,21 @@ from a snapshot of @racket[gv], use @racket[(in-vector
 }
 
 @deftogether[[
-@defform[(for/gvector (for-clause ...) body ...+)]
-@defform[(for*/gvector (for-clause ...) body ...+)]]]{
+@defform[(for/gvector maybe-capacity (for-clause ...) body ...+)
+         #:grammar ([maybe-capacity (code:line)
+                                    (code:line #:capacity capacity-expr)])]
+@defform[(for*/gvector maybe-capacity (for-clause ...) body ...+)]]]{
 
 Analogous to @racket[for/list] and @racket[for*/list], but constructs
-a gvector instead of a list.
+a gvector instead of a list.  The gvector starts with the capacity
+that @racket[capacity-expr] produces, or with the default capacity of
+@racket[make-gvector] without one.
 
 Unlike @racket[for/list], the @racket[body] may return zero or
 multiple values; all returned values are added to the gvector, in
 order, on each iteration.
+
+@history[#:changed "1.3" @elem{Added @racket[#:capacity].}]
 }
 
 

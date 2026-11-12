@@ -116,6 +116,28 @@
 (define (gvector-count gv)
   (gvector-n gv))
 
+(define (gvector-append! gv gv*)
+  ;; gv* may be gv itself, whose vector ensure-free-space! may replace;
+  ;; the vector read here still holds the same elements
+  (define v* (gvector-vec gv*))
+  (define n* (gvector-n gv*))
+  (ensure-free-space! gv n*)
+  (define n (gvector-n gv))
+  (vector-copy! (gvector-vec gv) n v* 0 n*)
+  (set-gvector-n! gv (+ n n*)))
+
+(define (gvector-append gv gv*)
+  (define n (gvector-n gv))
+  (define v* (gvector-vec gv*))
+  (define n* (gvector-n gv*))
+  ;; retain the spare capacity of gv*
+  (define gv0 (make-gvector #:capacity (+ n (vector-length v*))))
+  (define v0 (gvector-vec gv0))
+  (vector-copy! v0 0 (gvector-vec gv) 0 n)
+  (vector-copy! v0 n v* 0 n*)
+  (set-gvector-n! gv0 (+ n n*))
+  gv0)
+
 (define none (gensym 'none))
 
 (define (gvector-ref gv index [default none])
@@ -206,9 +228,11 @@
 (define-syntax (for/gvector stx)
   (syntax-case stx ()
     [(_ (clause ...) . body)
+     #'(for/gvector #:capacity DEFAULT-CAPACITY (clause ...) . body)]
+    [(_ #:capacity cap (clause ...) . body)
      (with-syntax ([((pre-body ...) post-body) (split-for-body stx #'body)])
        (quasisyntax/loc stx
-         (let ([gv (make-gvector)])
+         (let ([gv (make-gvector #:capacity cap)])
            (for/fold/derived #,stx () (clause ...)
             pre-body ...
             (call-with-values (lambda () . post-body)
@@ -218,9 +242,11 @@
 (define-syntax (for*/gvector stx)
   (syntax-case stx ()
     [(_ (clause ...) . body)
+     #'(for*/gvector #:capacity DEFAULT-CAPACITY (clause ...) . body)]
+    [(_ #:capacity cap (clause ...) . body)
      (with-syntax ([((pre-body ...) post-body) (split-for-body stx #'body)])
        (quasisyntax/loc stx
-         (let ([gv (make-gvector)])
+         (let ([gv (make-gvector #:capacity cap)])
            (for*/fold/derived #,stx () (clause ...)
             pre-body ...
             (call-with-values (lambda () . post-body)
@@ -282,7 +308,7 @@
  [rename gvector* gvector
   (->* () () #:rest any/c gvector?)]
  [make-gvector
-  (->* () (#:capacity exact-positive-integer?) gvector?)]
+  (->* () (#:capacity exact-nonnegative-integer?) gvector?)]
  [gvector-ref
   (->* (gvector? exact-nonnegative-integer?) (any/c) any)]
  [gvector-set!
@@ -295,6 +321,10 @@
   (-> gvector? exact-nonnegative-integer? any)]
  [gvector-remove-last!
   (-> gvector? any)]
+ [gvector-append
+  (-> gvector? gvector? gvector?)]
+ [gvector-append!
+  (-> gvector? gvector? any)]
  [gvector-count
   (-> gvector? any)]
  [gvector->vector

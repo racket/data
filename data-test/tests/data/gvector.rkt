@@ -133,6 +133,33 @@
              (gvector->vector (for/gvector ([x '(1 2 3)]) x))
              '#(1 2 3))
 
+(test-case "gvector-append and gvector-append!"
+  (define a (gvector 1 2 3))
+  (define b (gvector 4 5))
+  (check-equal? (gvector->list (gvector-append a b)) '(1 2 3 4 5))
+  (check-equal? (gvector->list a) '(1 2 3))
+  (check-equal? (gvector->list b) '(4 5))
+  (check-equal? (gvector-count (gvector-append (gvector) (gvector))) 0)
+  (gvector-append! a b)
+  (check-equal? (gvector->list a) '(1 2 3 4 5))
+  (check-equal? (gvector->list b) '(4 5))
+  (gvector-append! b b)
+  (check-equal? (gvector->list b) '(4 5 4 5)))
+
+(test-equal? "for*/gvector nests its clauses"
+             (gvector->list (for*/gvector ([i 2] [j 3]) (list i j)))
+             '((0 0) (0 1) (0 2) (1 0) (1 1) (1 2)))
+
+(test-equal? "for/gvector and for*/gvector with #:capacity"
+             (list (gvector->list (for/gvector #:capacity 100 ([i 3]) i))
+                   (gvector->list (for*/gvector #:capacity 0 ([i 2] [j 2]) (+ i j))))
+             '((0 1 2) (0 1 1 2)))
+
+(test-case "a gvector made with a capacity of 0 grows"
+  (define gv (make-gvector #:capacity 0))
+  (for ([i 20]) (gvector-add! gv i))
+  (check-equal? (gvector->list gv) (for/list ([i 20]) i)))
+
 (test-case "gvector, lots of adds"
   (let ([gv (make-gvector)])
     (for ([x (in-range 0 1000)])

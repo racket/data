@@ -7,7 +7,7 @@
 (define pkg-desc "documentation part of \"data\"")
 
 (define pkg-authors '(ryanc))
-(define build-deps '(["data-lib" #:version "1.2.1"]
+(define build-deps '(["data-lib" #:version "1.3"]
                      "data-enumerate-lib"
                      "racket-doc"
                      "scribble-lib"
