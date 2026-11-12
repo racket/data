@@ -25,7 +25,7 @@ removing any element, although removal can take time linear in the
 number of elements in the gvector.
 
 Two gvectors are @racket[equal?] if they contain the same number of
-elements and if the contain equal elements at each index.
+elements and if they contain equal elements at each index.
 
 Operations on gvectors are not thread-safe.
 
@@ -68,7 +68,7 @@ Adds each @racket[value] to the end of the gvector @racket[gv].
 Takes (amortized) time proportional to the number of added @racket[value]s.
 }
 
-@defproc[(gvector-insert! [gv gvector]
+@defproc[(gvector-insert! [gv gvector?]
                           [index (and/c exact-nonnegative-integer?
                                         (</c (+ 1 (gvector-count gv))))]
                           [value any/c])
@@ -102,7 +102,8 @@ index)].
 
 @defproc[(gvector-remove-last! [gv gvector?])
          any/c]{
-Removes the element at the end and returns it.  Takes constant time.
+Removes the element at the end and returns it, or raises an exception
+if @racket[gv] is empty.  Takes (amortized) constant time.
 }
 
 
