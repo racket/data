@@ -9,6 +9,59 @@
          racket/vector
          racket/struct)
 
+(struct gvector (vec n)
+  #:mutable
+  #:authentic
+  #:property prop:dict/contract
+             ;; expand these so they are not referenced before definition
+             (list (vector-immutable (case-lambda
+                                       [(gv i) (gvector-ref gv i)]
+                                       [(gv i d) (gvector-ref gv i d)])
+                                     (lambda (gv i v) (gvector-set! gv i v))
+                                     #f ;; set
+                                     (lambda (gv i) (gvector-remove! gv i))
+                                     #f ;; remove
+                                     (lambda (gv) (gvector-count gv))
+                                     (lambda (gv) (gvector-iterate-first gv))
+                                     (lambda (gv it) (gvector-iterate-next gv it))
+                                     (lambda (gv it) (gvector-iterate-key gv it))
+                                     (lambda (gv it) (gvector-iterate-value gv it)))
+                   (vector-immutable exact-nonnegative-integer?
+                                     any/c
+                                     exact-nonnegative-integer?
+                                     #f #f #f))
+  #:methods gen:equal+hash
+  [(define (equal-proc x y recursive-equal?)
+     (let ([vx (gvector-vec x)]
+           [vy (gvector-vec y)]
+           [nx (gvector-n x)]
+           [ny (gvector-n y)])
+       (and (= nx ny)
+            (for/and ([index (in-range nx)])
+              (recursive-equal? (vector-ref vx index)
+                                (vector-ref vy index))))))
+   (define (hash-code x hc)
+     (let ([v (gvector-vec x)]
+           [n (gvector-n x)])
+       (for/fold ([h 1]) ([i (in-range n)])
+         ;; FIXME: better way of combining hashcodes
+         (+ h (hc (vector-ref v i))))))
+   (define hash-proc  hash-code)
+   (define hash2-proc hash-code)]
+  #:methods gen:custom-write
+  [(define write-proc
+     (make-constructor-style-printer
+      (lambda (obj) 'gvector)
+      (lambda (obj) (gvector->list obj))))]
+  #:property prop:sequence (lambda (gv) (in-gvector gv))
+  #:property prop:serializable
+  (make-serialize-info
+   (λ (this)
+     (vector (gvector->vector this)))
+   (cons 'deserialize-gvector (module-path-index-join '(submod data/gvector deserialize) #f))
+   #t
+   (or (current-load-relative-directory) (current-directory))))
+
 (define DEFAULT-CAPACITY 10)
 
 (define (make-gvector #:capacity [capacity DEFAULT-CAPACITY])
@@ -252,55 +305,6 @@
             (call-with-values (lambda () . post-body)
               (lambda args (apply gvector-add! gv args) (values))))
            gv)))]))
-
-(struct gvector (vec n)
-  #:mutable
-  #:property prop:dict/contract
-             (list (vector-immutable gvector-ref
-                                     gvector-set!
-                                     #f ;; set
-                                     gvector-remove!
-                                     #f ;; remove
-                                     gvector-count
-                                     gvector-iterate-first
-                                     gvector-iterate-next
-                                     gvector-iterate-key
-                                     gvector-iterate-value)
-                   (vector-immutable exact-nonnegative-integer?
-                                     any/c
-                                     exact-nonnegative-integer?
-                                     #f #f #f))
-  #:methods gen:equal+hash
-  [(define (equal-proc x y recursive-equal?)
-     (let ([vx (gvector-vec x)]
-           [vy (gvector-vec y)]
-           [nx (gvector-n x)]
-           [ny (gvector-n y)])
-       (and (= nx ny)
-            (for/and ([index (in-range nx)])
-              (recursive-equal? (vector-ref vx index)
-                                (vector-ref vy index))))))
-   (define (hash-code x hc)
-     (let ([v (gvector-vec x)]
-           [n (gvector-n x)])
-       (for/fold ([h 1]) ([i (in-range n)])
-         ;; FIXME: better way of combining hashcodes
-         (+ h (hc (vector-ref v i))))))
-   (define hash-proc  hash-code)
-   (define hash2-proc hash-code)]
-  #:methods gen:custom-write
-  [(define write-proc
-     (make-constructor-style-printer
-      (lambda (obj) 'gvector)
-      (lambda (obj) (gvector->list obj))))]
-  #:property prop:sequence in-gvector
-  #:property prop:serializable
-  (make-serialize-info
-   (λ (this)
-     (vector (gvector->vector this)))
-   (cons 'deserialize-gvector (module-path-index-join '(submod data/gvector deserialize) #f))
-   #t
-   (or (current-load-relative-directory) (current-directory))))
 
 (provide/contract
  [gvector?
