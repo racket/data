@@ -2,7 +2,8 @@
 
 (define collection 'multi)
 
-(define deps '("base"))
+;; the gvector stress tests use parallel threads
+(define deps '(("base" #:version "8.18.0.2")))
 
 (define pkg-desc "tests for \"data-lib\"")
 
