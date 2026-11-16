@@ -3,6 +3,7 @@
 (require (for-syntax racket/base
                      syntax/contract
                      syntax/for-body)
+	 racket/performance-hint
          racket/serialize
          racket/contract/base
          racket/dict
@@ -65,6 +66,8 @@
 (define DEFAULT-CAPACITY 10)
 
 (define (make-gvector #:capacity [capacity DEFAULT-CAPACITY])
+  (unless (exact-nonnegative-integer? capacity)
+    (raise-argument-error* 'make-gvector 'data/gvector "exact-nonnegative-integer?" capacity))
   (gvector (make-vector capacity #f) 0))
 
 (define gvector*
@@ -81,6 +84,17 @@
   (define hi (if set-to-add? (add1 n) n))
   (unless (< index hi)
     (raise-range-error who "gvector" "" index gv 0 (sub1 hi))))
+
+(begin-encourage-inline
+
+  (define (check-gvector who gv)
+    (unless (gvector? gv)
+      (raise-argument-error* who 'data/gvector "gvector?" gv)))
+
+  ;; for an index argument
+  (define (check-natural who index)
+    (unless (exact-nonnegative-integer? index)
+      (raise-argument-error* who 'data/gvector "exact-nonnegative-integer?" index))))
 
 ;; ensure-free-space! : GVector Nat -> Void
 (define (ensure-free-space! gv needed-free-space)
@@ -99,12 +113,14 @@
 (define gvector-add!
   (case-lambda
     [(gv item)
+     (check-gvector 'gvector-add! gv)
      (ensure-free-space! gv 1)
      (define n (gvector-n gv))
      (define v (gvector-vec gv))
      (vector-set! v n item)
      (set-gvector-n! gv (add1 n))]
     [(gv . items)
+     (check-gvector 'gvector-add! gv)
      (define item-count (length items))
      (ensure-free-space! gv item-count)
      (define n (gvector-n gv))
@@ -117,6 +133,8 @@
 (define (gvector-insert! gv index item)
   ;; This does (n - index) redundant copies on resize, but that
   ;; happens rarely and I prefer the simpler code.
+  (check-gvector 'gvector-insert! gv)
+  (check-natural 'gvector-insert! index)
   (define n (gvector-n gv))
   (check-index 'gvector-insert! gv index #t)
   (ensure-free-space! gv 1)
@@ -150,6 +168,8 @@
 
 ;; SLOW!
 (define (gvector-remove! gv index)
+  (check-gvector 'gvector-remove! gv)
+  (check-natural 'gvector-remove! index)
   (define n (gvector-n gv))
   (define v (gvector-vec gv))
   (check-index 'gvector-remove! gv index #f)
@@ -159,6 +179,7 @@
   (trim! gv))
 
 (define (gvector-remove-last! gv)
+  (check-gvector 'gvector-remove-last! gv)
   (let ([n (gvector-n gv)]
         [v (gvector-vec gv)])
     (unless (> n 0) (error 'gvector-remove-last! "empty"))
@@ -167,9 +188,12 @@
     last-val))
 
 (define (gvector-count gv)
+  (check-gvector 'gvector-count gv)
   (gvector-n gv))
 
 (define (gvector-append! gv gv*)
+  (check-gvector 'gvector-append! gv)
+  (check-gvector 'gvector-append! gv*)
   ;; gv* may be gv itself, whose vector ensure-free-space! may replace;
   ;; the vector read here still holds the same elements
   (define v* (gvector-vec gv*))
@@ -180,6 +204,8 @@
   (set-gvector-n! gv (+ n n*)))
 
 (define (gvector-append gv gv*)
+  (check-gvector 'gvector-append gv)
+  (check-gvector 'gvector-append gv*)
   (define n (gvector-n gv))
   (define v* (gvector-vec gv*))
   (define n* (gvector-n gv*))
@@ -194,6 +220,7 @@
 (define none (gensym 'none))
 
 (define (gvector-ref gv index [default none])
+  (check-gvector 'gvector-ref gv)
   (unless (exact-nonnegative-integer? index)
     (raise-type-error 'gvector-ref "exact nonnegative integer" index))
   (if (< index (gvector-n gv))
@@ -205,6 +232,8 @@
 
 ;; gvector-set! with index = |gv| is interpreted as gvector-add!
 (define (gvector-set! gv index item)
+  (check-gvector 'gvector-set! gv)
+  (check-natural 'gvector-set! index)
   (let ([n (gvector-n gv)])
     (check-index 'gvector-set! gv index #t)
     (if (= index n)
@@ -213,13 +242,17 @@
 
 ;; creates a snapshot vector
 (define (gvector->vector gv)
+  (check-gvector 'gvector->vector gv)
   (vector-copy (gvector-vec gv) 0 (gvector-n gv)))
 
 (define (gvector->list gv)
+  (check-gvector 'gvector->list gv)
   (vector->list (gvector->vector gv)))
 
 ;; constructs a gvector
 (define (vector->gvector v)
+  (unless (vector? v)
+    (raise-argument-error* 'vector->gvector 'data/gvector "vector?" v))
   (define lv (vector-length v))
   (define gv (make-gvector #:capacity lv))
   (define nv (gvector-vec gv))
@@ -228,6 +261,8 @@
   gv)
 
 (define (list->gvector v)
+  (unless (list? v)
+    (raise-argument-error* 'list->gvector 'data/gvector "list?" v))
   (vector->gvector (list->vector v)))
 
 ;; Iteration methods
@@ -252,8 +287,7 @@
   (gvector-ref gv iter))
 
 (define (in-gvector gv)
-  (unless (gvector? gv)
-    (raise-type-error 'in-gvector "gvector" gv))
+  (check-gvector 'in-gvector gv)
   (in-dict-values gv))
 
 (define-sequence-syntax in-gvector*
@@ -306,43 +340,26 @@
               (lambda args (apply gvector-add! gv args) (values))))
            gv)))]))
 
-(provide/contract
- [gvector?
-  (-> any/c any)]
- [rename gvector* gvector
-  (->* () () #:rest any/c gvector?)]
- [make-gvector
-  (->* () (#:capacity exact-nonnegative-integer?) gvector?)]
- [gvector-ref
-  (->* (gvector? exact-nonnegative-integer?) (any/c) any)]
- [gvector-set!
-  (-> gvector? exact-nonnegative-integer? any/c any)]
- [gvector-add!
-  (->* (gvector?) () #:rest any/c any)]
- [gvector-insert!
-  (-> gvector? exact-nonnegative-integer? any/c any)]
- [gvector-remove!
-  (-> gvector? exact-nonnegative-integer? any)]
- [gvector-remove-last!
-  (-> gvector? any)]
- [gvector-append
-  (-> gvector? gvector? gvector?)]
- [gvector-append!
-  (-> gvector? gvector? any)]
- [gvector-count
-  (-> gvector? any)]
- [gvector->vector
-  (-> gvector? vector?)]
- [gvector->list
-  (-> gvector? list?)]
- [vector->gvector
-  (-> vector? gvector?)]
- [list->gvector
-  (-> list? gvector?)])
-
-(provide (rename-out [in-gvector* in-gvector])
-         for/gvector
-         for*/gvector)
+(provide
+ gvector?
+ (rename-out [gvector* gvector])
+ make-gvector
+ gvector-ref
+ gvector-set!
+ gvector-add!
+ gvector-insert!
+ gvector-remove!
+ gvector-remove-last!
+ gvector-append
+ gvector-append!
+ gvector-count
+ gvector->vector
+ gvector->list
+ vector->gvector
+ list->gvector
+ (rename-out [in-gvector* in-gvector])
+ for/gvector
+ for*/gvector)
 
 (module+ deserialize
   (provide deserialize-gvector)
