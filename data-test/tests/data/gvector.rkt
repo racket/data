@@ -160,6 +160,13 @@
   (for ([i 20]) (gvector-add! gv i))
   (check-equal? (gvector->list gv) (for/list ([i 20]) i)))
 
+(test-case "argument errors name the function"
+  (check-exn #rx"vector->gvector" (lambda () (vector->gvector 5)))
+  (check-exn #rx"list->gvector" (lambda () (list->gvector 5)))
+  (for ([i (list -1 1.5)])
+    (check-exn #rx"gvector-insert!" (lambda () (gvector-insert! (gvector 1 2) i 'x)))
+    (check-exn #rx"gvector-remove!" (lambda () (gvector-remove! (gvector 1 2) i)))))
+
 (test-case "gvector, lots of adds"
   (let ([gv (make-gvector)])
     (for ([x (in-range 0 1000)])
