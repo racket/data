@@ -160,6 +160,30 @@
   (for ([i 20]) (gvector-add! gv i))
   (check-equal? (gvector->list gv) (for/list ([i 20]) i)))
 
+;; An index that is not a natural number is an error, and leaves the
+;; gvector unchanged.
+(test-case "gvector-set! and gvector-ref reject indexes that are not naturals"
+  (define gv (gvector 1 2 3))
+  (for ([i (list -1 1.5 'a (expt 2 100))])
+    (check-exn exn:fail:contract? (lambda () (gvector-set! gv i 'x)))
+    (check-exn exn:fail:contract? (lambda () (gvector-ref gv i))))
+  (check-equal? (gvector->vector gv) '#(1 2 3)))
+
+;; in-gvector's fast path reads the gvector at every step, so it sees
+;; changes that the body makes, as the documentation says.
+(test-equal? "in-gvector sees a removal made while it runs"
+             (let ([gv (gvector 0 1 2 3)])
+               (for/list ([x (in-gvector gv)])
+                 (when (eqv? x 1) (gvector-remove! gv 3))
+                 x))
+             '(0 1 2))
+(test-equal? "in-gvector sees an add made while it runs"
+             (let ([gv (gvector 0 1 2)])
+               (for/list ([x (in-gvector gv)])
+                 (when (eqv? x 1) (gvector-add! gv 9))
+                 x))
+             '(0 1 2 9))
+
 (test-case "argument errors name the function"
   (check-exn #rx"vector->gvector" (lambda () (vector->gvector 5)))
   (check-exn #rx"list->gvector" (lambda () (list->gvector 5)))
