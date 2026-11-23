@@ -35,7 +35,7 @@ Additionally, gvectors are serializable with the
 @defproc[(make-gvector [#:capacity capacity exact-nonnegative-integer? 10])
          gvector?]{
 
-Creates a new empty gvector with an initial capacity of
+Creates a new empty gvector with an initial capacity of at least
 @racket[capacity].
 
 @history[#:changed "1.3" @elem{Allowed a @racket[capacity] of @racket[0].}]

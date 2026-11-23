@@ -1,12 +1,26 @@
 #lang racket/base
 ;; written by ryanc
+
+;; Invariants: n is a fixnum, and vec is a vector that this module
+;; allocated, so it is never a chaperone or impersonator.  The unchecked
+;; operations in this module rely only on these invariants.
+;;
+;; A gvector is not thread-safe.  Concurrent operations may lose updates,
+;; and nothing guarantees
+;; - that n <= (vector-length vec), so no unchecked operation may rely
+;;   on it, or
+;; - that a value gvector-ref returns was ever added to the gvector: it
+;;   may be a vector's fill value, so a (GVectorof X) may produce values
+;;   that are not X.
 (require (for-syntax racket/base
                      syntax/contract
                      syntax/for-body)
 	 racket/performance-hint
          racket/serialize
+         racket/fixnum
          racket/contract/base
          racket/dict
+	 racket/unsafe/ops
          racket/vector
          racket/struct)
 
@@ -65,10 +79,12 @@
 
 (define DEFAULT-CAPACITY 10)
 
+(define MIN-CAPACITY 8)
+
 (define (make-gvector #:capacity [capacity DEFAULT-CAPACITY])
   (unless (exact-nonnegative-integer? capacity)
     (raise-argument-error* 'make-gvector 'data/gvector "exact-nonnegative-integer?" capacity))
-  (gvector (make-vector capacity #f) 0))
+  (gvector (make-vector (max capacity MIN-CAPACITY) 0) 0))
 
 (define gvector*
   (let ([gvector
@@ -94,40 +110,46 @@
   ;; for an index argument
   (define (check-natural who index)
     (unless (exact-nonnegative-integer? index)
-      (raise-argument-error* who 'data/gvector "exact-nonnegative-integer?" index))))
+      (raise-argument-error* who 'data/gvector "exact-nonnegative-integer?" index)))
 
-;; ensure-free-space! : GVector Nat -> Void
-(define (ensure-free-space! gv needed-free-space)
-  (define vec (gvector-vec gv))
-  (define n (gvector-n gv))
-  (define cap (vector-length vec))
-  (define needed-cap (+ n needed-free-space))
-  (unless (<= needed-cap cap)
-    (define new-cap
-      (let loop ([new-cap (max DEFAULT-CAPACITY cap)])
-        (if (<= needed-cap new-cap) new-cap (loop (* 2 new-cap)))))
-    (define new-vec (make-vector new-cap #f))
-    (vector-copy! new-vec 0 vec)
-    (set-gvector-vec! gv new-vec)))
 
-(define gvector-add!
-  (case-lambda
-    [(gv item)
-     (check-gvector 'gvector-add! gv)
-     (ensure-free-space! gv 1)
-     (define n (gvector-n gv))
-     (define v (gvector-vec gv))
-     (vector-set! v n item)
-     (set-gvector-n! gv (add1 n))]
-    [(gv . items)
-     (check-gvector 'gvector-add! gv)
-     (define item-count (length items))
-     (ensure-free-space! gv item-count)
-     (define n (gvector-n gv))
-     (define v (gvector-vec gv))
-     (for ([index (in-naturals n)] [item (in-list items)])
-       (vector-set! v index item))
-     (set-gvector-n! gv (+ n item-count))]))
+  ;; grow-vec : Vector Nat Nat -> Vector/#f
+  ;; Returns a new, larger vector if more space is needed, or #f if
+  ;; the existing vector has enough capacity.
+  (define (grow-vec vec n needed-free-space)
+    (define cap (unsafe-vector*-length vec))
+    (define needed-cap (unsafe-fx+ n needed-free-space))
+    (cond [(unsafe-fx<= needed-cap cap) #f]
+	  [else
+	   ;; taken from Rust's raw_vec implementation
+	   (let* ([new-cap (unsafe-fxmax (unsafe-fx* 2 cap) needed-cap)]
+		  [new-cap (unsafe-fxmax new-cap MIN-CAPACITY)])
+	     (vector*-extend vec new-cap 0))]))
+
+  ;; define/ensure-space! : binds n and v after ensuring that v, the
+  ;; gvector's vec, has room for needed-free-space more elements past n.
+  (define-syntax-rule (define/ensure-space! (n v) gv needed-free-space)
+    (begin (define n (gvector-n gv))
+	   (define v
+	     (let* ([v1 (gvector-vec gv)]
+		    [v2 (grow-vec v1 n needed-free-space)])
+	       (cond [(not v2) v1]   ; already big enough
+		     [else (set-gvector-vec! gv v2) v2])))))
+
+  (define gvector-add!
+    (case-lambda
+      [(gv item)
+       (check-gvector 'gvector-add! gv)
+       (define/ensure-space! (n v) gv 1)
+       (vector-set! v n item)
+       (set-gvector-n! gv (add1 n))]
+      [(gv . items)
+       (check-gvector 'gvector-add! gv)
+       (define item-count (length items))
+       (define/ensure-space! (n v) gv item-count)
+       (for ([index (in-naturals n)] [item (in-list items)])
+	 (vector-set! v index item))
+       (set-gvector-n! gv (+ n item-count))])))
 
 ;; SLOW!
 (define (gvector-insert! gv index item)
@@ -135,10 +157,8 @@
   ;; happens rarely and I prefer the simpler code.
   (check-gvector 'gvector-insert! gv)
   (check-natural 'gvector-insert! index)
-  (define n (gvector-n gv))
   (check-index 'gvector-insert! gv index #t)
-  (ensure-free-space! gv 1)
-  (define v (gvector-vec gv))
+  (define/ensure-space! (n v) gv 1)
   (vector-copy! v (add1 index) v index n)
   (vector-set! v index item)
   (set-gvector-n! gv (add1 n)))
@@ -194,13 +214,12 @@
 (define (gvector-append! gv gv*)
   (check-gvector 'gvector-append! gv)
   (check-gvector 'gvector-append! gv*)
-  ;; gv* may be gv itself, whose vector ensure-free-space! may replace;
+  ;; gv* may be gv itself, whose vector the space check below may replace;
   ;; the vector read here still holds the same elements
   (define v* (gvector-vec gv*))
   (define n* (gvector-n gv*))
-  (ensure-free-space! gv n*)
-  (define n (gvector-n gv))
-  (vector-copy! (gvector-vec gv) n v* 0 n*)
+  (define/ensure-space! (n v) gv n*)
+  (vector-copy! v n v* 0 n*)
   (set-gvector-n! gv (+ n n*)))
 
 (define (gvector-append gv gv*)
@@ -254,7 +273,7 @@
   (unless (vector? v)
     (raise-argument-error* 'vector->gvector 'data/gvector "vector?" v))
   (define lv (vector-length v))
-  (define gv (make-gvector #:capacity lv))
+  (define gv (make-gvector #:capacity (max lv DEFAULT-CAPACITY)))
   (define nv (gvector-vec gv))
   (vector-copy! nv 0 v)
   (set-gvector-n! gv lv)
