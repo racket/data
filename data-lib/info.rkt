@@ -1,6 +1,6 @@
 #lang info
 (define collection 'multi)
-(define deps '(("base" #:version "6.9.0.4")))
+(define deps '(("base" #:version "8.12.0.10")))
 (define build-deps '("rackunit-lib"))
 
 (define pkg-desc "implementation (no documentation) part of \"data\"")
