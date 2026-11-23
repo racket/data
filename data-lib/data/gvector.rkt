@@ -136,6 +136,12 @@
 	       (cond [(not v2) v1]   ; already big enough
 		     [else (set-gvector-vec! gv v2) v2])))))
 
+  ;; gvector-add! of one item, without checking that gv is a gvector
+  (define (unchecked-gvector-add! gv item)
+    (define/ensure-space! (n v) gv 1)
+    (vector-set! v n item)
+    (set-gvector-n! gv (add1 n)))
+
   (define gvector-add!
     (case-lambda
       [(gv item)
@@ -342,7 +348,9 @@
            (for/fold/derived #,stx () (clause ...)
             pre-body ...
             (call-with-values (lambda () . post-body)
-              (lambda args (apply gvector-add! gv args) (values))))
+              (case-lambda
+                [(one) (unchecked-gvector-add! gv one) (values)]
+                [args (apply gvector-add! gv args) (values)])))
            gv)))]))
 
 (define-syntax (for*/gvector stx)
@@ -356,7 +364,9 @@
            (for*/fold/derived #,stx () (clause ...)
             pre-body ...
             (call-with-values (lambda () . post-body)
-              (lambda args (apply gvector-add! gv args) (values))))
+              (case-lambda
+                [(one) (unchecked-gvector-add! gv one) (values)]
+                [args (apply gvector-add! gv args) (values)])))
            gv)))]))
 
 (provide
